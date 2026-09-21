@@ -1,0 +1,12 @@
+## Ignore Visual Studio & .NET build artifacts
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.suo
+*.userlibraries
+*.cache
+*.log
+.DS_Store
+Thumbs.db

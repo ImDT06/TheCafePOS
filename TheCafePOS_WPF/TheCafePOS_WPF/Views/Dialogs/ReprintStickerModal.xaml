@@ -1,0 +1,43 @@
+﻿<Window x:Class="TheCafePOS_WPF.Views.Dialogs.ReprintStickerModal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="In Lại Tem Ly (Reprint Sticker)" Height="540" Width="520"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#F8F9FA">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Path Data="M 1,21 L 23,21 L 12,2 L 1,21 Z M 13,18 L 11,18 L 11,16 L 13,16 L 13,18 Z M 13,14 L 11,14 L 11,10 L 13,10 L 13,14 Z"
+                      Fill="#EA580C" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="IN LẠI TEM DÁN LY HỎNG" FontSize="18" FontWeight="Bold" Foreground="#EA580C" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock x:Name="TxtStickerDetails" Text="Đơn #01 - Hồng Trà Truyền Thống (Ly 1/2)" FontSize="14" Foreground="#334155" Margin="26,5,0,15" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Vui lòng chọn lý do in lại tem (Ghi nhật ký audit):" FontWeight="SemiBold" Foreground="#1E293B" Margin="0,0,0,10"/>
+            <RadioButton x:Name="RbReason1" Content="Rách ly / Kẹt máy dập nắp" IsChecked="True" Margin="0,5" FontSize="14"/>
+            <RadioButton x:Name="RbReason2" Content="Làm đổ ly nước / Pha lại" Margin="0,5" FontSize="14"/>
+            <RadioButton x:Name="RbReason3" Content="Tem bị mờ / Đèn in lỗi" Margin="0,5" FontSize="14"/>
+            <RadioButton x:Name="RbReason4" Content="Bị mất tem dán" Margin="0,5" FontSize="14"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="Hủy bỏ" Width="100" Height="48" Margin="0,0,10,0" Background="#94A3B8" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnCancel_Click"/>
+            <Button Width="170" Height="48" Background="#EA580C" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnConfirm_Click">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Path Data="M 19,8 L 5,8 C 3.34,8 2,9.34 2,11 L 2,17 L 6,17 L 6,21 L 18,21 L 18,17 L 22,17 L 22,11 C 22,9.34 20.66,8 19,8 Z M 16,19 L 8,19 L 8,15 L 16,15 L 16,19 Z M 19,12 C 18.45,12 18,11.55 18,11 C 18,10.45 18.45,10 19,10 C 19.55,10 20,10.45 20,11 C 20,11.55 19.55,12 19,12 Z M 18,3 L 6,3 L 6,7 L 18,7 L 18,3 Z"
+                          Fill="White" Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="IN LẠI TEM NGAY" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
+
+

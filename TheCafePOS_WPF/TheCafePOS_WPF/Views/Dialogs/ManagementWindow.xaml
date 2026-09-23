@@ -1,0 +1,50 @@
+﻿<Window x:Class="TheCafePOS_WPF.Views.Dialogs.ManagementWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core"
+ Title="Quản trị cửa hàng" Width="1120" Height="760" MinWidth="920" MinHeight="620" WindowStartupLocation="CenterOwner" Background="#F1F5F9">
+ <DockPanel Margin="18">
+  <TextBlock DockPanel.Dock="Top" Text="QUẢN TRỊ CỬA HÀNG" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
+  <TextBlock DockPanel.Dock="Bottom" x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,0"/>
+  <TabControl>
+   <TabItem Header="Thực đơn"><Grid Margin="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="350"/></Grid.ColumnDefinitions>
+    <DataGrid x:Name="Products" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="ProductSelected" Margin="0,0,15,0"><DataGrid.Columns>
+     <DataGridTextColumn Header="Tên món" Binding="{Binding Name}" Width="*"/><DataGridTextColumn Header="Giá" Binding="{Binding FormattedPrice}" Width="90"/><DataGridCheckBoxColumn Header="Đang bán" Binding="{Binding IsActive}"/>
+    </DataGrid.Columns></DataGrid>
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="Tên món"/><TextBox x:Name="ProductName" Padding="6" Margin="0,4,0,10"/>
+     <TextBlock Text="Danh mục"/><ComboBox x:Name="ProductCategory" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10"/>
+     <TextBlock Text="Giá cơ bản (đồng)"/><TextBox x:Name="ProductPrice" touch:TouchInput.Numeric="True" Padding="6" Margin="0,4,0,10"/>
+     <CheckBox x:Name="ProductActive" Content="Đang bán" IsChecked="True" Margin="0,4,0,10"/>
+     <Button Content="Lưu món" Padding="8" Click="SaveProduct_Click"/><Button Content="Thêm món mới" Padding="8" Margin="0,8,0,0" Click="NewProduct_Click"/>
+     <Button Content="Cấu hình size / topping / đường đá" Padding="8" Margin="0,8,0,0" Click="ConfigureProduct_Click"/>
+    </StackPanel></ScrollViewer></Grid></TabItem>
+   <TabItem Header="Danh mục"><Grid Margin="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="350"/></Grid.ColumnDefinitions>
+    <ListBox x:Name="Categories" DisplayMemberPath="Name" SelectionChanged="CategorySelected" Margin="0,0,15,0"/>
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="Tên danh mục"/><TextBox x:Name="CategoryName" Padding="6" Margin="0,4,0,10"/>
+     <CheckBox x:Name="CategoryActive" Content="Đang hiển thị" IsChecked="True" Margin="0,4,0,10"/>
+     <Button Content="Lưu danh mục" Padding="8" Click="SaveCategory_Click"/><Button Content="Thêm danh mục mới" Padding="8" Margin="0,8,0,0" Click="NewCategory_Click"/>
+    </StackPanel></ScrollViewer></Grid></TabItem>
+   <TabItem Header="Nhân viên"><Grid Margin="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="350"/></Grid.ColumnDefinitions>
+    <DataGrid x:Name="Staff" IsReadOnly="True" AutoGenerateColumns="False" Margin="0,0,15,0"><DataGrid.Columns><DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="*"/><DataGridTextColumn Header="Vai trò" Binding="{Binding Role}" Width="100"/><DataGridCheckBoxColumn Header="Hoạt động" Binding="{Binding IsActive}"/><DataGridCheckBoxColumn Header="Đổi mật khẩu" Binding="{Binding MustChangePassword}"/></DataGrid.Columns></DataGrid>
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="Tạo tài khoản nhân viên" FontWeight="Bold" Margin="0,0,0,12"/>
+     <TextBlock Text="Tên đăng nhập"/><TextBox x:Name="StaffName" Padding="6" Margin="0,4,0,10"/>
+     <TextBlock Text="Mật khẩu (tối thiểu 8 ký tự)"/><PasswordBox x:Name="StaffPassword" Padding="6" Margin="0,4,0,10"/>
+     <ComboBox x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10"><ComboBoxItem Content="Cashier"/><ComboBoxItem Content="Manager"/></ComboBox>
+     <Button Content="Tạo tài khoản" Padding="8" Click="CreateStaff_Click"/>
+     <TextBlock Text="Chọn nhân viên trong danh sách để quản lý:" TextWrapping="Wrap" Margin="0,16,0,8"/>
+     <Button Content="Đặt lại mật khẩu" Padding="8" Click="ResetPassword_Click"/>
+     <Button Content="Khóa / Mở khóa tài khoản" Padding="8" Margin="0,8,0,0" Click="ToggleStaff_Click"/>
+    </StackPanel></ScrollViewer></Grid></TabItem>
+   <TabItem Header="Chuyển khoản"><StackPanel Margin="18" MaxWidth="450" HorizontalAlignment="Left">
+    <TextBlock Text="Thông tin tài khoản nhận tiền" FontWeight="Bold" FontSize="16"/>
+    <TextBlock Text="Mã ngân hàng (ví dụ MB)" Margin="0,12,0,4"/><TextBox x:Name="BankCode" Padding="6"/>
+    <TextBlock Text="Số tài khoản" Margin="0,12,0,4"/><TextBox x:Name="BankAccount" Padding="6"/>
+    <TextBlock Text="Tên chủ tài khoản" Margin="0,12,0,4"/><TextBox x:Name="BankOwner" Padding="6"/>
+    <TextBlock Text="Quản lý phải kiểm tra giao dịch thực tế trước khi duyệt thanh toán QR. Chưa kết nối xác nhận tự động." TextWrapping="Wrap" Margin="0,16"/>
+    <Button Content="Lưu thông tin chuyển khoản" Padding="8" Click="SaveBank_Click"/>
+   </StackPanel></TabItem>
+  </TabControl>
+ </DockPanel>
+</Window>
+
+
+
+

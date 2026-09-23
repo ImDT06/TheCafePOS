@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TheCafePOS_WPF/TheCafePOS_WPF.csproj" />
+  <Project Path="TheCafePOS.RegressionTests/TheCafePOS.RegressionTests.csproj" />
+</Solution>

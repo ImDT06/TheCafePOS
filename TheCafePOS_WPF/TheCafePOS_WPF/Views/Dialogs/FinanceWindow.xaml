@@ -1,8 +1,8 @@
-﻿<Window x:Class="TheCafePOS_WPF.Views.Dialogs.FinanceWindow"
+<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.FinanceWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core"
- Title="Hoàn tiền và thu/chi ca" Width="1040" Height="720" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterOwner" Background="#F1F5F9">
+ Title="Hoàn tiền và thu/chi ca" Width="1040" Height="720" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterOwner" Background="#F3F5F4">
  <DockPanel Margin="18">
-  <TextBlock DockPanel.Dock="Top" Text="HOÀN TIỀN / THU CHI CA" FontSize="22" FontWeight="Bold" Margin="0,0,0,12"/>
+  <StackPanel DockPanel.Dock="Top"><TextBlock Text="Hoàn tiền &amp; Thu chi" Style="{StaticResource PageTitle}"/><TextBlock Text="Ghi nhận giao dịch và theo dõi tiền trong ca hiện tại" Style="{StaticResource Hint}"/></StackPanel>
   <TextBlock DockPanel.Dock="Bottom" x:Name="Status" TextWrapping="Wrap" Margin="0,10,0,0"/>
   <TabControl>
    <TabItem Header="Hoàn tiền đơn hàng"><Grid Margin="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="330"/></Grid.ColumnDefinitions>
@@ -10,27 +10,27 @@
      <StackPanel DockPanel.Dock="Top"><TextBlock Text="Ngày bán và mã đơn / số thứ tự"/><WrapPanel Margin="0,6,0,8"><DatePicker x:Name="OrderDate" Width="135"/><TextBox x:Name="Search" Width="180" Padding="6" Margin="6,0"/><Button Content="Tìm đơn" Padding="12,6" Click="Search_Click"/></WrapPanel></StackPanel>
      <DataGrid x:Name="Orders" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="OrderSelected"><DataGrid.Columns>
       <DataGridTextColumn Header="STT" Binding="{Binding DailyOrderNumberFormatted}" Width="55"/><DataGridTextColumn Header="Giờ" Binding="{Binding CreatedAt, StringFormat=HH:mm}" Width="60"/>
-      <DataGridTextColumn Header="Tổng" Binding="{Binding TotalAmount, StringFormat=N0}" Width="95"/><DataGridTextColumn Header="Còn được hoàn" Binding="{Binding RefundableAmount, StringFormat=N0}" Width="110"/><DataGridTextColumn Header="Trạng thái" Binding="{Binding RefundStatus}" Width="*"/>
+      <DataGridTextColumn Header="Tổng" Binding="{Binding TotalAmount, StringFormat=N0}" Width="95"/><DataGridTextColumn Header="Có thể hoàn" Binding="{Binding RefundableAmount, StringFormat=N0}" Width="110"/><DataGridTextColumn Header="Trạng thái" Binding="{Binding RefundStatus}" Width="*"/>
      </DataGrid.Columns></DataGrid>
     </DockPanel>
-    <DockPanel Grid.Column="1"><Button DockPanel.Dock="Bottom" Content="Quản lý duyệt và ghi nhận hoàn" MinHeight="52" Click="Refund_Click" Margin="0,10,0,0"/><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+    <Border Grid.Column="1" Style="{StaticResource SurfaceCard}"><DockPanel><Button Style="{StaticResource PrimaryButton}" DockPanel.Dock="Bottom" Content="Duyệt và ghi nhận hoàn" MinHeight="52" Click="Refund_Click" Margin="0,10,0,0"/><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
      <TextBlock x:Name="OrderDetails" Text="Chọn đơn cần hoàn tiền." TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,12"/>
-     <TextBlock Text="Số tiền hoàn (đồng)"/><TextBox x:Name="RefundAmount" touch:TouchInput.Numeric="True" Padding="10" Margin="0,5,0,10"/>
+     <TextBlock Text="Số tiền hoàn (đồng)"/><TextBox x:Name="RefundAmount" touch:TouchInput.Label="Số tiền hoàn" touch:TouchInput.Numeric="True" Padding="10" Margin="0,5,0,10"/>
      <TextBlock Text="Lý do hoàn tiền (bắt buộc)"/><TextBox x:Name="RefundReason" Padding="8" MinHeight="70" MaxLength="300" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,10"/>
      <TextBlock Text="Mã giao dịch hoàn chuyển khoản"/><TextBox x:Name="RefundReference" Padding="10" MaxLength="150" Margin="0,5,0,10"/>
      <TextBlock Text="Hoàn theo phương thức của đơn gốc. Chuyển khoản phải thực hiện bên ngoài ứng dụng, sau đó nhập mã giao dịch. Không tự cộng lại bao bì." TextWrapping="Wrap" Foreground="#64748B" Margin="0,4,0,12"/>
      <CheckBox x:Name="RefundConfirmed" Margin="0,0,0,12"><TextBlock Text="Đã trả tiền cho khách và kiểm tra đúng số tiền." TextWrapping="Wrap"/></CheckBox>
-     
-    </StackPanel></ScrollViewer></DockPanel>
+
+    </StackPanel></ScrollViewer></DockPanel></Border>
    </Grid></TabItem>
-   <TabItem Header="Thu / chi tiền mặt"><StackPanel Margin="20" MaxWidth="600" HorizontalAlignment="Left">
+   <TabItem Header="Thu / chi tiền mặt"><Border Style="{StaticResource SurfaceCard}" Margin="12" MaxWidth="650" HorizontalAlignment="Left"><DockPanel><Button DockPanel.Dock="Bottom" Content="Duyệt và lưu phiếu" Style="{StaticResource PrimaryButton}" Click="Cash_Click" Margin="0,16,0,0"/><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
     <TextBlock Text="Ghi nhận tiền vào/ra ngăn kéo ngoài bán hàng" FontWeight="Bold" FontSize="16" Margin="0,0,0,16"/>
     <ComboBox x:Name="CashType" SelectedIndex="0" MinHeight="44"><ComboBoxItem Content="Thu vào — bổ sung tiền lẻ, tiền đầu quỹ" Tag="In"/><ComboBoxItem Content="Chi ra — mua hàng, nộp bớt tiền" Tag="Out"/></ComboBox>
-    <TextBlock Text="Số tiền (đồng)" Margin="0,16,0,5"/><TextBox x:Name="CashAmount" touch:TouchInput.Numeric="True" Padding="10"/>
+    <TextBlock Text="Số tiền (đồng)" Margin="0,16,0,5"/><TextBox x:Name="CashAmount" touch:TouchInput.Label="Số tiền thu / chi" touch:TouchInput.Numeric="True" Padding="10"/>
     <TextBlock Text="Lý do / người nhận / số chứng từ" Margin="0,16,0,5"/><TextBox x:Name="CashReason" Padding="10" MaxLength="300" MinHeight="100" TextWrapping="Wrap" AcceptsReturn="True"/>
     <TextBlock Text="Phiếu ảnh hưởng tiền chốt ca, không cộng vào doanh thu bán hàng. Mỗi phiếu cần quản lý duyệt." TextWrapping="Wrap" Foreground="#64748B" Margin="0,16"/>
-    <Button Content="Quản lý duyệt và lưu phiếu" MinHeight="48" Click="Cash_Click"/>
-   </StackPanel></TabItem>
+
+   </StackPanel></ScrollViewer></DockPanel></Border></TabItem>
    <TabItem Header="Lịch sử ca hiện tại"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <TextBlock Text="Phiếu hoàn tiền" FontWeight="Bold" Margin="0,0,0,6"/>
     <DataGrid x:Name="RefundHistory" Grid.Row="1" IsReadOnly="True" AutoGenerateColumns="False"><DataGrid.Columns><DataGridTextColumn Header="Giờ" Binding="{Binding CreatedAt, StringFormat=HH:mm:ss}"/><DataGridTextColumn Header="Số tiền" Binding="{Binding Amount, StringFormat=N0}"/><DataGridTextColumn Header="Phương thức" Binding="{Binding Method}"/><DataGridTextColumn Header="Lý do" Binding="{Binding Reason}" Width="*"/><DataGridTextColumn Header="Người duyệt" Binding="{Binding Approver}"/><DataGridTextColumn Header="Mã đơn" Binding="{Binding OrderId}" Width="180"/></DataGrid.Columns></DataGrid>

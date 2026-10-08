@@ -1,16 +1,43 @@
-﻿<Window x:Class="TheCafePOS_WPF.Views.Dialogs.ReportWindow"
+<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.ReportWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="Báo cáo doanh thu" Width="1040" Height="680" WindowStartupLocation="CenterOwner" Background="#F1F5F9">
- <DockPanel Margin="18">
+ Language="vi-VN" Title="Báo cáo kinh doanh" Width="1180" Height="780" MinWidth="900" MinHeight="620" WindowStartupLocation="CenterOwner" Background="#F3F5F4">
+ <Window.Resources>
+ <Style x:Key="Metric" TargetType="Border"><Setter Property="Background" Value="White"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="16"/><Setter Property="Margin" Value="0,0,10,12"/></Style>
+ <Style x:Key="MetricValue" TargetType="TextBlock"><Setter Property="FontSize" Value="26"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#12634B"/><Setter Property="Margin" Value="0,6,0,0"/></Style>
+</Window.Resources>
+<DockPanel Margin="18">
   <StackPanel DockPanel.Dock="Top">
-   <TextBlock Text="BÁO CÁO DOANH THU" FontSize="22" FontWeight="Bold" Margin="0,0,0,12"/>
+   <TextBlock Text="Báo cáo kinh doanh" FontSize="26" FontWeight="Bold" Foreground="#123D35"/>
+<TextBlock Text="Theo dõi bán hàng, hoàn tiền và đối soát ca" Foreground="#52665F" Margin="0,4,0,12"/>
+<WrapPanel Margin="0,0,0,10"><Button Content="Hôm nay" Tag="today" Click="QuickRange_Click" Margin="0,0,8,0"/><Button Content="7 ngày qua" Tag="week" Click="QuickRange_Click" Margin="0,0,8,0"/><Button Content="Tháng này" Tag="month" Click="QuickRange_Click"/><TextBlock x:Name="AppliedRange" Margin="16,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#52665F"/></WrapPanel>
    <WrapPanel><TextBlock Text="Từ " VerticalAlignment="Center"/><DatePicker x:Name="From" Width="135"/><TextBlock Text=" đến " VerticalAlignment="Center"/><DatePicker x:Name="To" Width="135"/>
     <ComboBox x:Name="ShiftFilter" Width="230" Margin="12,0" DisplayMemberPath="Label" SelectedValuePath="Id"/>
-    <Button Content="Xem báo cáo" Padding="10,5" Click="Refresh_Click"/><Button Content="Xuất CSV" Padding="10,5" Margin="10,0" Click="Export_Click"/>
+    <Button Background="#12634B" Foreground="White" Content="Xem báo cáo" Padding="10,5" Click="Refresh_Click"/><Button Content="Xuất CSV" Padding="10,5" Margin="10,0" Click="Export_Click"/>
    </WrapPanel>
-   <TextBlock x:Name="Summary" FontSize="16" FontWeight="SemiBold" Margin="0,16" TextWrapping="Wrap"/>
+
   </StackPanel>
-  <TabControl>
+  <TabControl Margin="0,14,0,0">
+<TabItem Header="Tổng quan"><ScrollViewer Background="#F3F5F4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="14">
+<UniformGrid Columns="2">
+ <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Doanh thu bán hàng"/><TextBlock x:Name="RevenueMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
+ <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Doanh thu thuần · sau hoàn tiền"/><TextBlock x:Name="NetMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
+ <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Đơn đã thanh toán"/><TextBlock x:Name="OrderMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
+ <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Giá trị đơn trung bình · trước hoàn"/><TextBlock x:Name="AverageMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
+</UniformGrid>
+<TextBlock x:Name="EmptyReport" Text="Chưa có giao dịch trong khoảng ngày và ca đã chọn." Visibility="Collapsed" Foreground="#52665F" Margin="0,4,0,12"/>
+<TextBlock x:Name="Summary" TextWrapping="Wrap" Margin="0,0,0,16"/>
+<TextBlock Text="Doanh thu thuần không phải lợi nhuận. Hoàn tiền được tính theo ngày hoàn; thu/chi ngoài bán hàng không cộng vào doanh thu." TextWrapping="Wrap" Foreground="#52665F" Margin="0,0,0,20"/>
+<DockPanel><Button DockPanel.Dock="Right" Content="Xuất CSV theo ngày" Click="ExportDaily_Click"/><StackPanel><TextBlock Text="Doanh thu theo ngày" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="Tối đa 31 ngày có giao dịch gần nhất trong bộ lọc; CSV gồm toàn bộ ngày có giao dịch. Xanh: bán hàng · Cam: hoàn tiền" TextWrapping="Wrap" Foreground="#52665F" Margin="0,4,12,12"/></StackPanel></DockPanel>
+<ItemsControl x:Name="DailyChart"><ItemsControl.ItemTemplate><DataTemplate>
+ <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,10"><StackPanel>
+  <DockPanel><TextBlock Text="{Binding Label}" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" HorizontalAlignment="Right"/></DockPanel>
+  <WrapPanel Margin="0,4,0,0"><TextBlock Text="{Binding SalesLabel}" Foreground="#12634B" Margin="0,0,16,0"/><TextBlock Text="{Binding RefundLabel}" Foreground="#92400E"/></WrapPanel><ProgressBar Value="{Binding SalesPercent, Mode=OneWay}" Maximum="100" Height="12" Foreground="#12634B" Background="#EFF4F1" BorderThickness="0" Margin="0,8,0,4" ToolTip="{Binding SalesLabel}" AutomationProperties.Name="{Binding SalesLabel}"/>
+  <ProgressBar Value="{Binding RefundPercent, Mode=OneWay}" Maximum="100" Height="8" Foreground="#B45309" Background="#FFF7ED" BorderThickness="0" ToolTip="{Binding RefundLabel}" AutomationProperties.Name="{Binding RefundLabel}"/>
+ </StackPanel></Border>
+</DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+<TextBlock Text="Top 5 món theo doanh thu · trước hoàn tiền" FontSize="20" FontWeight="SemiBold" Margin="0,24,0,12"/>
+<ItemsControl x:Name="ProductChart"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,0,0,14"><DockPanel><TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" HorizontalAlignment="Right"/></DockPanel><ProgressBar Value="{Binding Percent, Mode=OneWay}" Maximum="100" Height="12" Foreground="#12634B" Background="#EFF4F1" BorderThickness="0" Margin="0,6,0,0" AutomationProperties.Name="{Binding Detail}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+</StackPanel></ScrollViewer></TabItem>
    <TabItem Header="Đơn hàng"><Grid><Grid.RowDefinitions><RowDefinition Height="2*"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <DataGrid x:Name="Orders" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="OrderSelected"><DataGrid.Columns>
      <DataGridTextColumn Header="STT" Binding="{Binding DailyOrderNumberFormatted}"/><DataGridTextColumn Header="Thời gian" Binding="{Binding CreatedAt, StringFormat=dd/MM/yyyy HH:mm}" Width="160"/>

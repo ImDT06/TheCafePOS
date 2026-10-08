@@ -1,45 +1,29 @@
-﻿<Window x:Class="TheCafePOS_WPF.Views.Dialogs.PackagingStatusModal"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core"
- Title="Kho bao bì — nhập kho và kiểm kê" Height="720" Width="1080" MinHeight="580" MinWidth="850"
- WindowStartupLocation="CenterOwner" Background="#F1F5F9">
- <DockPanel Margin="20">
-  <StackPanel DockPanel.Dock="Top">
-   <TextBlock Text="KHO BAO BÌ" FontSize="22" FontWeight="Bold" Foreground="#0284C7"/>
-   <TextBlock x:Name="Summary" Margin="0,8,0,12"/>
-  </StackPanel>
-  <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-   <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,0,0,8"/>
-   <Button Content="Đóng" Width="110" Padding="8" HorizontalAlignment="Right" Click="BtnClose_Click"/>
-  </StackPanel>
-  <Grid><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-   <DataGrid x:Name="DgPackaging" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="PackagingSelected">
-    <DataGrid.RowStyle><Style TargetType="DataGridRow"><Style.Triggers><DataTrigger Binding="{Binding IsLowStock}" Value="True"><Setter Property="Background" Value="#FEF3C7"/><Setter Property="Foreground" Value="#92400E"/></DataTrigger></Style.Triggers></Style></DataGrid.RowStyle>
+<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.PackagingStatusModal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Kho bao bì" Width="1120" Height="740" MinWidth="900" MinHeight="600" WindowStartupLocation="CenterOwner">
+<DockPanel Margin="20">
+ <StackPanel DockPanel.Dock="Top"><TextBlock Text="Kho bao bì" Style="{StaticResource PageTitle}"/><TextBlock x:Name="Summary" Style="{StaticResource Hint}"/></StackPanel>
+ <DockPanel DockPanel.Dock="Bottom" Margin="0,14,0,0"><Button DockPanel.Dock="Right" Content="Đóng" Width="110" Click="BtnClose_Click"/><TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/></DockPanel>
+ <TabControl><TabItem Header="Tồn kho &amp; Cập nhật"><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="360"/></Grid.ColumnDefinitions>
+ <DockPanel Margin="0,0,16,0"><TextBlock DockPanel.Dock="Top" Text="Chọn bao bì để nhập kho hoặc kiểm kê. Dòng vàng cần bổ sung tồn." Style="{StaticResource Hint}"/><DataGrid x:Name="DgPackaging" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="PackagingSelected">
+    <DataGrid.RowStyle><Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}"><Style.Triggers><DataTrigger Binding="{Binding IsLowStock}" Value="True"><Setter Property="Background" Value="#FEF3C7"/><Setter Property="Foreground" Value="#92400E"/></DataTrigger></Style.Triggers></Style></DataGrid.RowStyle>
     <DataGrid.Columns>
      <DataGridTextColumn Header="Bao bì" Binding="{Binding Name}" Width="*"/>
      <DataGridTextColumn Header="Tồn hệ thống" Binding="{Binding StockQuantity}" Width="130"/>
      <DataGridTextColumn Header="Đơn vị" Binding="{Binding Unit}" Width="90"/>
      <DataGridTextColumn Header="Ngưỡng cảnh báo" Binding="{Binding WarningThreshold}" Width="140"/>
     </DataGrid.Columns>
-   </DataGrid>
-   <Border Grid.Row="1" Padding="12" Margin="0,12" Background="White">
-    <StackPanel>
-     <TextBlock x:Name="PermissionNote" Text="Chọn bao bì cần cập nhật. Mỗi lần lưu tạo một dòng lịch sử." Margin="0,0,0,8"/>
-     <StackPanel x:Name="Editor">
-      <WrapPanel>
-       <ComboBox x:Name="Operation" Width="150" SelectedIndex="0" SelectionChanged="PreviewChanged"><ComboBoxItem Content="Nhập kho"/><ComboBoxItem Content="Kiểm kê"/><ComboBoxItem Content="Điều chỉnh"/></ComboBox>
-       <TextBlock Text="Số lượng:" VerticalAlignment="Center" Margin="12,0,6,0"/>
-       <TextBox x:Name="Quantity" touch:TouchInput.AllowNegative="True" touch:TouchInput.Numeric="True" Width="130" Padding="5" TextChanged="PreviewChanged"/>
-       <TextBlock x:Name="Preview" VerticalAlignment="Center" Margin="12,0"/>
-      </WrapPanel>
-      <TextBlock Text="Nhập kho: số nhập thêm. Kiểm kê: tổng đếm thực tế. Điều chỉnh: số tăng (+) hoặc giảm (-)." TextWrapping="Wrap" Foreground="#64748B" Margin="0,8"/>
-      <DockPanel><Button DockPanel.Dock="Right" Content="Lưu thay đổi kho" Padding="14,6" Margin="12,0,0,0" Click="SaveStock_Click"/><TextBox x:Name="Reason" Padding="6" ToolTip="Lý do, nhà cung cấp hoặc số phiếu"/></DockPanel>
-      <TextBlock Text="Lý do / nhà cung cấp / số phiếu (bắt buộc)" FontSize="11" Foreground="#64748B"/>
-     </StackPanel>
-    </StackPanel>
-   </Border>
-   <DockPanel Grid.Row="2">
-    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8"><TextBlock Text="LỊCH SỬ BIẾN ĐỘNG" FontWeight="Bold"/><CheckBox x:Name="OnlySelected" Content="Chỉ bao bì đang chọn" Margin="18,0" Checked="HistoryFilterChanged" Unchecked="HistoryFilterChanged"/></WrapPanel>
-    <DataGrid x:Name="History" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"><DataGrid.Columns>
+   </DataGrid></DockPanel>
+ <Border Grid.Column="1" Style="{StaticResource SurfaceCard}"><DockPanel>
+ <StackPanel DockPanel.Dock="Top"><TextBlock Text="Cập nhật tồn kho" Style="{StaticResource SectionTitle}"/><TextBlock x:Name="PermissionNote" Text="Chọn bao bì cần cập nhật." Style="{StaticResource Hint}"/></StackPanel>
+ <DockPanel x:Name="Editor"><Button DockPanel.Dock="Bottom" Content="Lưu thay đổi kho" Style="{StaticResource PrimaryButton}" Click="SaveStock_Click" Margin="0,16,0,0"/>
+ <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+ <TextBlock Text="Loại thao tác"/><ComboBox x:Name="Operation" SelectedIndex="0" SelectionChanged="PreviewChanged" Margin="0,6,0,14"><ComboBoxItem Content="Nhập kho"/><ComboBoxItem Content="Kiểm kê"/><ComboBoxItem Content="Điều chỉnh"/></ComboBox>
+ <TextBlock Text="Số lượng"/><TextBox x:Name="Quantity" touch:TouchInput.Label="Số lượng bao bì" touch:TouchInput.Unit="đơn vị" touch:TouchInput.Maximum="2147483647" touch:TouchInput.AllowNegative="True" touch:TouchInput.Numeric="True" TextChanged="PreviewChanged" Margin="0,6,0,12" FontSize="22"/>
+ <Border Background="#EAF3ED" Padding="12" CornerRadius="8"><TextBlock x:Name="Preview" TextWrapping="Wrap" FontWeight="SemiBold"/></Border>
+ <TextBlock Text="Nhập kho: số nhập thêm. Kiểm kê: tổng đếm thực tế. Điều chỉnh: số tăng hoặc giảm." Style="{StaticResource Hint}"/>
+ <TextBlock Text="Lý do / nhà cung cấp / số phiếu" TextWrapping="Wrap"/><TextBox x:Name="Reason" MinHeight="80" TextWrapping="Wrap" MaxLength="300" Margin="0,6,0,0"/>
+ </StackPanel></ScrollViewer></DockPanel>
+ </DockPanel></Border></Grid></TabItem>
+ <TabItem Header="Lịch sử biến động"><DockPanel Margin="0,12,0,0"><CheckBox DockPanel.Dock="Top" x:Name="OnlySelected" Content="Chỉ xem bao bì đang chọn" Checked="HistoryFilterChanged" Unchecked="HistoryFilterChanged" Margin="0,0,0,12"/><DataGrid x:Name="History" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"><DataGrid.Columns>
      <DataGridTextColumn Header="Thời gian" Binding="{Binding CreatedAt, StringFormat=dd/MM/yyyy HH:mm:ss}" Width="155"/>
      <DataGridTextColumn Header="Bao bì" Binding="{Binding PackagingName}" Width="160"/>
      <DataGridTextColumn Header="Loại" Binding="{Binding Type}" Width="90"/>
@@ -48,10 +32,5 @@
      <DataGridTextColumn Header="Sau" Binding="{Binding After}" Width="60"/>
      <DataGridTextColumn Header="Nhân viên" Binding="{Binding Operator}" Width="100"/>
      <DataGridTextColumn Header="Lý do" Binding="{Binding Reason}" Width="*"/>
-    </DataGrid.Columns></DataGrid>
-   </DockPanel>
-  </Grid>
- </DockPanel>
-</Window>
-
-
+    </DataGrid.Columns></DataGrid></DockPanel></TabItem></TabControl>
+</DockPanel></Window>

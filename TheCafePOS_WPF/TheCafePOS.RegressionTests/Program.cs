@@ -4,6 +4,9 @@ using TheCafePOS_WPF.Services;
 
 if (args.Length < 2) throw new ArgumentException("Usage: <isolated data directory> <create|reload>");
 Environment.SetEnvironmentVariable("THECAFEPOS_DATA_DIR", Path.GetFullPath(args[0]));
+if (args[1] == "americano") { AmericanoRegression.Run(); return; }
+if (args[1] == "menu-options") { MenuOptionsRegression.Run(); return; }
+if (args[1] == "report-dashboard") { ReportDashboardRegression.Run(); return; }
 if (args[1] is "finance" or "finance-reload") { FinanceRegression.Run(args[1] == "finance-reload"); return; }
 if (args[1] is "session" or "session-reload") { SessionRegression.Run(args[1] == "session-reload"); return; }
 int checks = 0;

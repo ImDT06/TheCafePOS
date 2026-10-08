@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using TheCafePOS_WPF.Models;
@@ -22,6 +22,7 @@ public partial class OptionCustomModal : Window
     private int _quantity, _sugar, _ice;
     private int _toppingPage, _toppingsPerPage = 6;
     private string _size = "";
+    private string? _sugarChoice, _iceChoice;
     private bool _ready;
     public OrderItem ResultItem { get; private set; } = null!;
     public OptionCustomModal(Product product, int dailyOrderNumber = 1, OrderItem? existing = null, bool singleUnit = false)
@@ -35,16 +36,18 @@ public partial class OptionCustomModal : Window
         Height = Math.Min(Height, MaxHeight); Width = Math.Min(Width, MaxWidth);
         Heading.Text = product.Name;
         ContextLabel.Text = singleUnit ? "TÁCH 1 SẢN PHẨM ĐỂ CHỈNH RIÊNG" : _editing ? "CHỈNH SỬA MÓN TRONG GIỎ" : $"THÊM MÓN · ĐƠN #{dailyOrderNumber:D2}";
-        PriceNotice.Text = _editing ? "Giá khi lưu được tính theo thực đơn hiện tại." : $"Giá từ {product.BasePrice + (product.IsTopping ? 0 : product.Sizes.Select(s => s.ExtraPrice).DefaultIfEmpty(0).Min()):N0}đ";
+        PriceNotice.Text = _editing ? "Giá khi lưu được tính theo thực đơn hiện tại." : $"Giá từ {product.BasePrice + (!product.IsBeverage ? 0 : product.Sizes.Select(s => s.ExtraPrice).DefaultIfEmpty(0).Min()):N0}đ";
         _quantity = singleUnit ? 1 : Math.Clamp(existing?.Quantity ?? 1, 1, 999);
-        _size = product.Sizes.FirstOrDefault(s => s.Name == existing?.Size)?.Name ?? product.Sizes.FirstOrDefault()?.Name ?? "";
+        _size = product.Sizes.FirstOrDefault(s => s.Name == existing?.Size)?.Name ?? product.Sizes.FirstOrDefault(s => s.Name == product.DefaultSize)?.Name ?? product.Sizes.FirstOrDefault()?.Name ?? "";
         _sugar = OrderConfigurationService.Levels.Contains(existing?.SugarPercent ?? product.DefaultSugar) ? existing?.SugarPercent ?? product.DefaultSugar : product.DefaultSugar;
         _ice = OrderConfigurationService.Levels.Contains(existing?.IcePercent ?? product.DefaultIce) ? existing?.IcePercent ?? product.DefaultIce : product.DefaultIce;
+        _sugarChoice = product.SugarChoices?.Contains(existing?.SugarChoice ?? "") == true ? existing!.SugarChoice : product.DefaultSugarChoice;
+        _iceChoice = product.IceChoices?.Contains(existing?.IceChoice ?? "") == true ? existing!.IceChoice : product.DefaultIceChoice;
         Note.Text = existing?.Note ?? "";
-        DrinkOptions.Visibility = product.IsTopping ? Visibility.Collapsed : Visibility.Visible;
+        DrinkOptions.Visibility = !product.IsBeverage ? Visibility.Collapsed : Visibility.Visible;
         SugarPanel.Visibility = product.AllowSugar ? Visibility.Visible : Visibility.Collapsed;
         IcePanel.Visibility = product.AllowIce ? Visibility.Visible : Visibility.Collapsed;
-        QuantityLabel.Text = product.IsTopping ? "Số phần" : "Số ly";
+        QuantityLabel.Text = !product.IsBeverage ? "Số phần" : "Số ly";
         foreach (var size in product.Sizes)
         {
             var label = new StackPanel();
@@ -55,17 +58,24 @@ public partial class OptionCustomModal : Window
         foreach (int level in OrderConfigurationService.Levels)
         {
             string label = level == 0 ? "Không" : $"{level}%";
-            AddChoice(SugarChoices, "sugar", label, level == _sugar, () => _sugar = level);
-            AddChoice(IceChoices, "ice", label, level == _ice, () => _ice = level);
+            if (product.SugarChoices is null) AddChoice(SugarChoices, "sugar", label, level == _sugar, () => _sugar = level);
+            if (product.IceChoices is null) AddChoice(IceChoices, "ice", label, level == _ice, () => _ice = level);
         }
-        foreach (var topping in DataStoreService.Instance.Products.Where(p => !product.IsTopping && p.IsTopping && p.IsActive && product.AllowedToppingIds.Contains(p.Id) && DataStoreService.Instance.Categories.Any(c => c.Id == p.CategoryId && c.IsActive)))
+        foreach (var choice in product.SugarChoices ?? new())
+            AddChoice(SugarChoices, "sugar", choice, choice == _sugarChoice, () => _sugarChoice = choice);
+        foreach (var choice in product.IceChoices ?? new())
+            AddChoice(IceChoices, "ice", choice, choice == _iceChoice, () => _iceChoice = choice);
+        foreach (var topping in DataStoreService.Instance.Products.Where(p => product.IsBeverage && p.IsTopping && p.IsActive && product.AllowedToppingIds.Contains(p.Id) && DataStoreService.Instance.Categories.Any(c => c.Id == p.CategoryId && c.IsActive)))
             AddTopping(topping, existing?.SelectedToppings.FirstOrDefault(t => t.ProductId == topping.Id)?.Quantity ?? 0);
         if (_toppings.Count == 0) { ToppingSection.Visibility = Visibility.Collapsed; ToppingColumn.Width = new GridLength(0); }
         bool missingTopping = existing?.SelectedToppings.Any(t => !_toppings.Any(c => c.Product.Id == t.ProductId)) == true;
         bool missingSize = existing is { IsBeverage: true } && existing.Size != _size;
-        if (missingTopping || missingSize)
+        bool changedOptions = existing != null &&
+            ((product.AllowSugar && product.SugarChoices != null && existing.SugarChoice != _sugarChoice) ||
+             (product.AllowIce && product.IceChoices != null && existing.IceChoice != _iceChoice));
+        if (missingTopping || missingSize || changedOptions)
         {
-            ChangeNotice.Text = "Một số lựa chọn cũ đã ngừng bán. Vui lòng kiểm tra size và topping trước khi lưu.";
+            ChangeNotice.Text = "Tùy chọn món đã thay đổi. Vui lòng kiểm tra size, đường, đá và topping trước khi lưu.";
             ChangeNotice.Visibility = Visibility.Visible;
         }
         _ready = true; UpdateTotal(); ShowToppingPage();
@@ -83,6 +93,7 @@ public partial class OptionCustomModal : Window
     }
     private void AddChoice(Panel panel, string group, object content, bool selected, Action select)
     {
+        if (content is string text) content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center };
         var button = new RadioButton { Content = content, GroupName = group, IsChecked = selected, Style = (Style)FindResource("Choice") };
         button.Checked += (_, _) => { select(); if (_ready) UpdateTotal(); };
         panel.Children.Add(button);
@@ -91,8 +102,12 @@ public partial class OptionCustomModal : Window
     {
         var surface = new Border { CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(6), Margin = new Thickness(0, 0, 6, 6) };
         var content = new StackPanel(); surface.Child = content;
-        content.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 34, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });
-        content.Children.Add(new TextBlock { Text = $"+{product.BasePrice:N0}đ / phần", FontSize = 11, Foreground = Brushes.SlateGray, Margin = new Thickness(0, 0, 0, 2) });
+        var header = new DockPanel();
+        var photo = MainWindow.LoadProductImage(product.ImageUrl);
+        if (photo != null) header.Children.Add(new Image { Source = photo, Width = 40, Height = 40, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 6, 0) });
+        var labels = new StackPanel(); header.Children.Add(labels); content.Children.Add(header);
+        labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 34, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });
+        labels.Children.Add(new TextBlock { Text = $"+{product.BasePrice:N0}đ / phần", FontSize = 11, Foreground = Brushes.SlateGray, Margin = new Thickness(0, 0, 0, 2) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var minus = new Button { Content = "−", Style = (Style)FindResource("Action"), ToolTip = "Bớt " + product.Name };
         var label = new TextBlock { Width = 40, FontSize = 16, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
@@ -136,7 +151,7 @@ public partial class OptionCustomModal : Window
     private void PreviousToppings_Click(object sender, RoutedEventArgs e) { _toppingPage--; ShowToppingPage(); }
     private void NextToppings_Click(object sender, RoutedEventArgs e) { _toppingPage++; ShowToppingPage(); }
     private OrderItem BuildItem() => OrderConfigurationService.Create(_product, _size, _sugar, _ice, _quantity,
-        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)), Note.Text, DataStoreService.Instance.Products);
+        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)), Note.Text, DataStoreService.Instance.Products, _sugarChoice, _iceChoice);
     private void MinusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Max(1, _quantity - 1); UpdateTotal(); }
     private void PlusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Min(999, _quantity + 1); UpdateTotal(); }
     private void UpdateTotal()
@@ -150,15 +165,15 @@ public partial class OptionCustomModal : Window
         foreach (var topping in _toppings)
         {
             topping.Label.Text = topping.Count.ToString(); topping.Minus.IsEnabled = topping.Count > 0; topping.Plus.IsEnabled = topping.Count < 10;
-            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#F0F9FF" : "#FFFFFF"));
-            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#7DD3FC" : "#E2E8F0"));
+            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#EFF7F2" : "#FFFFFF"));
+            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#12634B" : "#E2E8F0"));
         }
         try
         {
             var item = BuildItem();
             Total.Text = $"{item.TotalPrice:N0}đ";
-            Breakdown.Text = $"{item.UnitPrice:N0}đ × {item.Quantity} {(_product.IsTopping ? "phần" : "ly")}";
-            ConfirmButton.Content = _singleUnit ? "Tách và lưu 1 sản phẩm" : _editing ? "Lưu thay đổi" : $"Thêm {_quantity} {(_product.IsTopping ? "phần" : "ly")} vào đơn";
+            Breakdown.Text = $"{item.UnitPrice:N0}đ × {item.Quantity} {(!_product.IsBeverage ? "phần" : "ly")}";
+            ConfirmButton.Content = _singleUnit ? "Tách và lưu 1 sản phẩm" : _editing ? "Lưu thay đổi" : $"Thêm {_quantity} {(!_product.IsBeverage ? "phần" : "ly")} vào đơn";
             ConfirmButton.IsEnabled = true; Error.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex) { Total.Text = "—"; Breakdown.Text = ""; ConfirmButton.IsEnabled = false; Error.Text = ex.Message; Error.Visibility = Visibility.Visible; }

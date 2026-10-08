@@ -1,9 +1,9 @@
-﻿<Application x:Class="TheCafePOS_WPF.App"
+<Application x:Class="TheCafePOS_WPF.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:TheCafePOS_WPF"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Themes/Touch.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary>
+        <ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Themes/Touch.xaml"/><ResourceDictionary Source="Themes/Workspace.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary>
     </Application.Resources>
 </Application>

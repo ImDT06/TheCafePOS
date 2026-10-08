@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using TheCafePOS_WPF.Models;
 
@@ -7,6 +7,7 @@ namespace TheCafePOS_WPF.Services;
 public class StoreState
 {
     public int MenuSchemaVersion { get; set; }
+    public DraftOrder? Draft { get; set; }
     public List<RefundEntry> Refunds { get; set; } = new();
     public List<CashEntry> CashEntries { get; set; } = new();
     public List<Category> Categories { get; set; } = new();
@@ -24,9 +25,10 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 1, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements };
     private void Restore(StoreState state)
     {
+        Draft = state.Draft;
         Categories = state.Categories; Products = state.Products; PackagingInventory = state.Packaging;
         CompletedOrders = new ObservableCollection<Order>(state.Orders); Shifts = state.Shifts;
         CurrentShift = state.CurrentShift; StickerLogs = state.StickerLogs;
@@ -49,7 +51,42 @@ public partial class DataStoreService
                 }
                 else product.AllowedToppingIds = new List<string>(toppingIds);
             }
+        }
+        if (state is null || state.MenuSchemaVersion < 2)
+        {
+            AddAmericanoMenu();
+        }
+        if (state is null || state.MenuSchemaVersion < 3)
+        {
+            ImportCoffeeHouseMenu();
+        }
+        if (state is null || state.MenuSchemaVersion < 4)
+        {
+            ImportCoffeeHouseOptions();
             Save();
+        }
+        NormalizeProductImagePaths();
+    }
+    private void AddAmericanoMenu()
+    {
+        var category = Categories.FirstOrDefault(c => c.Name.Trim().Equals("Cà phê", StringComparison.OrdinalIgnoreCase));
+        if (category is null)
+        {
+            category = new Category { Name = "Cà phê", DisplayOrder = Categories.Select(c => c.DisplayOrder).DefaultIfEmpty(0).Max() + 1 };
+            Categories.Add(category);
+        }
+        foreach (var (name, hot, image) in new[] {
+            ("Americano Classic", false, "americano-classic.png"),
+            ("Americano Nóng", true, "americano-nong.png") })
+        {
+            // Preserve products the shop has already configured; run only once per database.
+            if (Products.Any(p => p.Name.Trim().Equals(name, StringComparison.OrdinalIgnoreCase))) continue;
+            Products.Add(new Product {
+                CategoryId = category.Id, Name = name, BasePrice = 55000,
+                ImageUrl = "Assets/Products/" + image, ColorHex = "#6F4935",
+                AllowIce = !hot, DefaultIce = hot ? 0 : 100,
+                Sizes = new() { new() { Name = "M", ExtraPrice = 0, PackagingId = "pack-1" } }
+            });
         }
     }
     public void Save() => LocalDatabase.Instance.Write("store", Snapshot());
@@ -81,7 +118,7 @@ public partial class DataStoreService
         if (actualCash < 0) throw new InvalidOperationException("Tiền thực tế không được âm.");
         Mutate(() => { CurrentShift.ActualCash = actualCash; CurrentShift.ExpectedCash = ExpectedCash; CurrentShift.EndTime = DateTime.Now; CurrentShift.Status = "Closed"; Shifts.Add(CurrentShift); });
     }
-    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false)
+    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi")
     {
         RequireOpenShift();
         var existing = CompletedOrders.FirstOrDefault(o => o.Id == checkoutId);
@@ -92,9 +129,13 @@ public partial class DataStoreService
         foreach (var item in items)
         {
             var product = Products.Single(p => p.Id == item.ProductId);
-            if (item.Quantity > 999 || product.IsTopping && !product.SoldSeparately || item.IsBeverage == product.IsTopping)
+            if (item.Quantity > 999 || product.IsTopping && !product.SoldSeparately || item.IsBeverage != product.IsBeverage)
                 throw new InvalidOperationException("Loại món hoặc số lượng đã thay đổi. Vui lòng chọn lại món.");
-            if (!product.IsTopping && !product.Sizes.Any(s => s.Name == item.Size)) throw new InvalidOperationException("Size đã ngừng bán. Vui lòng sửa món.");
+            if (product.IsBeverage && !product.Sizes.Any(s => s.Name == item.Size)) throw new InvalidOperationException("Size đã ngừng bán. Vui lòng sửa món.");
+            if (product.IsBeverage &&
+                ((product.AllowSugar && product.SugarChoices != null && !product.SugarChoices.Contains(item.SugarChoice)) ||
+                 (product.AllowIce && product.IceChoices != null && !product.IceChoices.Contains(item.IceChoice))))
+                throw new InvalidOperationException("Tùy chọn đường/đá đã thay đổi. Vui lòng sửa món trước khi thanh toán.");
             if (item.SelectedToppings.Any(t => !product.AllowedToppingIds.Contains(t.ProductId) || !Products.Any(p => p.Id == t.ProductId && p.IsTopping && p.IsActive && Categories.Any(c => c.Id == p.CategoryId && c.IsActive))))
                 throw new InvalidOperationException("Topping đã ngừng bán hoặc không còn áp dụng. Vui lòng sửa món.");
         }
@@ -103,8 +144,9 @@ public partial class DataStoreService
         if (method is not ("Cash" or "VietQR")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
         if (method == "Cash" && cash < total) throw new InvalidOperationException("Số tiền khách đưa chưa đủ hoặc không hợp lệ.");
         if (method == "VietQR" && (!qrApproved || !AuthService.Instance.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
-        var order = new Order { Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
-        foreach (var item in items) item.OrderId = order.Id;
+        if (serviceType is not ("Mang đi" or "Tại chỗ")) throw new InvalidOperationException("Chọn loại đơn hợp lệ.");
+        var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
+        foreach (var item in items) { item.OrderId = order.Id; item.ReadyQuantity = item.DeliveredQuantity = 0; }
         Mutate(() =>
         {
             var stockBefore = PackagingInventory.ToDictionary(p => p.Id, p => p.StockQuantity);
@@ -113,6 +155,7 @@ public partial class DataStoreService
             foreach (var packaging in PackagingInventory.Where(p => p.StockQuantity != stockBefore[p.Id]))
                 RecordStockMovement(packaging, stockBefore[packaging.Id], "Bán hàng", $"Đơn #{order.DailyOrderNumber:D2}", order.Id);
             CompletedOrders.Add(order);
+            if (Draft?.Id == checkoutId) Draft = null;
         });
         return order;
     }
@@ -121,7 +164,11 @@ public partial class DataStoreService
         AuthService.Instance.RequireManager();
         if (string.IsNullOrWhiteSpace(product.Name) || product.BasePrice <= 0 || product.BasePrice != decimal.Truncate(product.BasePrice) || !Categories.Any(c => c.Id == product.CategoryId)) throw new InvalidOperationException("Nhập tên món, giá nguyên dương và danh mục hợp lệ.");
         if (!OrderConfigurationService.Levels.Contains(product.DefaultSugar) || !OrderConfigurationService.Levels.Contains(product.DefaultIce)) throw new InvalidOperationException("Mức đường/đá mặc định không hợp lệ.");
-        if (!product.IsTopping && (product.Sizes.Count == 0 || product.Sizes.Select(s => s.Name).Distinct().Count() != product.Sizes.Count || product.Sizes.Any(s => string.IsNullOrWhiteSpace(s.Name) || s.ExtraPrice < 0 || s.ExtraPrice != decimal.Truncate(s.ExtraPrice) || !PackagingInventory.Any(p => p.Id == s.PackagingId)))) throw new InvalidOperationException("Cần ít nhất một size, phụ thu nguyên không âm và bao bì hợp lệ.");
+        if ((product.AllowSugar && product.SugarChoices != null && !product.SugarChoices.Contains(product.DefaultSugarChoice)) ||
+            (product.AllowIce && product.IceChoices != null && !product.IceChoices.Contains(product.DefaultIceChoice)))
+            throw new InvalidOperationException("Lựa chọn đường/đá mặc định phải nằm trong tùy chọn của món.");
+        if (product.IsTopping && product.IsRetailItem) throw new InvalidOperationException("Chọn một loại: topping hoặc hàng bán lẻ.");
+        if (product.IsBeverage && (product.Sizes.Count == 0 || product.Sizes.Select(s => s.Name).Distinct().Count() != product.Sizes.Count || product.Sizes.Any(s => string.IsNullOrWhiteSpace(s.Name) || s.ExtraPrice < 0 || s.ExtraPrice != decimal.Truncate(s.ExtraPrice) || !PackagingInventory.Any(p => p.Id == s.PackagingId)))) throw new InvalidOperationException("Cần ít nhất một size, phụ thu nguyên không âm và bao bì hợp lệ.");
         if (product.AllowedToppingIds.Any(id => id == product.Id || !Products.Any(p => p.Id == id && p.IsTopping))) throw new InvalidOperationException("Danh sách topping không hợp lệ.");
         Mutate(() => { Products.RemoveAll(p => p.Id == product.Id); Products.Add(product); });
     }

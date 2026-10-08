@@ -2,6 +2,10 @@ using System.Globalization;
 using TheCafePOS_WPF.Models;
 namespace TheCafePOS_WPF.Services;
 public record ProductSales(string ProductName, int Quantity, decimal Revenue);
+public record DailySales(DateTime Date, int OrderCount, decimal Revenue, decimal Refunded)
+{
+    public decimal NetRevenue => Revenue - Refunded;
+}
 public record SalesReport(List<Order> Orders, List<ProductSales> Products, decimal Revenue, decimal Cash, decimal Transfer)
 {
     public List<RefundEntry> Refunds { get; init; } = new();
@@ -12,6 +16,17 @@ public record SalesReport(List<Order> Orders, List<ProductSales> Products, decim
     public decimal TransferRefunded => Refunds.Where(r => r.Method == "VietQR").Sum(r => r.Amount);
     public decimal CashIn => CashEntries.Where(e => e.Type == "In").Sum(e => e.Amount);
     public decimal CashOut => CashEntries.Where(e => e.Type == "Out").Sum(e => e.Amount);
+    public decimal AverageOrderValue => Orders.Count == 0 ? 0 : Revenue / Orders.Count;
+    public List<DailySales> Daily
+    {
+        get
+        {
+            var sales = Orders.GroupBy(o => o.CreatedAt.Date).ToDictionary(g => g.Key, g => (Count: g.Count(), Total: g.Sum(o => o.TotalAmount)));
+            var refunds = Refunds.GroupBy(r => r.CreatedAt.Date).ToDictionary(g => g.Key, g => g.Sum(r => r.Amount));
+            return sales.Keys.Union(refunds.Keys).OrderBy(d => d).Select(d =>
+                new DailySales(d, sales.GetValueOrDefault(d).Count, sales.GetValueOrDefault(d).Total, refunds.GetValueOrDefault(d))).ToList();
+        }
+    }
 }
 public static class ReportService
 {
@@ -31,6 +46,10 @@ public static class ReportService
         if (value.TrimStart().StartsWith('=') || value.TrimStart().StartsWith('+') || value.TrimStart().StartsWith('-') || value.TrimStart().StartsWith('@')) value = "'" + value;
         return "\"" + value.Replace("\"", "\"\"") + "\"";
     }
+    public static string ToDailyCsv(SalesReport report) => "Ngày,Số đơn,Doanh thu bán hàng,Hoàn tiền,Doanh thu thuần\r\n" +
+        string.Join("\r\n", report.Daily.Select(d => string.Join(",", d.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            d.OrderCount.ToString(CultureInfo.InvariantCulture), d.Revenue.ToString(CultureInfo.InvariantCulture),
+            d.Refunded.ToString(CultureInfo.InvariantCulture), d.NetRevenue.ToString(CultureInfo.InvariantCulture))));
     public static string ToCsv(SalesReport report)
     {
         string Row(string type, string id, DateTime at, string method, decimal amount, string shift, string orderId, string reason, string actor, string approver, string reference = "") => string.Join(",", Cell(type), Cell(id), Cell(at.ToString("yyyy-MM-dd HH:mm:ss")), Cell(method), amount.ToString(CultureInfo.InvariantCulture), Cell(shift), Cell(orderId), Cell(reason), Cell(actor), Cell(approver), Cell(reference));

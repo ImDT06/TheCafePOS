@@ -121,3 +121,42 @@ Trong môi trường triển khai hiện tại, build Release thành công. Vi�
 
 
 Cấu hình Supabase dự phòng được đọc từ biến môi trường THECAFEPOS_SUPABASE_URL và THECAFEPOS_SUPABASE_KEY; không lưu khóa trong mã nguồn. Luồng bán hàng hiện tại dùng SQLite, không cần hai biến này.
+
+## Cập nhật giao diện POS (08/10/2026)
+
+- Màn hình bán hàng chia thực đơn co giãn và đơn hàng rộng cố định; vùng tổng tiền, tiền khách đưa và thanh toán luôn ở cuối cột đơn hàng. Kích thước cửa sổ tối thiểu 960×680.
+- Thẻ món tự chia cột theo chiều rộng; hiển thị số kết quả và hướng dẫn khi không tìm thấy món. Nút xem tất cả xóa cả bộ lọc danh mục và từ khóa.
+- Tông xanh đậm dùng cho thao tác chính; VietQR là lựa chọn phụ rõ ràng; màu đỏ dành cho xóa. Giỏ trống vô hiệu hóa giữ đơn/thanh toán. Vùng chạm tối thiểu 48 và trạng thái focus bàn phím được giữ trong theme chung.
+- Đồng bộ màu nhấn ở đăng nhập và các hộp thoại. Đây là áp dụng nguyên tắc UX, không phải chứng nhận tuân thủ toàn bộ WCAG.
+- Tham chiếu: [WCAG 2.2](https://www.w3.org/TR/WCAG22/) về tương phản, vùng thao tác và focus; [Shopify POS smart grid](https://help.shopify.com/en/manual/sell-in-person/shopify-pos/customize-pos/smart-grid-management/edit) về truy cập nhanh sản phẩm và thao tác thường dùng.
+- Kiểm tra đợt này: build Release thành công; 134 kiểm tra nghiệp vụ, khởi động lại, tài chính và phiên đăng nhập đạt. Kiểm tra phiên cần chạy ngoài sandbox để Windows DPAPI truy cập hồ sơ người dùng. Dựng ảnh WPF ở 1240×780 và 960×680 để rà giỏ trống/có món. Chưa kiểm tra cảm ứng vật lý hoặc DPI thực tế. NuGet báo NU1900 khi không truy cập được dữ liệu cảnh báo bảo mật qua mạng trong lượt dựng preview.
+
+### Tổng quan báo cáo
+
+Trong **Tiện ích → Báo cáo → Tổng quan**, dùng Hôm nay, 7 ngày qua (gồm hôm nay), Tháng này hoặc chọn khoảng ngày và ca rồi bấm Xem báo cáo. Bộ lọc nhanh trở về Tất cả ca. Dòng Đang xem ghi rõ bộ lọc đã áp dụng.
+
+- Thẻ số liệu: doanh thu bán hàng, doanh thu thuần sau hoàn, số đơn hoàn tất và giá trị đơn trung bình trước hoàn.
+- Biểu đồ bán hàng/hoàn tiền theo ngày dùng cùng thang đo; hiển thị tối đa 31 ngày có giao dịch gần nhất trong khoảng lọc, bao gồm ngày chỉ hoàn tiền. Ngày không có bán/hoàn không có cột. Doanh thu thuần có thể âm.
+- Top 5 món xếp theo doanh thu trước hoàn. Thu/chi ngoài bán hàng hiển thị riêng và không cộng vào doanh thu. Chưa có giá vốn nên chưa tính lợi nhuận.
+- Xuất CSV theo ngày gồm toàn bộ ngày có bán/hoàn trong bộ lọc; Xuất CSV ở thanh trên vẫn xuất sổ giao dịch chi tiết.
+- Kiểm tra: 7 kiểm tra tổng hợp mới và 124 kiểm tra hồi quy nghiệp vụ/khởi động lại/tài chính đạt; dựng giao diện WPF có dữ liệu ở vùng 1180×750 và 900×590. Build Release thành công; môi trường có cảnh báo NU1900 do không truy cập được nguồn kiểm tra bảo mật NuGet.
+
+### Menu The Coffee House và ảnh sản phẩm
+
+Đã nhập snapshot menu công khai ngày 08/10/2026: **79 món/hàng hóa, 22 topping, 14 nhóm**, kèm ảnh đóng gói offline. Chọn món rồi chọn size theo bảng giá chính thức; giá trên thẻ là size mặc định. Các món mẫu cũ được ẩn khi nâng cấp một lần, lịch sử đơn được giữ. Đọc [nguồn và phạm vi menu](TheCafePOS_WPF/TheCafePOS_WPF/Assets/Menu/README.md) và [bảng tên/giá/size/ảnh](TheCafePOS_WPF/TheCafePOS_WPF/Assets/Menu/menu-reference.csv). Hai ảnh Matcha Layers Dâu/Xoài chưa có giá xác minh trong menu nguồn nên chưa đưa vào bán.
+
+Ảnh đã được gom trực tiếp vào `Images`, thống nhất tên `kebab-case` (ví dụ `americano-classic.png`, `tra-dao-cam-sa-da.png`). 83 ảnh được kiểm tra SHA256 trước/sau, nội dung không thay đổi. Các đường dẫn ảnh cũ trong cơ sở dữ liệu được chuyển bằng bảng `Assets/Menu/image-renames.json`, không nhập lại menu hoặc ghi đè giá.
+
+### Đồng bộ giao diện tiện ích
+
+Các màn hình quản trị, tài chính, kho bao bì, đơn tạm giữ, đăng nhập và hộp thoại nghiệp vụ dùng chung theme Workspace với màn hình chính. Menu tiện ích chia nhóm ca làm việc và vận hành cửa hàng; quản trị có tìm món; biểu mẫu dài cuộn độc lập với nút xác nhận cố định. Kho bao bì tách tồn kho và lịch sử thành hai tab. Các hộp thoại tạo bằng C# dùng DialogLayout để thống nhất bố cục.
+
+Kiểm tra: build thành công; 131 kiểm tra hồi quy nghiệp vụ đạt. Đã dựng 16 ảnh bố cục XAML tĩnh, gồm các kích thước thu nhỏ. Chưa kiểm tra tương tác đầy đủ trên bộ preview mới vì Windows Application Control chặn DLL preview; ảnh tĩnh không thay thế kiểm tra thao tác trực tiếp. Cảnh báo NU1900 do không truy cập được nguồn kiểm tra bảo mật NuGet.
+
+### Rà giao diện và trạng thái nhập liệu
+
+Đã chạy được preview WPF thực: 14 hộp thoại cùng các tab và màn hình chính ở chiều rộng 960/1240 px, tạo 32 ảnh kiểm tra. Đã sửa chữ gợi ý tìm kiếm chồng con trỏ, viền focus làm xê dịch nội dung, khoảng trống thẻ món/ghi chú, vùng ảnh QR trống khi lỗi và nhãn vai trò nhân viên. Kiểm tra focus, nhập tiếng Việt, chuỗi trắng, xóa/blur, vị trí nội dung, cuộn danh mục và trạng thái đầu/cuối đã qua. Bộ kiểm tra lưu ở scripts/ui-smoke; chạy scripts/test-ui.ps1. Dùng dữ liệu riêng trong artifacts, không thay dữ liệu cửa hàng. Chưa kiểm chứng toàn bộ mức DPI và thiết bị cảm ứng thực tế.
+
+### Bàn phím nhập tiền
+
+Ô số cho gõ trực tiếp khi dùng chuột/bàn phím; nút bàn phím bên phải mở bộ nhập số, chạm cảm ứng cũng mở bộ nhập. Bàn phím dùng ô nhập có thể sửa/chọn/dán, phím số lớn, 00/000, xóa lùi, Enter áp dụng và Esc hủy. Chọn sẵn giá trị ban đầu để nhập thay; có bản đọc tiền theo vi-VN. Tiền khách đưa hiển thị cần thu, tiền thối/còn thiếu, các nút đặt mệnh giá và đúng số. Áp dụng không thanh toán; hủy không đổi ô nguồn. Hoàn tiền bị giới hạn theo số còn hoàn, số lượng kho theo Int32, chỉ điều chỉnh kho được nhập âm. Tiền đầu ca/chốt ca/giá/phụ thu có tiêu đề riêng; chốt ca mù không hiện tiền dự kiến. Build Release sạch và 17 kiểm tra keypad mới qua; chưa thử thao tác chạm trên thiết bị vật lý.

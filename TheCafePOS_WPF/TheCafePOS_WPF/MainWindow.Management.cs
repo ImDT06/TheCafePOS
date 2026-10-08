@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Views.Dialogs;
@@ -51,13 +51,14 @@ public partial class MainWindow
     {
         UtilitiesPopup.IsOpen = false;
         if (DataStoreService.Instance.CurrentShift.Status == "Open") { MessageBox.Show(this, "Ca hiện tại chưa đóng."); return; }
-        var window = new Window { Owner = this, Title = "Mở ca làm việc", Width = 380, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var window = new Window { Owner = this, Title = "Mở ca làm việc", Width = 500, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new Thickness(24) };
         panel.Children.Add(new TextBlock { Text = "Tiền mặt đầu ca (đồng)" });
         var input = new TextBox { Text = "0", Margin = new Thickness(0, 10, 0, 10), Padding = new Thickness(8) };
         TheCafePOS_WPF.Core.TouchInput.SetNumeric(input, true);
+        Core.TouchInput.SetLabel(input, "Tiền mặt đầu ca");
         panel.Children.Add(input);
-        var submit = new Button { Content = "Mở ca", Padding = new Thickness(8), IsDefault = true };
+        var submit = new Button { Content = "Bắt đầu ca", Style = (Style)FindResource("PrimaryButton"), IsDefault = true };
         submit.Click += (_, _) =>
         {
             try
@@ -67,7 +68,10 @@ public partial class MainWindow
             }
             catch (Exception ex) { MessageBox.Show(window, ex.Message); }
         };
-        panel.Children.Add(submit); window.Content = panel; window.ShowDialog();
+        var actions = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
+        actions.Children.Add(new Button { Content = "Hủy", IsCancel = true, Margin = new Thickness(0, 0, 12, 0) }); actions.Children.Add(submit);
+        Core.DialogLayout.Apply(window, "Mở ca làm việc", "Đếm và nhập tiền mặt có sẵn trong ngăn kéo", panel, actions);
+        window.ShowDialog();
     }
 }
 

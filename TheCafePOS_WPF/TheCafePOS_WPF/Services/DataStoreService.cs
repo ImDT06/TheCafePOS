@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -34,9 +34,10 @@ namespace TheCafePOS_WPF.Services
             LoadState();
         }
 
+        public static DateTime CafeNow => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "SE Asia Standard Time").DateTime;
         public int GetNextDailyOrderNumber()
         {
-            return CompletedOrders.Where(o => o.CreatedAt.Date == DateTime.Today).Select(o => o.DailyOrderNumber).DefaultIfEmpty(0).Max() + 1;
+            return CompletedOrders.Where(o => o.CreatedAt.Date == CafeNow.Date).Select(o => o.DailyOrderNumber).DefaultIfEmpty(0).Max() + 1;
         }
 
         private void SeedInitialData()

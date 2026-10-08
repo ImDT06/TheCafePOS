@@ -13,6 +13,8 @@ namespace TheCafePOS_WPF.Models
         public string Size { get; set; } = "M"; // S, M, L
         public int SugarPercent { get; set; } = 100; // 0, 30, 50, 70, 100
         public int IcePercent { get; set; } = 100; // 0, 30, 50, 70, 100
+        public string SugarChoice { get; set; } = "";
+        public string IceChoice { get; set; } = "";
         public List<string> Toppings { get; set; } = new List<string>();
         public decimal ToppingsPrice { get; set; }
         public List<SelectedTopping> SelectedToppings { get; set; } = new();
@@ -22,6 +24,8 @@ namespace TheCafePOS_WPF.Models
         public bool HasIceOption { get; set; } = true;
         public string PackagingId { get; set; } = "";
         public int Quantity { get; set; } = 1;
+        public int ReadyQuantity { get; set; }
+        public int DeliveredQuantity { get; set; }
         public decimal BasePrice { get; set; }
         public decimal SizeExtraPrice { get; set; }
 
@@ -34,8 +38,8 @@ namespace TheCafePOS_WPF.Models
             {
                 var options = new List<string>();
                 if (IsBeverage) options.Add($"Size {Size}");
-                if (HasSugarOption && IsBeverage) options.Add($"Đường {SugarPercent}%");
-                if (HasIceOption && IsBeverage) options.Add($"Đá {IcePercent}%");
+                if (HasSugarOption && IsBeverage) options.Add(string.IsNullOrEmpty(SugarChoice) ? $"Đường {SugarPercent}%" : $"Độ ngọt: {SugarChoice}");
+                if (HasIceOption && IsBeverage) options.Add(string.IsNullOrEmpty(IceChoice) ? $"Đá {IcePercent}%" : $"Lượng đá: {IceChoice}");
 
                 if (Toppings != null && Toppings.Count > 0)
                 {

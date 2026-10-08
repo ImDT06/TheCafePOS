@@ -6,6 +6,12 @@ namespace TheCafePOS_WPF.Models
     public class Order
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string ServiceType { get; set; } = "Không xác định";
+        public string FulfillmentStatus { get; set; } = "Legacy";
+        public DateTimeOffset? PaidAt { get; set; }
+        public List<ServiceEvent> ServiceEvents { get; set; } = new();
+        public string CallLabel => $"#{DailyOrderNumber:D3} · {CreatedAt:dd/MM}";
+        public string ProgressLabel => $"Đã làm {Items.Sum(i => i.ReadyQuantity)}/{Items.Sum(i => i.Quantity)} · Đã giao {Items.Sum(i => i.DeliveredQuantity)}/{Items.Sum(i => i.Quantity)}";
         public int DailyOrderNumber { get; set; }
         public string DailyOrderNumberFormatted => $"#{DailyOrderNumber:D2}";
         public string ShiftId { get; set; } = string.Empty;

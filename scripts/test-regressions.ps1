@@ -5,6 +5,12 @@ dotnet build $testProject -c Release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $testAssembly = Join-Path $projectRoot 'TheCafePOS_WPF/TheCafePOS.RegressionTests/bin/Release/net10.0-windows/TheCafePOS.RegressionTests.dll'
 $testDataDirectory = Join-Path $projectRoot ('artifacts/regression-' + [guid]::NewGuid().ToString('N'))
+dotnet $testAssembly (Join-Path $testDataDirectory 'menu-options') menu-options
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet $testAssembly (Join-Path $testDataDirectory 'report-dashboard') report-dashboard
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet $testAssembly (Join-Path $testDataDirectory 'americano') americano
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly $testDataDirectory create
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly $testDataDirectory reload

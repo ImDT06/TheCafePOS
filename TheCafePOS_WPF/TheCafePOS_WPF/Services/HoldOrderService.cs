@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using TheCafePOS_WPF.Models;
 
@@ -11,7 +11,6 @@ namespace TheCafePOS_WPF.Services
         public ObservableCollection<OrderItem> Items { get; set; } = new ObservableCollection<OrderItem>();
         public decimal TotalAmount { get; set; }
         public string Note { get; set; } = string.Empty;
-        public string ServiceType { get; set; } = "Mang đi";
 
         public string DisplaySummary => $"Đơn giữ {HeldTime:HH:mm:ss} - {Items.Count} món ({TotalAmount:N0}đ)";
     }
@@ -28,7 +27,7 @@ namespace TheCafePOS_WPF.Services
             HeldOrders = new ObservableCollection<HeldOrderInfo>(LocalDatabase.Instance.Read<System.Collections.Generic.List<HeldOrderInfo>>("held-orders") ?? new());
         }
 
-        public void HoldOrder(ObservableCollection<OrderItem> items, decimal totalAmount, string note = "", string serviceType = "Mang đi")
+        public void HoldOrder(ObservableCollection<OrderItem> items, decimal totalAmount, string note = "")
         {
             if (items == null || items.Count == 0) return;
 
@@ -36,7 +35,7 @@ namespace TheCafePOS_WPF.Services
             {
                 HeldTime = DateTime.Now,
                 TotalAmount = totalAmount,
-                Note = note, ServiceType = serviceType
+                Note = note
             };
 
             foreach (var item in items)
@@ -45,7 +44,7 @@ namespace TheCafePOS_WPF.Services
             }
 
             HeldOrders.Insert(0, heldInfo);
-            try { DataStoreService.Instance.SaveWorkspace(HeldOrders, null); }
+            try { LocalDatabase.Instance.Write("held-orders", HeldOrders); }
             catch { HeldOrders.Remove(heldInfo); throw; }
         }
 
@@ -57,7 +56,7 @@ namespace TheCafePOS_WPF.Services
                 {
                     var item = HeldOrders[i];
                     HeldOrders.RemoveAt(i);
-                    try { DataStoreService.Instance.SaveWorkspace(HeldOrders, null); }
+                    try { LocalDatabase.Instance.Write("held-orders", HeldOrders); }
                     catch { HeldOrders.Insert(i, item); throw; }
                     return item;
                 }

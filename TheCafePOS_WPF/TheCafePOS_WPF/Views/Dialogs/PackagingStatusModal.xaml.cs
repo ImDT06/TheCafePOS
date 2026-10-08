@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
@@ -30,10 +30,8 @@ public partial class PackagingStatusModal : Window
     }
     private void UpdatePreview()
     {
-        if (Preview == null || Quantity == null || Operation == null || DgPackaging == null) return;
+        if (Preview == null || Quantity == null) return;
         Preview.Text = "";
-        Core.TouchInput.SetAllowNegative(Quantity, (Operation.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Điều chỉnh");
-        Core.TouchInput.SetUnit(Quantity, (DgPackaging.SelectedItem as PackagingItem)?.Unit ?? "đơn vị");
         if (DgPackaging.SelectedItem is not PackagingItem item || !int.TryParse(Quantity.Text, out var quantity)) return;
         long after = ((ComboBoxItem)Operation.SelectedItem).Content.ToString() == "Kiểm kê" ? quantity : (long)item.StockQuantity + quantity;
         Preview.Text = $"Tồn: {item.StockQuantity} → {after} ({after - item.StockQuantity:+0;-0;0})";

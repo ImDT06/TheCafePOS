@@ -16,11 +16,18 @@ public partial class ManagementWindow : Window
     }
     private void Refresh()
     {
-        Products.ItemsSource = _store.Products.OrderBy(p => p.Name).ToList();
+        FilterProducts();
         Categories.ItemsSource = _store.Categories.OrderBy(c => c.DisplayOrder).ToList();
         ProductCategory.ItemsSource = _store.Categories.ToList();
         Staff.ItemsSource = AuthService.Instance.Accounts.ToList();
     }
+    private void FilterProducts()
+    {
+        if (Products == null) return;
+        string keyword = MenuSearch?.Text.Trim() ?? "";
+        Products.ItemsSource = _store.Products.Where(p => p.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).OrderBy(p => p.Name).ToList();
+    }
+    private void MenuSearch_TextChanged(object sender, TextChangedEventArgs e) => FilterProducts();
     private void Run(Action action)
     {
         try { action(); Refresh(); Status.Text = "Đã lưu thành công."; }

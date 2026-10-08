@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
@@ -25,6 +25,7 @@ public partial class FinanceWindow : Window
         RefundConfirmed.IsChecked = false; RefundReason.Clear(); RefundReference.Clear();
         if (Orders.SelectedItem is not Order order) { OrderDetails.Text = "Chọn đơn cần hoàn tiền."; RefundAmount.Clear(); return; }
         OrderDetails.Text = $"Đơn #{order.DailyOrderNumber:D2} · {order.CreatedAt:dd/MM/yyyy HH:mm}\n{order.PaymentMethod} · Đã hoàn: {order.RefundedAmount:N0}đ\n" + string.Join("\n", order.Items.Select(i => $"{i.Quantity} × {i.ProductName} — {i.TotalPrice:N0}đ"));
+        Core.TouchInput.SetMaximum(RefundAmount, order.RefundableAmount);
         RefundAmount.Text = order.RefundableAmount.ToString("0");
     }
     private void Refund_Click(object sender, RoutedEventArgs e)

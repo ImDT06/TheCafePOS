@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -48,10 +48,10 @@ namespace TheCafePOS_WPF
 
         private void UpdateOrderHeaderInfo()
         {
-            TxtNextOrderNumber.Text = $"Đơn mới #{_currentDailyOrderNumber:D2}";
-            TxtCartTitle.Text = $"Đơn hàng #{_currentDailyOrderNumber:D2}";
-            TxtCartTime.Text = $"Tạo lúc {DateTime.Now:HH:mm} · Chưa thanh toán";
-            BtnHeldOrders.Content = $"Đơn giữ ({HoldOrderService.Instance.HeldOrders.Count})";
+            TxtNextOrderNumber.Text = $"🎫 STT: #{_currentDailyOrderNumber:D2}";
+            TxtCartTitle.Text = $"🧾 ĐƠN HÀNG #{_currentDailyOrderNumber:D2}";
+            TxtCartTime.Text = $" ({DateTime.Now:HH:mm})";
+            BtnHeldOrders.Content = $"⏸️ Đơn Giữ ({HoldOrderService.Instance.HeldOrders.Count})";
         }
 
         #region Category & Product Rendering (POS-01)
@@ -60,7 +60,7 @@ namespace TheCafePOS_WPF
         {
             PnlCategories.Children.Clear();
 
-            var categories = new List<(string Id, string Name)> { ("ALL", "Tất cả") };
+            var categories = new List<(string Id, string Name)> { ("ALL", "⭐ TẤT CẢ") };
             categories.AddRange(DataStoreService.Instance.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)));
 
             foreach (var cat in categories)
@@ -71,7 +71,7 @@ namespace TheCafePOS_WPF
                     Content = cat.Name,
                     Padding = new Thickness(14, 6, 14, 6),
                     Margin = new Thickness(0, 0, 6, 0),
-                    Background = isSelected ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B")) : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F1F5F9")),
+                    Background = isSelected ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0284C7")) : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F1F5F9")),
                     Foreground = isSelected ? Brushes.White : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155")),
                     FontWeight = FontWeights.Bold,
                     FontSize = 14,
@@ -93,30 +93,7 @@ namespace TheCafePOS_WPF
                 _selectedCategoryId = catId;
                 RenderCategories();
                 RenderProducts();
-                PnlCategories.UpdateLayout();
-                PnlCategories.Children.OfType<Button>().FirstOrDefault(b => Equals(b.Tag, catId))?.BringIntoView();
             }
-        }
-
-        private void PreviousCategories_Click(object sender, RoutedEventArgs e) =>
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset - CategoryScroller.ViewportWidth * 0.8);
-
-        private void NextCategories_Click(object sender, RoutedEventArgs e) =>
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset + CategoryScroller.ViewportWidth * 0.8);
-
-        private void CategoryScroller_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset - e.Delta);
-            e.Handled = true;
-        }
-
-        private void CategoryScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
-        {
-            if (PreviousCategories == null || NextCategories == null) return;
-            PreviousCategories.IsEnabled = CategoryScroller.HorizontalOffset > 0.5;
-            NextCategories.IsEnabled = CategoryScroller.HorizontalOffset < CategoryScroller.ScrollableWidth - 0.5;
-            var visibility = CategoryScroller.ScrollableWidth > 0.5 ? Visibility.Visible : Visibility.Hidden;
-            PreviousCategories.Visibility = NextCategories.Visibility = visibility;
         }
 
         private void RenderProducts()
@@ -133,20 +110,17 @@ namespace TheCafePOS_WPF
                 return (!p.IsTopping || p.SoldSeparately) && p.IsActive && DataStoreService.Instance.Categories.Any(c => c.Id == p.CategoryId && c.IsActive) && matchCat && matchSearch;
             });
 
-            var products = filtered.ToList();
-            if (TxtProductCount != null) TxtProductCount.Text = $"{products.Count} món";
-            if (PnlNoProducts != null) PnlNoProducts.Visibility = products.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var p in products)
+            foreach (var p in filtered)
             {
                 var card = new Border
                 {
-                    Width = ProductCardWidth(),
-                    Height = 142,
+                    Width = 190,
+                    Height = 112,
                     Margin = new Thickness(0),
-                    CornerRadius = new CornerRadius(12),
+                    CornerRadius = new CornerRadius(8),
                     Background = Brushes.White,
                     BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E2E8F0")),
-                    BorderThickness = new Thickness(0),
+                    BorderThickness = new Thickness(1.5),
                     Cursor = System.Windows.Input.Cursors.Hand,
                     Padding = new Thickness(12, 10, 12, 10)
                 };
@@ -170,58 +144,46 @@ namespace TheCafePOS_WPF
 
                 var txtPrice = new TextBlock
                 {
-                    Text = p.FormattedPrice + (p.IsBeverage && p.Sizes.Count > 1 ? $" · {p.DefaultSize}" : ""),
+                    Text = p.FormattedPrice,
                     FontSize = 15,
                     FontWeight = FontWeights.Bold,
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B")),
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16A34A")),
                     VerticalAlignment = VerticalAlignment.Center
                 };
 
                 var btnAdd = new Border
                 {
-                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E8F2ED")),
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E0F2FE")),
                     CornerRadius = new CornerRadius(4),
                     Padding = new Thickness(10, 3, 10, 3),
                     HorizontalAlignment = HorizontalAlignment.Right,
                     Child = new TextBlock
                     {
-                        Text = "+",
-                        FontSize = 18,
+                        Text = "+ Chọn",
+                        FontSize = 11,
                         FontWeight = FontWeights.Bold,
-                        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"))
+                        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0284C7"))
                     }
                 };
 
-                bottomRow.ColumnDefinitions.Add(new ColumnDefinition());
-                bottomRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                Grid.SetColumn(btnAdd, 1);
                 bottomRow.Children.Add(txtPrice);
                 bottomRow.Children.Add(btnAdd);
 
                 grid.Children.Add(txtName);
                 grid.Children.Add(bottomRow);
-                var productImage = LoadProductImage(p.ImageUrl);
-                if (productImage != null)
-                {
-                    card.Height = 218;
-                    grid.RowDefinitions.Insert(0, new RowDefinition { Height = new GridLength(110) });
-                    Grid.SetRow(txtName, 1);
-                    Grid.SetRow(bottomRow, 2);
-                    grid.Children.Add(new Image { Source = productImage, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 0, 8) });
-                }
                 card.Child = grid;
 
                 card.MouseEnter += (s, e) =>
                 {
-                    card.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
-                    card.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EFF7F2"));
+                    card.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0284C7"));
+                    card.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0F9FF"));
                 };
                 card.MouseLeave += (s, e) =>
                 {
                     card.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1"));
                     card.Background = Brushes.White;
                 };
-                var productButton = new Button { Content = card, Padding = new Thickness(0), BorderThickness = new Thickness(1), Background = Brushes.White, Margin = new Thickness(5), ToolTip = p.Name };
+                var productButton = new Button { Content = card, Padding = new Thickness(0), BorderThickness = new Thickness(0), Background = Brushes.Transparent, Margin = new Thickness(5), ToolTip = p.Name };
                 System.Windows.Automation.AutomationProperties.SetName(productButton, p.Name + " " + p.FormattedPrice);
                 productButton.Click += (s, e) => OpenProductOptionModal(p);
 
@@ -229,61 +191,18 @@ namespace TheCafePOS_WPF
             }
         }
 
-        internal static System.Windows.Media.Imaging.BitmapImage? LoadProductImage(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path)) return null;
-            try
-            {
-                string fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, path));
-                if (!System.IO.File.Exists(fullPath)) return null;
-                using var stream = System.IO.File.OpenRead(fullPath);
-                var image = new System.Windows.Media.Imaging.BitmapImage();
-                image.BeginInit();
-                image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                image.DecodePixelWidth = 400;
-                image.StreamSource = stream;
-                image.EndInit();
-                image.Freeze();
-                return image;
-            }
-            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.IO.FileFormatException)
-            {
-                return null; // A missing or invalid photo must not prevent sales.
-            }
-        }
-
-        private double ProductCardWidth()
-        {
-            double available = Math.Max(180, (ProductScroller?.ActualWidth ?? 420) - 20);
-            int columns = Math.Max(1, (int)(available / 184));
-            return Math.Max(150, available / columns - 14);
-        }
-
-        private void ProductScroller_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (PnlProducts == null) return;
-            foreach (var button in PnlProducts.Children.OfType<Button>())
-                if (button.Content is Border card) card.Width = ProductCardWidth();
-        }
-
-        private void ResetProductFilter_Click(object sender, RoutedEventArgs e)
-        {
-            _selectedCategoryId = "ALL";
-            TxtSearch.Clear();
-            RenderCategories();
-            RenderProducts();
-            TxtSearch.Focus();
-        }
-
         private void TxtSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (TxtSearchPlaceholder != null)
+            {
+                TxtSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(TxtSearch.Text) ? Visibility.Visible : Visibility.Collapsed;
+            }
             RenderProducts();
         }
 
         private void BtnClearSearch_Click(object sender, RoutedEventArgs e)
         {
             TxtSearch.Text = "";
-            TxtSearch.Focus();
             RenderProducts();
         }
 
@@ -311,10 +230,8 @@ namespace TheCafePOS_WPF
                 PnlEmptyCart.Visibility = (_cartItems.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            TxtItemCountSummary.Text = $"Tổng cộng · {totalCups} món";
-            BtnHold.IsEnabled = BtnQr.IsEnabled = BtnCash.IsEnabled = _cartItems.Count > 0;
+            TxtItemCountSummary.Text = $"TỔNG TIỀN ({totalCups} món):";
             TxtGrandTotal.Text = $"{total:N0}đ";
-            Core.TouchInput.SetDue(TxtCashGiven, total);
 
             CalculateChange();
             UpdateCashShortcutButtons();
@@ -395,7 +312,7 @@ namespace TheCafePOS_WPF
             var normalFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"));
             var normalBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1"));
 
-            var activeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
+            var activeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16A34A"));
             var activeFg = Brushes.White;
             var activeBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
 
@@ -443,7 +360,7 @@ namespace TheCafePOS_WPF
                 if (change >= 0)
                 {
                     TxtChangeReturned.Text = $"{change:N0}đ";
-                    TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
+                    TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16A34A"));
                 }
                 else
                 {
@@ -454,7 +371,7 @@ namespace TheCafePOS_WPF
             else
             {
                 TxtChangeReturned.Text = "0đ";
-                TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
+                TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16A34A"));
             }
         }
 

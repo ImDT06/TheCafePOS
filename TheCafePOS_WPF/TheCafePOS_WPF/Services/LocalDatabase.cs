@@ -50,16 +50,4 @@ public sealed class LocalDatabase
         command.ExecuteNonQuery();
         transaction.Commit();
     }
-    public void WritePair<T, U>(string firstKey, T first, string secondKey, U second)
-    {
-        using var connection = Open();
-        using var transaction = connection.BeginTransaction();
-        foreach (var pair in new[] { (firstKey, JsonSerializer.Serialize(first)), (secondKey, JsonSerializer.Serialize(second)) })
-        {
-            using var command = connection.CreateCommand(); command.Transaction = transaction;
-            command.CommandText = "INSERT INTO documents(id,payload) VALUES($id,$json) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload";
-            command.Parameters.AddWithValue("$id", pair.Item1); command.Parameters.AddWithValue("$json", pair.Item2); command.ExecuteNonQuery();
-        }
-        transaction.Commit();
-    }
 }

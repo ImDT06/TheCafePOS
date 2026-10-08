@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\Menu\thecoffeehouse.json" />
-    <EmbeddedResource Include="Assets\Menu\image-renames.json" />
-    <None Include="..\..\Images\**\*.png" Link="Images\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Update="Assets\Products\*.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="Supabase" Version="8.1.1" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.12" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />

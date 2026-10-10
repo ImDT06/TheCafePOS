@@ -50,9 +50,12 @@ public sealed partial class AuthService
         return record?.Approver ?? throw new InvalidOperationException("Cần quản lý phê duyệt thao tác này.");
     }
     public static string PaymentApprovalAction(string orderId, decimal amount) => $"Đã kiểm tra nhận {amount:N0}đ — POS {orderId}";
+    public static string DiscountApprovalAction(string orderId, decimal amount, string reason) => $"Giảm giá {amount:N0}đ ({reason.Trim()}) — POS {orderId}";
     public bool HasPaymentApproval(string orderId, decimal amount)
     {
-        try { RequireApproval(PaymentApprovalAction(orderId, amount)); return true; }
+        string action = PaymentApprovalAction(orderId, amount);
+        if (_state.Audit.Any(a => a.Operator == CurrentUser?.Username && a.Action == action && a.Approver.StartsWith("SePay:"))) return true;
+        try { RequireApproval(action); return true; }
         catch (InvalidOperationException) { return false; }
     }
     public IReadOnlyList<StaffAccount> Accounts => _state.Accounts.AsReadOnly();
@@ -92,6 +95,15 @@ public sealed partial class AuthService
         return account;
     }
     public void Login(string username, string password) => CurrentUser = Verify(username, password);
+    // Payment confirmed by a bank feed (e.g. SePay) instead of a manager; only valid for payment actions.
+    public void ApproveBySystem(string paymentAction, string source)
+    {
+        RequireSignedIn();
+        var record = new ApprovalRecord { Operator = CurrentUser!.Username, Approver = source, Action = paymentAction };
+        _state.Audit.Add(record);
+        try { LocalDatabase.Instance.Write("auth", _state); }
+        catch { _state.Audit.Remove(record); throw; }
+    }
     public void Approve(string username, string password, string action)
     {
         RequireSignedIn();
@@ -153,5 +165,22 @@ public sealed partial class AuthService
         if (!active && shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi khóa tài khoản.");
         UpdateAccount(target, active ? "Mở khóa tài khoản" : "Khóa tài khoản", () => target.IsActive = active);
         if (active) _attempts.Remove(username);
+    }
+    public void DeleteAccount(string username)
+    {
+        var target = ManagedAccount(username);
+        var shift = DataStoreService.Instance.CurrentShift;
+        if (shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi xóa tài khoản.");
+        // Orders, shifts and audit keep the username as text, so history stays readable.
+        UpdateAccount(target, "Xóa tài khoản", () => _state.Accounts.Remove(target));
+        _attempts.Remove(username);
+    }
+    public void UpdateAccountRole(string username, string role)
+    {
+        var target = ManagedAccount(username);
+        if (role is not ("Cashier" or "Manager")) throw new InvalidOperationException("Vai trò không hợp lệ.");
+        if (role == "Manager" && CurrentUser?.Role != "Owner") throw new InvalidOperationException("Chỉ chủ quán được bổ nhiệm quản lý.");
+        if (target.Role == role) return;
+        UpdateAccount(target, $"Đổi vai trò {target.Role} → {role}", () => target.Role = role);
     }
 }

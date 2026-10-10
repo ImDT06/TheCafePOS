@@ -6,6 +6,13 @@ public static class OrderConfigurationService
 {
     public static readonly int[] Levels = { 0, 30, 50, 70, 100 };
     public static OrderItem Clone(OrderItem item) => JsonSerializer.Deserialize<OrderItem>(JsonSerializer.Serialize(item))!;
+    public static string? ResolveChoice(List<string>? choices, string? current, string? fallback)
+    {
+        if (choices is null || choices.Count == 0) return null;
+        if (!string.IsNullOrWhiteSpace(current) && choices.Contains(current)) return current;
+        if (!string.IsNullOrWhiteSpace(fallback) && choices.Contains(fallback)) return fallback;
+        return choices.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+    }
     public static OrderItem Create(Product product, string sizeName, int sugar, int ice, int quantity,
         IEnumerable<(string Id, int Quantity)> toppings, string note, IEnumerable<Product> menu,
         string? sugarChoice = null, string? iceChoice = null)
@@ -18,8 +25,9 @@ public static class OrderConfigurationService
         string Resolve(bool enabled, List<string>? choices, string fallback, string? selected)
         {
             if (!product.IsBeverage || !enabled || choices is null) return "";
-            var value = selected ?? fallback;
-            if (!choices.Contains(value)) throw new InvalidOperationException("Tùy chọn đường/đá không áp dụng cho món này.");
+            var value = ResolveChoice(choices, selected, fallback);
+            if (string.IsNullOrWhiteSpace(value) || !choices.Contains(value))
+                throw new InvalidOperationException("Tùy chọn đường/đá không áp dụng cho món này.");
             return value;
         }
         var selectedSugar = Resolve(product.AllowSugar, product.SugarChoices, product.DefaultSugarChoice, sugarChoice);

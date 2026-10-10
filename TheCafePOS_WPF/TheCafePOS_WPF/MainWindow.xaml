@@ -1,4 +1,4 @@
-<Window x:Class="TheCafePOS_WPF.MainWindow"
+﻿<Window x:Class="TheCafePOS_WPF.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core"
  Title="TheCafePOS — Bán hàng" Width="1240" Height="780" MinWidth="960" MinHeight="680" WindowStartupLocation="CenterScreen" WindowState="Maximized" Background="#F3F5F4" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -8,8 +8,8 @@
     <TextBlock x:Name="TxtSupabaseStatus" Text="Dữ liệu tại máy" Foreground="#D0ECE1" VerticalAlignment="Center"/>
    </StackPanel>
    <StackPanel Grid.Column="1" Orientation="Horizontal">
-    <Button x:Name="BtnHeldOrders" Content="Đơn giữ" Margin="0,0,8,0" Click="BtnHeldOrders_Click"/>
-    <Button Content="Kho bao bì" Margin="0,0,8,0" Click="BtnPackaging_Click"/>
+    <Button x:Name="BtnHeldOrders" Content="Đơn giữ (F9)" Margin="0,0,8,0" Click="BtnHeldOrders_Click"/>
+    <Button x:Name="BtnQueue" Content="Pha chế (F6)" Margin="0,0,8,0" Click="BtnQueue_Click"/><Button Content="Kho bao bì" Margin="0,0,8,0" Click="BtnPackaging_Click"/>
     <Button x:Name="UtilitiesButton" Content="Tiện ích ▾" Click="Utilities_Click"/>
    </StackPanel>
    <Popup x:Name="UtilitiesPopup" PlacementTarget="{Binding ElementName=UtilitiesButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
@@ -29,7 +29,7 @@
     <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
      <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel VerticalAlignment="Center" Margin="0,0,14,0"><TextBlock Text="Thực đơn" FontSize="20" FontWeight="Bold" Foreground="#183D34"/><TextBlock x:Name="TxtProductCount" Foreground="#52665F" FontSize="12"/></StackPanel>
-      <Grid Grid.Column="1"><TextBox x:Name="TxtSearch" AutomationProperties.Name="Tìm món theo tên" TextChanged="TxtSearch_TextChanged"/><TextBlock x:Name="TxtSearchPlaceholder" Text="Tìm tên món…" Foreground="#52665F" FontSize="15" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding Text.Length, ElementName=TxtSearch}" Value="0"/><Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=TxtSearch}" Value="False"/></MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid>
+      <Grid Grid.Column="1"><TextBox x:Name="TxtSearch" AutomationProperties.Name="Tìm món theo tên" ToolTip="Tìm món (F2)" TextChanged="TxtSearch_TextChanged"/><TextBlock x:Name="TxtSearchPlaceholder" Text="Tìm tên món…" Foreground="#52665F" FontSize="15" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding Text.Length, ElementName=TxtSearch}" Value="0"/><Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=TxtSearch}" Value="False"/></MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid>
       <Button Grid.Column="2" Content="×" FontSize="22" Width="48" MinWidth="48" Padding="0" ToolTip="Xóa tìm kiếm" AutomationProperties.Name="Xóa tìm kiếm" Click="BtnClearSearch_Click" Margin="6,0,0,0"/>
      </Grid>
      <Grid Grid.Row="1" Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -61,7 +61,11 @@
        </StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
       </ListBox>
      </Grid>
-     <StackPanel Grid.Row="2" Margin="0,12,0,12"><Border Height="1" Background="#DCE5DF" Margin="0,0,0,12"/>
+     <StackPanel Grid.Row="2" Margin="0,12,0,12">
+      <UniformGrid Columns="2" Margin="-2,0,-2,10"><Button x:Name="BtnTakeAway" Content="🥤 Mang đi" Margin="2" MinHeight="44" Click="ServiceType_Click" Tag="Mang đi"/><Button x:Name="BtnDineIn" Content="☕ Tại chỗ" Margin="2" MinHeight="44" Click="ServiceType_Click" Tag="Tại chỗ"/></UniformGrid>
+      <Border Height="1" Background="#DCE5DF" Margin="0,0,0,12"/>
+      <DockPanel Margin="0,0,0,6"><Button x:Name="BtnCustomer" DockPanel.Dock="Right" Content="👤 Thành viên" Padding="10,4" MinHeight="36" Click="BtnCustomer_Click"/><TextBlock x:Name="TxtCustomerLine" VerticalAlignment="Center" Foreground="#12634B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="Khách lẻ"/></DockPanel>
+      <DockPanel Margin="0,0,0,6"><Button x:Name="BtnDiscount" DockPanel.Dock="Right" Content="＋ Giảm giá" Padding="10,4" MinHeight="36" Click="BtnDiscount_Click"/><StackPanel VerticalAlignment="Center"><TextBlock x:Name="TxtSubtotalLine" Foreground="#64748B"/><TextBlock x:Name="TxtPromoLine" Foreground="#B45309" FontWeight="SemiBold" Visibility="Collapsed"/><TextBlock x:Name="TxtLoyaltyLine" Foreground="#B91C1C" FontWeight="SemiBold" Visibility="Collapsed"/><TextBlock x:Name="TxtDiscountLine" Foreground="#B91C1C" FontWeight="SemiBold" Visibility="Collapsed"/></StackPanel></DockPanel>
       <DockPanel Margin="0,0,0,8"><TextBlock x:Name="TxtItemCountSummary" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock x:Name="TxtGrandTotal" FontSize="30" FontWeight="Bold" Foreground="#12634B" HorizontalAlignment="Right"/></DockPanel>
       <UniformGrid x:Name="GridCashShortcuts" Columns="5" Margin="0,0,0,8">
        <Button Content="Đúng số" Tag="0" Padding="4" Margin="2" Click="BtnCashShortcut_Click"/><Button Content="50k" Tag="50000" Padding="4" Margin="2" Click="BtnCashShortcut_Click"/><Button Content="100k" Tag="100000" Padding="4" Margin="2" Click="BtnCashShortcut_Click"/><Button Content="200k" Tag="200000" Padding="4" Margin="2" Click="BtnCashShortcut_Click"/><Button Content="500k" Tag="500000" Padding="4" Margin="2" Click="BtnCashShortcut_Click"/>
@@ -71,7 +75,7 @@
        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"><TextBlock Text="Tiền thối lại" Foreground="#64748B" FontSize="12"/><TextBlock x:Name="TxtChangeReturned" FontSize="20" FontWeight="Bold" Foreground="#12634B" TextWrapping="Wrap"/></StackPanel>
       </Grid>
      </StackPanel>
-     <UniformGrid Grid.Row="3" Columns="3"><Button x:Name="BtnHold" Content="Giữ đơn" Margin="0,0,6,0" MinHeight="56" Click="BtnHoldOrder_Click"/><Button x:Name="BtnQr" Content="VietQR" Background="#E8F2ED" Foreground="#123D35" FontWeight="Bold" MinHeight="56" Margin="0,0,6,0" Click="BtnPayVietQR_Click"/><Button x:Name="BtnCash" Content="Tiền mặt" Background="#12634B" Foreground="White" FontWeight="Bold" MinHeight="56" Click="BtnPayCash_Click"/></UniformGrid>
+     <UniformGrid Grid.Row="3" Columns="3"><Button x:Name="BtnHold" Content="Giữ đơn (F8)" Margin="0,0,6,0" MinHeight="56" Click="BtnHoldOrder_Click"/><Button x:Name="BtnQr" Content="VietQR (F5)" Background="#E8F2ED" Foreground="#123D35" FontWeight="Bold" MinHeight="56" Margin="0,0,6,0" Click="BtnPayVietQR_Click"/><Button x:Name="BtnCash" Content="Tiền mặt (F4)" Background="#12634B" Foreground="White" FontWeight="Bold" MinHeight="56" Click="BtnPayCash_Click"/></UniformGrid>
     </Grid>
    </Border>
   </Grid>

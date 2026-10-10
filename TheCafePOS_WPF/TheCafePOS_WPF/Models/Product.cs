@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace TheCafePOS_WPF.Models
 {
@@ -11,6 +11,8 @@ namespace TheCafePOS_WPF.Models
         public string ImageUrl { get; set; } = string.Empty;
         public string ColorHex { get; set; } = "#3498DB";
         public bool IsActive { get; set; } = true;
+    // Temporarily unavailable (e.g. ingredient ran out today); still shown on the menu, unlike IsActive = false.
+    public bool IsSoldOut { get; set; }
         public bool IsTopping { get; set; }
         public bool IsRetailItem { get; set; }
         public bool IsBeverage => !IsTopping && !IsRetailItem;

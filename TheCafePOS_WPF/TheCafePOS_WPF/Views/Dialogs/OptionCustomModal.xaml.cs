@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using TheCafePOS_WPF.Models;
@@ -35,19 +35,27 @@ public partial class OptionCustomModal : Window
         MinWidth = Math.Min(MinWidth, MaxWidth);
         Height = Math.Min(Height, MaxHeight); Width = Math.Min(Width, MaxWidth);
         Heading.Text = product.Name;
+        ProductPhoto.Source = MainWindow.LoadProductImage(product.ImageUrl);
+        PhotoFrame.Visibility = ProductPhoto.Source is null ? Visibility.Collapsed : Visibility.Visible;
         ContextLabel.Text = singleUnit ? "TÁCH 1 SẢN PHẨM ĐỂ CHỈNH RIÊNG" : _editing ? "CHỈNH SỬA MÓN TRONG GIỎ" : $"THÊM MÓN · ĐƠN #{dailyOrderNumber:D2}";
         PriceNotice.Text = _editing ? "Giá khi lưu được tính theo thực đơn hiện tại." : $"Giá từ {product.BasePrice + (!product.IsBeverage ? 0 : product.Sizes.Select(s => s.ExtraPrice).DefaultIfEmpty(0).Min()):N0}đ";
         _quantity = singleUnit ? 1 : Math.Clamp(existing?.Quantity ?? 1, 1, 999);
         _size = product.Sizes.FirstOrDefault(s => s.Name == existing?.Size)?.Name ?? product.Sizes.FirstOrDefault(s => s.Name == product.DefaultSize)?.Name ?? product.Sizes.FirstOrDefault()?.Name ?? "";
         _sugar = OrderConfigurationService.Levels.Contains(existing?.SugarPercent ?? product.DefaultSugar) ? existing?.SugarPercent ?? product.DefaultSugar : product.DefaultSugar;
         _ice = OrderConfigurationService.Levels.Contains(existing?.IcePercent ?? product.DefaultIce) ? existing?.IcePercent ?? product.DefaultIce : product.DefaultIce;
-        _sugarChoice = product.SugarChoices?.Contains(existing?.SugarChoice ?? "") == true ? existing!.SugarChoice : product.DefaultSugarChoice;
-        _iceChoice = product.IceChoices?.Contains(existing?.IceChoice ?? "") == true ? existing!.IceChoice : product.DefaultIceChoice;
+        _sugarChoice = product.SugarChoices is { Count: > 0 }
+            ? OrderConfigurationService.ResolveChoice(product.SugarChoices, existing?.SugarChoice, product.DefaultSugarChoice)
+            : null;
+        _iceChoice = product.IceChoices is { Count: > 0 }
+            ? OrderConfigurationService.ResolveChoice(product.IceChoices, existing?.IceChoice, product.DefaultIceChoice)
+            : null;
         Note.Text = existing?.Note ?? "";
         DrinkOptions.Visibility = !product.IsBeverage ? Visibility.Collapsed : Visibility.Visible;
         SugarPanel.Visibility = product.AllowSugar ? Visibility.Visible : Visibility.Collapsed;
         IcePanel.Visibility = product.AllowIce ? Visibility.Visible : Visibility.Collapsed;
         QuantityLabel.Text = !product.IsBeverage ? "Số phần" : "Số ly";
+        // A lone size is information, not a choice; keep it compact instead of a full-width button.
+        if (product.Sizes.Count == 1) { SizeChoices.HorizontalAlignment = HorizontalAlignment.Left; SizeChoices.MinWidth = 160; }
         foreach (var size in product.Sizes)
         {
             var label = new StackPanel();
@@ -93,14 +101,14 @@ public partial class OptionCustomModal : Window
     }
     private void AddChoice(Panel panel, string group, object content, bool selected, Action select)
     {
-        if (content is string text) content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center };
+        if (content is string text) content = new TextBlock { Text = text, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, TextAlignment = TextAlignment.Center };
         var button = new RadioButton { Content = content, GroupName = group, IsChecked = selected, Style = (Style)FindResource("Choice") };
         button.Checked += (_, _) => { select(); if (_ready) UpdateTotal(); };
         panel.Children.Add(button);
     }
     private void AddTopping(Product product, int count)
     {
-        var surface = new Border { CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(6), Margin = new Thickness(0, 0, 6, 6) };
+        var surface = new Border { VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(6), Margin = new Thickness(0, 0, 6, 6) };
         var content = new StackPanel(); surface.Child = content;
         var header = new DockPanel();
         var photo = MainWindow.LoadProductImage(product.ImageUrl);
@@ -173,6 +181,8 @@ public partial class OptionCustomModal : Window
             var item = BuildItem();
             Total.Text = $"{item.TotalPrice:N0}đ";
             Breakdown.Text = $"{item.UnitPrice:N0}đ × {item.Quantity} {(!_product.IsBeverage ? "phần" : "ly")}";
+        // Only worth showing when it explains the total; for a single unit it just repeats it.
+        Breakdown.Visibility = item.Quantity > 1 ? Visibility.Visible : Visibility.Collapsed;
             ConfirmButton.Content = _singleUnit ? "Tách và lưu 1 sản phẩm" : _editing ? "Lưu thay đổi" : $"Thêm {_quantity} {(!_product.IsBeverage ? "phần" : "ly")} vào đơn";
             ConfirmButton.IsEnabled = true; Error.Visibility = Visibility.Collapsed;
         }
@@ -184,4 +194,3 @@ public partial class OptionCustomModal : Window
         catch (Exception ex) { Error.Text = ex.Message; Error.Visibility = Visibility.Visible; }
     }
 }
-

@@ -11,6 +11,8 @@ dotnet $testAssembly (Join-Path $testDataDirectory 'report-dashboard') report-da
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'americano') americano
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet $testAssembly (Join-Path $testDataDirectory 'management') management
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly $testDataDirectory create
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly $testDataDirectory reload

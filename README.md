@@ -49,7 +49,8 @@ Mở **Hoàn tiền / Thu chi** khi đang đăng nhập bằng nhân viên sở 
 - Mọi người dùng có thể chọn **Đổi mật khẩu**, nhập mật khẩu hiện tại và xác nhận mật khẩu mới.
 - **Quản trị → Nhân viên:** chọn tài khoản rồi đặt lại mật khẩu hoặc khóa/mở khóa. Quản lý được quản lý thu ngân; chủ quán được quản lý thu ngân và quản lý. Không được khóa/reset chính mình hoặc tài khoản chủ quán qua luồng này.
 - Mật khẩu được reset là mật khẩu tạm; lần đăng nhập tiếp theo bắt buộc đổi trước khi thao tác nghiệp vụ. Không cho khóa nhân viên đang giữ ca mở; chốt ca trước khi khóa.
-- Các thao tác tài khoản được ghi nhật ký. Chưa có khôi phục mật khẩu chủ quán qua email, đổi vai trò tài khoản hay màn hình tra cứu toàn bộ nhật ký xác thực.
+- Chủ quán đổi vai trò thu ngân ↔ quản lý bằng cách chọn tài khoản, đổi vai trò rồi bấm **Tạo / Cập nhật tài khoản**. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
+- Các thao tác tài khoản được ghi nhật ký. Chưa có khôi phục mật khẩu chủ quán qua email hay màn hình tra cứu toàn bộ nhật ký xác thực.
 
 ### Chọn món, sửa món và topping
 
@@ -72,6 +73,8 @@ Mở **Kho Bao Bì**, chọn một dòng bao bì. Quản lý/chủ quán có th�
 - **Điều chỉnh:** nhập số tăng hoặc giảm, ví dụ `5` hoặc `-3` cho bao bì hỏng.
 
 Nhập lý do, nhà cung cấp hoặc số phiếu rồi bấm **Lưu thay đổi kho**. Tồn sau thay đổi hiển thị trước khi lưu; hệ thống chặn tồn âm và số vượt giới hạn. Tồn kho và lịch sử lưu cùng giao dịch SQLite. Thu ngân chỉ được xem. Dòng màu vàng là bao bì chạm ngưỡng cảnh báo.
+
+Tab **Danh mục bao bì** (quản lý) cho thêm/sửa tên, đơn vị, ngưỡng cảnh báo. Bao bì mới có tồn 0, nhập số lượng qua Nhập kho. Chỉ xóa được bao bì tự thêm, tồn bằng 0 và không gán cho size nào; ly M/L/XL, nắp và ống hút mặc định không xóa được.
 
 Lịch sử lưu thời gian, người thực hiện, lý do, số lượng trước/sau và cả bao bì trừ khi bán hàng. Có thể lọc theo bao bì đang chọn. Dữ liệu cũ tiếp tục sử dụng được, lịch sử chỉ bắt đầu từ các thay đổi sau nâng cấp. Đây là thao tác từng loại bao bì, chưa có phiếu nhập nhiều dòng, giá nhập hoặc công nợ nhà cung cấp.
 

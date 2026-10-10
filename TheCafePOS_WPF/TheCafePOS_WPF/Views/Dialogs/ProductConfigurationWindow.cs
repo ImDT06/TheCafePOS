@@ -29,7 +29,8 @@ public sealed class ProductConfigurationWindow : Window
         var defaultIce = Level("Đá mặc định (%)", product.DefaultIce);
         ComboBox NamedDefault(string label, List<string>? choices, string value, ComboBox legacy)
         {
-            var box = new ComboBox { ItemsSource = choices, SelectedItem = value, Margin = new Thickness(0, 4, 0, 10) };
+            var normalized = OrderConfigurationService.ResolveChoice(choices, value, value) ?? "";
+            var box = new ComboBox { ItemsSource = choices, SelectedItem = normalized, Margin = new Thickness(0, 4, 0, 10) };
             if (choices != null)
             {
                 var labelIndex = root.Children.IndexOf(legacy) - 1;

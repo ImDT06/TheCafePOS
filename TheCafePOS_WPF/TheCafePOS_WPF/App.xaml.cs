@@ -15,6 +15,12 @@ namespace TheCafePOS_WPF
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            System.Threading.Tasks.Task.Run(BackupService.BackupDailyQuietly);
+            // Esc closes any dialog; the main POS window is never closed by keyboard.
+            EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewKeyDownEvent, new System.Windows.Input.KeyEventHandler((s, k) =>
+            {
+                if (k.Key == System.Windows.Input.Key.Escape && s is Window w && w is not TheCafePOS_WPF.MainWindow && w.Owner is not null) { k.Handled = true; w.Close(); }
+            }));
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) =>
             {
                 if (sender is not Window window) return;

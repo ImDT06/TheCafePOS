@@ -16,6 +16,16 @@ namespace TheCafePOS_WPF.Models
         public string DailyOrderNumberFormatted => $"#{DailyOrderNumber:D2}";
         public string ShiftId { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
+        // Before discount; 0 on orders saved before discounts existed.
+        public decimal SubtotalAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public string DiscountReason { get; set; } = string.Empty;
+        public decimal PromotionAmount { get; set; }
+        public string PromotionName { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
+        public int PointsRedeemed { get; set; }
+        public int PointsEarned { get; set; }
+        public decimal LoyaltyAmount => PointsRedeemed * 1000m;
         public decimal RefundedAmount { get; set; }
         public decimal RefundableAmount => TotalAmount - RefundedAmount;
         public string RefundStatus => RefundedAmount == 0 ? "Chưa hoàn" : RefundedAmount == TotalAmount ? "Đã hoàn toàn bộ" : "Đã hoàn một phần";

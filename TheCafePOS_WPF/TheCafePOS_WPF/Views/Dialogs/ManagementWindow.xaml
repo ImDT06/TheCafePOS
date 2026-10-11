@@ -45,6 +45,7 @@
                   <CheckBox x:Name="ProductActive" Content="Đang bán (bỏ chọn để ẩn khỏi thực đơn)" IsChecked="True" Margin="0,4,0,6" />
                   <CheckBox x:Name="ProductSoldOut" Content="Hết hàng tạm thời (vẫn hiện, làm mờ)" Margin="0,4,0,10" />
                   <Button Content="Cấu hình size / topping / đường đá" Padding="8" Margin="0,8,0,0" Click="ConfigureProduct_Click" />
+                  <Button Content="Công thức (định lượng nguyên liệu)…" Padding="8" Margin="0,8,0,0" Click="Recipe_Click" />
                   <Button Content="Xóa món" Style="{StaticResource DangerButton}" Padding="8" Margin="0,24,0,0" Click="DeleteProduct_Click" />
                 </StackPanel>
               </ScrollViewer>
@@ -168,6 +169,9 @@
               <Button Content="Mở thư mục sao lưu" Padding="8" Margin="0,8,0,0" Click="OpenBackups_Click" />
               <TextBlock Text="Khách hàng thành viên" FontWeight="Bold" Margin="0,24,0,0" />
               <TextBlock x:Name="MemberInfo" Style="{StaticResource Hint}" />
+              <Button Content="Quản lý khách hàng…" Padding="8" Click="OpenCustomers_Click" />
+              <TextBlock Text="Kho nguyên liệu" FontWeight="Bold" Margin="0,24,0,8" />
+              <Button Content="Mở kho nguyên liệu…" Padding="8" Click="OpenIngredients_Click" />
             </StackPanel>
           </Border>
         </Grid>

@@ -20,6 +20,8 @@ public class StoreState
     public List<StockMovement> StockMovements { get; set; } = new();
     public List<Customer> Customers { get; set; } = new();
     public List<Promotion> Promotions { get; set; } = new();
+    public List<Ingredient> Ingredients { get; set; } = new();
+    public List<IngredientMovement> IngredientMovements { get; set; } = new();
 }
 public partial class DataStoreService
 {
@@ -27,7 +29,7 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements };
     private void Restore(StoreState state)
     {
         Draft = state.Draft;
@@ -37,6 +39,7 @@ public partial class DataStoreService
         StockMovements = state.StockMovements;
         Refunds = state.Refunds; CashEntries = state.CashEntries;
         Customers = state.Customers ?? new(); Promotions = state.Promotions ?? new();
+        Ingredients = state.Ingredients ?? new(); IngredientMovements = state.IngredientMovements ?? new();
     }
     private void LoadState()
     {
@@ -168,6 +171,7 @@ public partial class DataStoreService
             foreach (var packaging in PackagingInventory.Where(p => p.StockQuantity != stockBefore[p.Id]))
                 RecordStockMovement(packaging, stockBefore[packaging.Id], "Bán hàng", $"Đơn #{order.DailyOrderNumber:D2}", order.Id);
             ApplyLoyalty(order);
+            DeductIngredientsForOrder(order);
             CompletedOrders.Add(order);
             if (Draft?.Id == checkoutId) Draft = null;
         });

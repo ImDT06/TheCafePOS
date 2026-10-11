@@ -22,7 +22,7 @@ public partial class DataStoreService
     public void SetProductSoldOut(string id, bool soldOut)
     {
         var product = Products.FirstOrDefault(p => p.Id == id) ?? throw new InvalidOperationException("Món không tồn tại.");
-        if (product.IsSoldOut != soldOut) Mutate(() => product.IsSoldOut = soldOut);
+        if (product.IsSoldOut != soldOut) Mutate(() => { product.IsSoldOut = soldOut; product.SoldOutByStock = false; });
     }
     public void DeleteCategory(string id, bool deleteProducts = false)
     {

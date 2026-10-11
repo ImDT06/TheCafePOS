@@ -204,6 +204,13 @@ public partial class ManagementWindow : Window
         _store.SavePromotion(new Promotion { Id = id, Name = PromoName.Text.Trim(), Percent = percent, Start = start, End = end, IsActive = PromoActive.IsChecked == true,
             Days = PromoDays.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (DayOfWeek)c.Tag).ToList() });
     });
+    private void OpenIngredients_Click(object sender, RoutedEventArgs e) { new IngredientWindow { Owner = this }.ShowDialog(); Refresh(); }
+    private void Recipe_Click(object sender, RoutedEventArgs e)
+    {
+        if (_store.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi khai báo công thức."; return; }
+        if (new RecipeWindow(product) { Owner = this }.ShowDialog() == true) { Refresh(); Toast.Show(this, "Đã lưu công thức."); }
+    }
+    private void OpenCustomers_Click(object sender, RoutedEventArgs e) { new CustomerListWindow { Owner = this }.ShowDialog(); RefreshBackupInfo(); }
     private void BackupNow_Click(object sender, RoutedEventArgs e)
     {
         try { BackupService.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }

@@ -20,6 +20,9 @@ public class StoreState
     public List<StockMovement> StockMovements { get; set; } = new();
     public List<Customer> Customers { get; set; } = new();
     public List<Promotion> Promotions { get; set; } = new();
+    public List<Ingredient> Ingredients { get; set; } = new();
+    public List<IngredientMovement> IngredientMovements { get; set; } = new();
+    public StoreSettings Settings { get; set; } = new();
 }
 public partial class DataStoreService
 {
@@ -27,7 +30,7 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings };
     private void Restore(StoreState state)
     {
         Draft = state.Draft;
@@ -37,6 +40,8 @@ public partial class DataStoreService
         StockMovements = state.StockMovements;
         Refunds = state.Refunds; CashEntries = state.CashEntries;
         Customers = state.Customers ?? new(); Promotions = state.Promotions ?? new();
+        Ingredients = state.Ingredients ?? new(); IngredientMovements = state.IngredientMovements ?? new();
+        Settings = state.Settings ?? new();
     }
     private void LoadState()
     {
@@ -121,7 +126,7 @@ public partial class DataStoreService
         if (actualCash < 0) throw new InvalidOperationException("Tiền thực tế không được âm.");
         Mutate(() => { CurrentShift.ActualCash = actualCash; CurrentShift.ExpectedCash = ExpectedCash; CurrentShift.EndTime = DateTime.Now; CurrentShift.Status = "Closed"; Shifts.Add(CurrentShift); });
     }
-    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0)
+    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0, string channel = StoreSettings.Counter)
     {
         RequireOpenShift();
         var existing = CompletedOrders.FirstOrDefault(o => o.Id == checkoutId);
@@ -146,18 +151,25 @@ public partial class DataStoreService
         decimal subtotal = items.Sum(i => i.TotalPrice);
         var customer = string.IsNullOrWhiteSpace(customerPhone) ? null : FindCustomer(customerPhone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng thành viên.");
         if (redeemPoints < 0 || redeemPoints > 0 && (customer is null || customer.Points < redeemPoints)) throw new InvalidOperationException("Khách không đủ điểm để đổi.");
-        var promo = ActivePromotion(CafeNow);
-        decimal promoAmount = PromotionDiscount(promo, subtotal), loyaltyAmount = redeemPoints * PointValue;
+        // Delivery-app orders: listed at the channel price, paid out by the platform, no in-store promotions.
+        bool app = channel != StoreSettings.Counter;
+        var appChannel = app ? Settings.Channels.FirstOrDefault(c => c.Name == channel && c.IsActive) ?? throw new InvalidOperationException("Kênh bán không hợp lệ hoặc đang tắt.") : null;
+        if (app && (discount > 0 || redeemPoints > 0 || method != "Platform")) throw new InvalidOperationException("Đơn từ app giao hàng không áp dụng giảm giá/đổi điểm và được ghi nhận là thanh toán qua nền tảng.");
+        if (!app && method == "Platform") throw new InvalidOperationException("Chỉ đơn từ app giao hàng mới ghi nhận thanh toán qua nền tảng.");
+        if (app) serviceType = "Mang đi";
+        var promos = app ? (Amount: 0m, Names: "") : PromotionsFor(items, CafeNow);
+        decimal promoAmount = promos.Amount, loyaltyAmount = redeemPoints * PointValue;
         if (discount < 0 || discount != decimal.Truncate(discount) || discount + promoAmount + loyaltyAmount >= subtotal) throw new InvalidOperationException("Số tiền giảm phải là số nguyên, không âm và nhỏ hơn tạm tính.");
         if (discount > 0 && string.IsNullOrWhiteSpace(discountReason)) throw new InvalidOperationException("Nhập lý do giảm giá.");
-        if (discount > 0) AuthService.Instance.RequireApproval(AuthService.DiscountApprovalAction(checkoutId, discount, discountReason));
-        decimal total = subtotal - discount - promoAmount - loyaltyAmount;
+        if (DiscountNeedsApproval(subtotal, discount)) AuthService.Instance.RequireApproval(AuthService.DiscountApprovalAction(checkoutId, discount, discountReason));
+        decimal surcharge = appChannel is null ? 0 : Math.Ceiling(subtotal * appChannel.MarkupPercent / 100m / 1000m) * 1000m;
+        decimal total = subtotal + surcharge - discount - promoAmount - loyaltyAmount;
         if (total <= 0) throw new InvalidOperationException("Tổng tiền phải lớn hơn 0.");
-        if (method is not ("Cash" or "VietQR")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
+        if (method is not ("Cash" or "VietQR" or "Platform")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
         if (method == "Cash" && cash < total) throw new InvalidOperationException("Số tiền khách đưa chưa đủ hoặc không hợp lệ.");
         if (method == "VietQR" && (!qrApproved || !AuthService.Instance.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
         if (serviceType is not ("Mang đi" or "Tại chỗ")) throw new InvalidOperationException("Chọn loại đơn hợp lệ.");
-        var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promoAmount > 0 ? promo!.Name : "", CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
+        var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promos.Names, CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, Channel = channel, ChannelSurcharge = surcharge, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
         foreach (var item in items) { item.OrderId = order.Id; item.ReadyQuantity = item.DeliveredQuantity = 0; }
         Mutate(() =>
         {
@@ -168,6 +180,7 @@ public partial class DataStoreService
             foreach (var packaging in PackagingInventory.Where(p => p.StockQuantity != stockBefore[p.Id]))
                 RecordStockMovement(packaging, stockBefore[packaging.Id], "Bán hàng", $"Đơn #{order.DailyOrderNumber:D2}", order.Id);
             ApplyLoyalty(order);
+            DeductIngredientsForOrder(order);
             CompletedOrders.Add(order);
             if (Draft?.Id == checkoutId) Draft = null;
         });

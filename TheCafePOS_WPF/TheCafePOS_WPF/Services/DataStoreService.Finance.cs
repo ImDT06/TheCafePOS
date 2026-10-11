@@ -28,7 +28,40 @@ public partial class DataStoreService
         if (order.PaymentMethod == "VietQR" && string.IsNullOrWhiteSpace(reference)) throw new InvalidOperationException("Nhập mã giao dịch chuyển khoản hoàn tiền đã thực hiện.");
         var approver = AuthService.Instance.RequireApproval(RefundAction(id, orderId, amount, reason, reference));
         var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, Reason = reason.Trim(), Reference = reference.Trim(), Operator = AuthService.Instance.CurrentUser!.Username, Approver = approver };
-        Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); });
+        Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); RevokeLoyalty(order, amount); });
+        return entry;
+    }
+    public static string CancelReason(string reason) => "Hủy đơn: " + reason.Trim();
+
+    // Cancelling = full refund (same approval as a refund) + stop service + put unused stock back.
+    // Only orders the bar has not started, otherwise the cups and ingredients are really gone.
+    public RefundEntry CancelOrder(string refundId, string orderId, string reason, string reference)
+    {
+        var order = CompletedOrders.FirstOrDefault(o => o.Id == orderId) ?? throw new InvalidOperationException("Không tìm thấy đơn.");
+        if (order.FulfillmentStatus != "Chờ làm") throw new InvalidOperationException("Chỉ hủy được đơn chưa bắt đầu pha chế. Đơn đã làm hãy dùng hoàn tiền.");
+        if (order.RefundedAmount > 0) throw new InvalidOperationException("Đơn đã hoàn một phần, không thể hủy.");
+        if (string.IsNullOrWhiteSpace(reason)) throw new InvalidOperationException("Nhập lý do hủy đơn.");
+        var entry = RefundOrder(refundId, orderId, order.TotalAmount, CancelReason(reason), reference);
+        Mutate(() =>
+        {
+            foreach (var move in StockMovements.Where(m => m.OrderId == order.Id && m.Type == "Bán hàng").ToList())
+                if (PackagingInventory.FirstOrDefault(p => p.Id == move.PackagingId) is { } pack)
+                {
+                    int before = pack.StockQuantity;
+                    pack.StockQuantity -= move.Change;
+                    RecordStockMovement(pack, before, "Hủy đơn", $"Hủy đơn #{order.DailyOrderNumber:D2}", order.Id);
+                }
+            string tag = $"Đơn #{order.DailyOrderNumber:D2}";
+            foreach (var move in IngredientMovements.Where(m => m.Type == "Bán hàng" && m.Reason.StartsWith(tag + " ") && m.At.Date == order.CreatedAt.Date).ToList())
+                if (Ingredients.FirstOrDefault(i => i.Id == move.IngredientId) is { } ing)
+                {
+                    ing.Stock -= move.Change;
+                    IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = "Hủy đơn", Change = -move.Change, After = ing.Stock, Reason = tag, Operator = AuthService.Instance.CurrentUser?.Username ?? "" });
+                }
+            order.FulfillmentStatus = "Dừng phục vụ";
+            // Payment stays "Completed": the full refund entry already nets the revenue to zero in reports.
+            order.IsCancelled = true;
+        });
         return entry;
     }
     public CashEntry RecordCash(string id, string type, decimal amount, string reason)

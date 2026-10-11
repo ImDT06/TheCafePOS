@@ -76,8 +76,59 @@ internal static class ManagementRegression
         var second = store.Checkout(new[] { line }, "Cash", 50000, "loyalty-2", customerPhone: member.Phone, redeemPoints: 5);
         Check(second.PromotionAmount == 5000 && second.LoyaltyAmount == 5000 && second.TotalAmount == 40000, "Promotion and redeemed points both reduce the total");
         Check(member.Points == 4, "Redeemed points are deducted and new points earned on the net total");
+        auth.Approve("mgmt-owner", "OwnerPass!2026", DataStoreService.RefundAction("refund-loyalty", second.Id, 40000, "Khách trả món", ""));
+        store.RefundOrder("refund-loyalty", second.Id, 40000, "Khách trả món", "");
+        Check(member.Points == 5, "Full refund revokes earned points and returns redeemed points");
         store.SavePromotion(new Promotion { Id = store.Promotions[0].Id, Name = "Test giờ vàng", IsActive = false, Percent = 10, Start = TimeSpan.Zero, End = new TimeSpan(23, 59, 59) });
         store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.TotalAmount));
+
+        // Ingredient inventory by recipe
+        var beans = new Ingredient { Name = "Mgmt beans", Unit = "g", WarningThreshold = 5 };
+        store.SaveIngredient(beans);
+        store.SaveRecipe(loyaltyDrink.Id, new() { new RecipeLine { IngredientId = beans.Id, Amount = 10 } });
+        store.AdjustIngredient(beans.Id, "Nhập kho", 25, "Mgmt receipt");
+        Reject(() => store.DeleteIngredient(beans.Id), "Ingredient used in a recipe cannot be deleted");
+        store.OpenShift(0);
+        var twoUnits = OrderConfigurationService.Clone(line); twoUnits.Quantity = 2;
+        store.Checkout(new[] { twoUnits }, "Cash", 100000, "recipe-1");
+        Check(store.Ingredients.Single(i => i.Id == beans.Id).Stock == 5 && !store.Products.Single(p => p.Id == loyaltyDrink.Id).IsSoldOut, "Sale deducts recipe quantity");
+        store.Checkout(new[] { line }, "Cash", 50000, "recipe-2");
+        Check(store.Products.Single(p => p.Id == loyaltyDrink.Id) is { IsSoldOut: true, SoldOutByStock: true }, "Empty ingredient marks product sold out");
+        Reject(() => store.Checkout(new[] { line }, "Cash", 50000, "recipe-3"), "Sold-out product cannot be sold");
+        store.AdjustIngredient(beans.Id, "Nhập kho", 20, "Mgmt receipt 2");
+        Check(!store.Products.Single(p => p.Id == loyaltyDrink.Id).IsSoldOut && store.Ingredients.Single(i => i.Id == beans.Id).Stock == 15, "Restock reopens product automatically");
+        store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.TotalAmount));
+
+        // Channels, promotions, cancellation, settings
+        store.SaveSettings(new StoreSettings { ShopName = "Mgmt Cafe", CashierDiscountLimitPercent = 10 });
+        Check(store.Settings.Channels.Any(c => c.Name == "GrabFood" && c.MarkupPercent == 25), "Default delivery channels exist");
+        store.OpenShift(0);
+        Reject(() => store.Checkout(new[] { line }, "Cash", 100000, "app-cash", channel: "GrabFood"), "App orders must be recorded as platform payments");
+        var appOrder = store.Checkout(new[] { line }, "Platform", 0, "app-1", channel: "GrabFood");
+        Check(appOrder.ChannelSurcharge == 13000 && appOrder.TotalAmount == 63000 && appOrder.ServiceType == "Mang đi", "Channel markup is added and rounded up to 1.000đ");
+        var cheap = new Product { Name = "Mgmt cheap", CategoryId = promoCategory.Id, BasePrice = 20000, IsRetailItem = true, Sizes = new() };
+        store.SaveProduct(cheap);
+        var cheapLine = OrderConfigurationService.Create(cheap, "", 100, 100, 1, Array.Empty<(string, int)>(), "", store.Products);
+        var bxgy = new Promotion { Type = "Mua X tặng Y", Name = "Mua 2 tặng 1", IsActive = true, BuyQuantity = 2, FreeQuantity = 1, ProductIds = new() { loyaltyDrink.Id, cheap.Id }, Start = TimeSpan.Zero, End = new TimeSpan(23, 59, 59) };
+        store.SavePromotion(bxgy);
+        var bxgyCart = new[] { twoUnits, cheapLine };
+        Check(store.PromotionsFor(bxgyCart, DataStoreService.CafeNow).Amount == 20000, "Buy 2 get 1 frees the cheapest unit");
+        Check(store.PromotionsFor(new[] { twoUnits }, DataStoreService.CafeNow).Amount == 0, "Buy 2 get 1 needs a complete group");
+        store.DeletePromotion(bxgy.Id);
+        store.SavePromotion(new Promotion { Type = "Combo", Name = "Combo bánh", IsActive = true, ProductIds = new() { loyaltyDrink.Id, cheap.Id }, ComboPrice = 60000, Start = TimeSpan.Zero, End = new TimeSpan(23, 59, 59) });
+        Check(store.PromotionsFor(new[] { line, cheapLine }, DataStoreService.CafeNow).Amount == 10000, "Combo charges the fixed combo price");
+        store.DeletePromotion(store.Promotions.Single(p => p.Type == "Combo").Id);
+        decimal beansBefore = store.Ingredients.Single(i => i.Id == beans.Id).Stock;
+        var toCancel = store.Checkout(new[] { line }, "Cash", 50000, "cancel-1");
+        auth.Approve("mgmt-owner", "OwnerPass!2026", DataStoreService.RefundAction("cancel-refund", toCancel.Id, toCancel.TotalAmount, DataStoreService.CancelReason("Khách đổi ý"), ""));
+        store.CancelOrder("cancel-refund", toCancel.Id, "Khách đổi ý", "");
+        Check(toCancel.IsCancelled && toCancel.RefundedAmount == toCancel.TotalAmount && store.Ingredients.Single(i => i.Id == beans.Id).Stock == beansBefore, "Cancelling refunds in full and returns ingredients");
+        var report = ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today, store.CurrentShift.Id, store.Refunds, store.CashEntries);
+        Check(report.Orders.Contains(toCancel) && report.Refunds.Count(r => r.OrderId == toCancel.Id) == 1 && report.Refunds.Single(r => r.OrderId == toCancel.Id).Amount == toCancel.TotalAmount, "Cancelled order stays in sales once and is netted by exactly one full refund");
+        string xlsx = Path.Combine(Path.GetTempPath(), $"mgmt-{Guid.NewGuid():N}.xlsx");
+        XlsxWriter.Write(xlsx, new (string, IReadOnlyList<string>, IEnumerable<object?[]>)[] { ("Test", new[] { "A", "B" }, new[] { new object?[] { "x & y", 12000m } }) });
+        using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx)) Check(zip.GetEntry("xl/worksheets/sheet1.xml") != null && zip.GetEntry("xl/workbook.xml") != null, "Excel export writes a valid workbook package");
+        store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.RefundableAmount));
 
         // Staff accounts
         auth.CreateAccount("mgmt-cashier", "CashierPass!2026", "Cashier");
@@ -86,6 +137,7 @@ internal static class ManagementRegression
         Reject(() => auth.DeleteAccount("mgmt-owner"), "Cannot delete own owner account");
         auth.UpdateAccountRole("mgmt-cashier", "Cashier");
         auth.Login("mgmt-cashier", "CashierPass!2026");
+        Check(!store.DiscountNeedsApproval(100000, 10000) && store.DiscountNeedsApproval(100000, 10001), "Cashier discount above the limit needs approval");
         store.OpenShift(0);
         auth.Login("mgmt-owner", "OwnerPass!2026");
         Reject(() => auth.DeleteAccount("mgmt-cashier"), "Cannot delete staff holding an open shift");

@@ -12,7 +12,7 @@
 <WrapPanel Margin="0,0,0,10"><Button Content="Hôm nay" Tag="today" Click="QuickRange_Click" Margin="0,0,8,0"/><Button Content="7 ngày qua" Tag="week" Click="QuickRange_Click" Margin="0,0,8,0"/><Button Content="Tháng này" Tag="month" Click="QuickRange_Click"/><TextBlock x:Name="AppliedRange" Margin="16,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#52665F"/></WrapPanel>
    <WrapPanel><TextBlock Text="Từ " VerticalAlignment="Center"/><DatePicker x:Name="From" Width="135"/><TextBlock Text=" đến " VerticalAlignment="Center"/><DatePicker x:Name="To" Width="135"/>
     <ComboBox x:Name="ShiftFilter" Width="230" Margin="12,0" DisplayMemberPath="Label" SelectedValuePath="Id"/>
-    <Button Background="#12634B" Foreground="White" Content="Xem báo cáo" Padding="10,5" Click="Refresh_Click"/><Button Content="Xuất CSV" Padding="10,5" Margin="10,0" Click="Export_Click"/>
+    <Button Background="#12634B" Foreground="White" Content="Xem báo cáo" Padding="10,5" Click="Refresh_Click"/><Button Content="Xuất Excel" Padding="10,5" Margin="10,0,0,0" Click="ExportExcel_Click"/><Button Content="Xuất CSV" Padding="10,5" Margin="10,0" Click="Export_Click"/>
    </WrapPanel>
 
   </StackPanel>

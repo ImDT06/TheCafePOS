@@ -18,11 +18,18 @@ public class Promotion
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = "Giờ vàng";
+    // "Giờ vàng" = % off subtotal; "Mua X tặng Y" = cheapest eligible units free; "Combo" = fixed price for a set of products.
+    public string Type { get; set; } = "Giờ vàng";
+    public int BuyQuantity { get; set; } = 2;
+    public int FreeQuantity { get; set; } = 1;
+    // Mua X tặng Y: eligible products (empty = every drink). Combo: one unit of each listed product.
+    public List<string> ProductIds { get; set; } = new();
+    public decimal ComboPrice { get; set; }
     public bool IsActive { get; set; }
     public int Percent { get; set; } = 10;
     public TimeSpan Start { get; set; } = new(14, 0, 0);
     public TimeSpan End { get; set; } = new(16, 0, 0);
     // Empty = every day.
     public List<DayOfWeek> Days { get; set; } = new();
-    public bool AppliesAt(DateTime at) => IsActive && Percent is > 0 and < 100 && at.TimeOfDay >= Start && at.TimeOfDay < End && (Days.Count == 0 || Days.Contains(at.DayOfWeek));
+    public bool AppliesAt(DateTime at) => IsActive && at.TimeOfDay >= Start && at.TimeOfDay < End && (Days.Count == 0 || Days.Contains(at.DayOfWeek));
 }

@@ -27,9 +27,12 @@ namespace TheCafePOS_WPF
         private decimal Subtotal => _cartItems.Sum(i => i.TotalPrice);
         private string _customerPhone = "";
         private int _redeemPoints;
-        private Promotion? ActivePromo => DataStoreService.Instance.ActivePromotion(DataStoreService.CafeNow);
-        private decimal PromoAmount => DataStoreService.PromotionDiscount(ActivePromo, Subtotal);
-        private decimal PayableTotal => Subtotal - _discount - PromoAmount - _redeemPoints * DataStoreService.PointValue;
+        private string _channel = StoreSettings.Counter;
+        private bool IsAppOrder => _channel != StoreSettings.Counter;
+        private (decimal Amount, string Names) Promos => IsAppOrder ? (0m, "") : DataStoreService.Instance.PromotionsFor(_cartItems, DataStoreService.CafeNow);
+        private decimal PromoAmount => Promos.Amount;
+        private decimal ChannelSurcharge => DataStoreService.Instance.Settings.Channels.FirstOrDefault(c => c.Name == _channel) is { } ch && IsAppOrder ? Math.Ceiling(Subtotal * ch.MarkupPercent / 100m / 1000m) * 1000m : 0;
+        private decimal PayableTotal => Subtotal + ChannelSurcharge - _discount - PromoAmount - _redeemPoints * DataStoreService.PointValue;
 
         public MainWindow()
         {
@@ -39,6 +42,7 @@ namespace TheCafePOS_WPF
 
             Loaded += MainWindow_Loaded;
             PreviewKeyDown += MainWindow_PreviewKeyDown;
+            LoadChannels();
             Closing += (_, e) =>
             {
                 if (_cartItems.Count == 0) return;
@@ -339,8 +343,14 @@ namespace TheCafePOS_WPF
             TxtItemCountSummary.Text = $"Tổng cộng · {totalCups} món";
             BtnHold.IsEnabled = BtnQr.IsEnabled = BtnCash.IsEnabled = _cartItems.Count > 0;
             if (_cartItems.Count == 0 || PayableTotal <= 0) { if ((_discount > 0 || _redeemPoints > 0) && _cartItems.Count > 0) Toast.Show(this, "Đã bỏ giảm giá / đổi điểm vì vượt quá tạm tính.", true); _discount = 0; _discountReason = ""; _redeemPoints = 0; total = PayableTotal; }
-            var promo = ActivePromo;
-            TxtPromoLine.Text = promo is null ? "" : $"{promo.Name} −{promo.Percent}%: −{PromoAmount:N0}đ";
+            var promos = Promos;
+            TxtPromoLine.Text = $"Khuyến mãi ({promos.Names}): −{promos.Amount:N0}đ";
+            TxtChannelLine.Text = $"Giá kênh {_channel}: +{ChannelSurcharge:N0}đ · thanh toán qua nền tảng";
+            TxtChannelLine.Visibility = IsAppOrder ? Visibility.Visible : Visibility.Collapsed;
+            BtnDiscount.Visibility = BtnCustomer.Visibility = IsAppOrder ? Visibility.Collapsed : Visibility.Visible;
+            ServiceTypeRow.IsEnabled = !IsAppOrder;
+            BtnQr.Visibility = IsAppOrder ? Visibility.Collapsed : Visibility.Visible;
+            BtnCash.Content = IsAppOrder ? $"Ghi nhận đơn {_channel} (F4)" : "Tiền mặt (F4)";
             TxtPromoLine.Visibility = PromoAmount > 0 ? Visibility.Visible : Visibility.Collapsed;
             TxtLoyaltyLine.Text = $"Đổi {_redeemPoints} điểm −{_redeemPoints * DataStoreService.PointValue:N0}đ";
             TxtLoyaltyLine.Visibility = _redeemPoints > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -505,7 +515,7 @@ namespace TheCafePOS_WPF
 
         private async void BtnPayCash_Click(object sender, RoutedEventArgs e)
         {
-            await ProcessOrderPaymentAsync("Cash");
+            await ProcessOrderPaymentAsync(IsAppOrder ? "Platform" : "Cash");
         }
 
         private async void BtnPayVietQR_Click(object sender, RoutedEventArgs e)
@@ -533,8 +543,8 @@ namespace TheCafePOS_WPF
                 decimal cashGiven = 0;
                 if (paymentMethod == "Cash" && !decimal.TryParse(TxtCashGiven.Text, out cashGiven))
                     throw new InvalidOperationException("Vui lòng nhập số tiền khách đưa hợp lệ.");
-                var order = DataStoreService.Instance.Checkout(_cartItems, paymentMethod, cashGiven, _checkoutId, qrApproved, _serviceType, _discount, _discountReason, _customerPhone, _redeemPoints);
-                _discount = 0; _discountReason = ""; _serviceType = "Mang đi"; _customerPhone = ""; _redeemPoints = 0;
+                var order = DataStoreService.Instance.Checkout(_cartItems, paymentMethod, cashGiven, _checkoutId, qrApproved, _serviceType, _discount, _discountReason, _customerPhone, _redeemPoints, _channel);
+                _discount = 0; _discountReason = ""; _serviceType = "Mang đi"; _customerPhone = ""; _redeemPoints = 0; ChannelPicker.SelectedIndex = 0;
                 _cartItems.Clear();
                 TxtCashGiven.Clear();
                 _checkoutId = Guid.NewGuid().ToString();
@@ -601,7 +611,7 @@ namespace TheCafePOS_WPF
             if (_cartItems.Count == 0) return;
             var modal = new DiscountModal();
             if (!modal.Show(this, Subtotal, _discount, _discountReason)) return;
-            if (modal.Amount > 0 && new PinApprovalModal(AuthService.DiscountApprovalAction(_checkoutId, modal.Amount, modal.Reason)) { Owner = this }.ShowDialog() != true) return;
+            if (DataStoreService.Instance.DiscountNeedsApproval(Subtotal, modal.Amount) && new PinApprovalModal(AuthService.DiscountApprovalAction(_checkoutId, modal.Amount, modal.Reason)) { Owner = this }.ShowDialog() != true) return;
             _discount = modal.Amount; _discountReason = modal.Reason;
             UpdateCartTotal();
         }
@@ -612,6 +622,20 @@ namespace TheCafePOS_WPF
             if (!modal.Show(this, PayableTotal + _redeemPoints * DataStoreService.PointValue, _customerPhone, _redeemPoints)) return;
             _customerPhone = modal.Phone; _redeemPoints = modal.RedeemPoints;
             UpdateCartTotal();
+        }
+
+        private void LoadChannels()
+        {
+            ChannelPicker.ItemsSource = new[] { StoreSettings.Counter }.Concat(DataStoreService.Instance.Settings.Channels.Where(c => c.IsActive).Select(c => c.Name)).ToList();
+            ChannelPicker.SelectedIndex = 0;
+            Title = DataStoreService.Instance.Settings.DisplayName + " — POS";
+        }
+
+        private void ChannelPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _channel = ChannelPicker.SelectedItem as string ?? StoreSettings.Counter;
+            if (IsAppOrder) { _serviceType = "Mang đi"; _discount = 0; _discountReason = ""; _customerPhone = ""; _redeemPoints = 0; }
+            if (IsLoaded) UpdateCartTotal();
         }
 
         private void BtnQueue_Click(object sender, RoutedEventArgs e) => new OrderQueueWindow { Owner = this }.Show();

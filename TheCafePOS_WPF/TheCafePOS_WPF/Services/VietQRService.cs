@@ -8,11 +8,28 @@ namespace TheCafePOS_WPF.Services
         public string AccountNo { get; set; } = "";
         public string AccountName { get; set; } = "";
         // Optional; enables automatic transfer confirmation through SePay.
-        public string SePayToken { get; set; } = "";
+        [System.Text.Json.Serialization.JsonIgnore] public string SePayToken { get; set; } = "";
+        // Stored form: DPAPI-encrypted for the current Windows user, base64. Legacy plain value is migrated on next save.
+        public string SePayTokenProtected { get; set; } = "";
+        [System.Text.Json.Serialization.JsonPropertyName("SePayToken")] public string LegacySePayToken { get; set; } = "";
     }
     public class VietQRService
     {
-        public static BankSettings Settings => LocalDatabase.Instance.Read<BankSettings>("bank") ?? new();
+        public static BankSettings Settings
+        {
+            get
+            {
+                var s = LocalDatabase.Instance.Read<BankSettings>("bank") ?? new();
+                try
+                {
+                    s.SePayToken = s.SePayTokenProtected.Length > 0
+                        ? System.Text.Encoding.UTF8.GetString(WindowsSessionProtection.Transform(Convert.FromBase64String(s.SePayTokenProtected), false))
+                        : s.LegacySePayToken;
+                }
+                catch (Exception) { s.SePayToken = ""; } // another Windows user or damaged value: treat as not configured
+                return s;
+            }
+        }
         public static void ValidateSettings() => Validate(Settings);
         private static void Validate(BankSettings settings)
         {
@@ -21,7 +38,10 @@ namespace TheCafePOS_WPF.Services
         }
         public static void SaveSettings(BankSettings settings)
         {
-            AuthService.Instance.RequireManager(); Validate(settings); LocalDatabase.Instance.Write("bank", settings);
+            AuthService.Instance.RequireManager(); Validate(settings);
+            settings.SePayTokenProtected = string.IsNullOrWhiteSpace(settings.SePayToken) ? "" : Convert.ToBase64String(WindowsSessionProtection.Transform(System.Text.Encoding.UTF8.GetBytes(settings.SePayToken.Trim()), true));
+            settings.LegacySePayToken = "";
+            LocalDatabase.Instance.Write("bank", settings);
         }
 
         // Short, letters/digits only (banks strip symbols): CF + ddMM + 4 chars of the checkout id, e.g. "CF1010A3F9".

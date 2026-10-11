@@ -28,7 +28,7 @@ public partial class DataStoreService
         if (order.PaymentMethod == "VietQR" && string.IsNullOrWhiteSpace(reference)) throw new InvalidOperationException("Nhập mã giao dịch chuyển khoản hoàn tiền đã thực hiện.");
         var approver = AuthService.Instance.RequireApproval(RefundAction(id, orderId, amount, reason, reference));
         var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, Reason = reason.Trim(), Reference = reference.Trim(), Operator = AuthService.Instance.CurrentUser!.Username, Approver = approver };
-        Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); });
+        Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); RevokeLoyalty(order, amount); });
         return entry;
     }
     public CashEntry RecordCash(string id, string type, decimal amount, string reason)

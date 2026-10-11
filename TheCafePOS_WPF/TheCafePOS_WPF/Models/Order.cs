@@ -25,6 +25,7 @@ namespace TheCafePOS_WPF.Models
         public string CustomerPhone { get; set; } = string.Empty;
         public int PointsRedeemed { get; set; }
         public int PointsEarned { get; set; }
+        public int PointsRevoked { get; set; }
         public decimal LoyaltyAmount => PointsRedeemed * 1000m;
         public decimal RefundedAmount { get; set; }
         public decimal RefundableAmount => TotalAmount - RefundedAmount;

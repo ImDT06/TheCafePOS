@@ -31,6 +31,15 @@ public partial class DataStoreService
         return customer;
     }
 
+    public void UpdateCustomer(string phone, string name)
+    {
+        AuthService.Instance.RequireManager();
+        var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
+        if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Nhập tên khách hàng.");
+        Mutate(() => customer.Name = name.Trim());
+    }
+    public List<Order> CustomerOrders(string phone) => CompletedOrders.Where(o => o.CustomerPhone == phone).OrderByDescending(o => o.CreatedAt).ToList();
+
     public Promotion? ActivePromotion(DateTime at) => Promotions.FirstOrDefault(p => p.AppliesAt(at));
     // Rounded down to 1.000đ so the cashier never handles odd change.
     public static decimal PromotionDiscount(Promotion? promo, decimal subtotal) =>
@@ -47,6 +56,19 @@ public partial class DataStoreService
             int i = Promotions.FindIndex(p => p.Id == promo.Id);
             if (i < 0) Promotions.Add(promo); else Promotions[i] = promo;
         });
+    }
+
+    // Refunds take back earned points pro rata; a full refund also gives back the points spent on the order.
+    private void RevokeLoyalty(Order order, decimal refunded)
+    {
+        var customer = Customers.FirstOrDefault(c => c.Phone == order.CustomerPhone);
+        if (customer is null || order.TotalAmount <= 0) return;
+        int shouldRevoke = (int)Math.Ceiling(order.PointsEarned * order.RefundedAmount / order.TotalAmount);
+        int delta = Math.Min(shouldRevoke, order.PointsEarned) - order.PointsRevoked;
+        bool full = order.RefundedAmount >= order.TotalAmount;
+        customer.Points = Math.Max(0, customer.Points - delta + (full ? order.PointsRedeemed : 0));
+        customer.TotalSpent = Math.Max(0, customer.TotalSpent - refunded);
+        order.PointsRevoked += delta;
     }
 
     // Called inside Checkout's Mutate so points and the order are saved together.

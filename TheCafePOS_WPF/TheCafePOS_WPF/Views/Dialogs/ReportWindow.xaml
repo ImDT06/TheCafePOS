@@ -38,6 +38,7 @@
 <TextBlock Text="Top 5 món theo doanh thu · trước hoàn tiền" FontSize="20" FontWeight="SemiBold" Margin="0,24,0,12"/>
 <ItemsControl x:Name="ProductChart"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,0,0,14"><DockPanel><TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" HorizontalAlignment="Right"/></DockPanel><ProgressBar Value="{Binding Percent, Mode=OneWay}" Maximum="100" Height="12" Foreground="#12634B" Background="#EFF4F1" BorderThickness="0" Margin="0,6,0,0" AutomationProperties.Name="{Binding Detail}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
 </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Phân tích"><ScrollViewer x:Name="InsightsHost" Background="#F3F5F4" VerticalScrollBarVisibility="Auto"/></TabItem>
    <TabItem Header="Đơn hàng"><Grid><Grid.RowDefinitions><RowDefinition Height="2*"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <DataGrid x:Name="Orders" touch:EmptyState.Text="Chưa có dữ liệu" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="OrderSelected"><DataGrid.Columns>
      <DataGridTextColumn Header="STT" Binding="{Binding DailyOrderNumberFormatted}"/><DataGridTextColumn Header="Thời gian" Binding="{Binding CreatedAt, StringFormat=dd/MM/yyyy HH:mm}" Width="160"/>

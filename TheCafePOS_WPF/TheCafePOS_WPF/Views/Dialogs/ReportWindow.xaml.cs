@@ -1,7 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
@@ -26,6 +27,7 @@ public partial class ReportWindow : Window
         Orders.ItemsSource = report.Orders; Items.ItemsSource = null; TopProducts.ItemsSource = report.Products;
         Shifts.ItemsSource = store.Shifts.Where(s => s.EndTime?.Date >= from.Date && s.EndTime?.Date <= to.Date && (string.IsNullOrEmpty(shiftId) || s.Id == shiftId)).ToList();
         Refunds.ItemsSource = report.Refunds; CashEntries.ItemsSource = report.CashEntries;
+        RenderInsights(report, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId);
         Summary.Text = $"{report.Orders.Count} đơn | Bán hàng: {report.Revenue:N0}đ | Hoàn: {report.Refunded:N0}đ | Thuần: {report.NetRevenue:N0}đ\nBán tiền mặt: {report.Cash:N0}đ · Hoàn tiền mặt: {report.CashRefunded:N0}đ | Bán QR: {report.Transfer:N0}đ · Hoàn QR: {report.TransferRefunded:N0}đ\nThu ngoài bán hàng: {report.CashIn:N0}đ | Chi ngoài bán hàng: {report.CashOut:N0}đ";
         RevenueMetric.Text = $"{report.Revenue:N0}đ";
         NetMetric.Text = $"{report.NetRevenue:N0}đ";

@@ -76,7 +76,27 @@ internal static class ManagementRegression
         var second = store.Checkout(new[] { line }, "Cash", 50000, "loyalty-2", customerPhone: member.Phone, redeemPoints: 5);
         Check(second.PromotionAmount == 5000 && second.LoyaltyAmount == 5000 && second.TotalAmount == 40000, "Promotion and redeemed points both reduce the total");
         Check(member.Points == 4, "Redeemed points are deducted and new points earned on the net total");
+        auth.Approve("mgmt-owner", "OwnerPass!2026", DataStoreService.RefundAction("refund-loyalty", second.Id, 40000, "Khách trả món", ""));
+        store.RefundOrder("refund-loyalty", second.Id, 40000, "Khách trả món", "");
+        Check(member.Points == 5, "Full refund revokes earned points and returns redeemed points");
         store.SavePromotion(new Promotion { Id = store.Promotions[0].Id, Name = "Test giờ vàng", IsActive = false, Percent = 10, Start = TimeSpan.Zero, End = new TimeSpan(23, 59, 59) });
+        store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.TotalAmount));
+
+        // Ingredient inventory by recipe
+        var beans = new Ingredient { Name = "Mgmt beans", Unit = "g", WarningThreshold = 5 };
+        store.SaveIngredient(beans);
+        store.SaveRecipe(loyaltyDrink.Id, new() { new RecipeLine { IngredientId = beans.Id, Amount = 10 } });
+        store.AdjustIngredient(beans.Id, "Nhập kho", 25, "Mgmt receipt");
+        Reject(() => store.DeleteIngredient(beans.Id), "Ingredient used in a recipe cannot be deleted");
+        store.OpenShift(0);
+        var twoUnits = OrderConfigurationService.Clone(line); twoUnits.Quantity = 2;
+        store.Checkout(new[] { twoUnits }, "Cash", 100000, "recipe-1");
+        Check(store.Ingredients.Single(i => i.Id == beans.Id).Stock == 5 && !store.Products.Single(p => p.Id == loyaltyDrink.Id).IsSoldOut, "Sale deducts recipe quantity");
+        store.Checkout(new[] { line }, "Cash", 50000, "recipe-2");
+        Check(store.Products.Single(p => p.Id == loyaltyDrink.Id) is { IsSoldOut: true, SoldOutByStock: true }, "Empty ingredient marks product sold out");
+        Reject(() => store.Checkout(new[] { line }, "Cash", 50000, "recipe-3"), "Sold-out product cannot be sold");
+        store.AdjustIngredient(beans.Id, "Nhập kho", 20, "Mgmt receipt 2");
+        Check(!store.Products.Single(p => p.Id == loyaltyDrink.Id).IsSoldOut && store.Ingredients.Single(i => i.Id == beans.Id).Stock == 15, "Restock reopens product automatically");
         store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.TotalAmount));
 
         // Staff accounts

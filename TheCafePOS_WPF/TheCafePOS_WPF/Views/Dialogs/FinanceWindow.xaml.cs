@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
@@ -27,6 +27,24 @@ public partial class FinanceWindow : Window
         OrderDetails.Text = $"Đơn #{order.DailyOrderNumber:D2} · {order.CreatedAt:dd/MM/yyyy HH:mm}\n{order.PaymentMethod} · Đã hoàn: {order.RefundedAmount:N0}đ\n" + string.Join("\n", order.Items.Select(i => $"{i.Quantity} × {i.ProductName} — {i.TotalPrice:N0}đ"));
         Core.TouchInput.SetMaximum(RefundAmount, order.RefundableAmount);
         RefundAmount.Text = order.RefundableAmount.ToString("0");
+    }
+    private void CancelOrder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _store.RequireOpenShift();
+            if (Orders.SelectedItem is not Order order) throw new InvalidOperationException("Chọn đơn cần hủy.");
+            if (order.FulfillmentStatus != "Chờ làm") throw new InvalidOperationException("Đơn đã bắt đầu pha chế, hãy dùng hoàn tiền thay vì hủy.");
+            if (string.IsNullOrWhiteSpace(RefundReason.Text)) throw new InvalidOperationException("Nhập lý do hủy đơn vào ô Lý do.");
+            if (order.PaymentMethod == "VietQR" && string.IsNullOrWhiteSpace(RefundReference.Text)) throw new InvalidOperationException("Nhập mã giao dịch hoàn chuyển khoản.");
+            if (RefundConfirmed.IsChecked != true) throw new InvalidOperationException("Xác nhận đã trả tiền cho khách trước khi ghi nhận.");
+            if (MessageBox.Show(this, $"Hủy đơn {order.DailyOrderNumberFormatted} và hoàn {order.TotalAmount:N0}đ?", "Hủy đơn", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            var action = DataStoreService.RefundAction(_refundId, order.Id, order.TotalAmount, DataStoreService.CancelReason(RefundReason.Text), RefundReference.Text);
+            if (new PinApprovalModal(action) { Owner = this }.ShowDialog() != true) return;
+            _store.CancelOrder(_refundId, order.Id, RefundReason.Text, RefundReference.Text);
+            _refundId = Guid.NewGuid().ToString(); Refresh(); Status.Text = "Đã hủy đơn, hoàn đủ tiền và trả bao bì / nguyên liệu về kho.";
+        }
+        catch (Exception ex) { Status.Text = ex.Message; }
     }
     private void Refund_Click(object sender, RoutedEventArgs e)
     {

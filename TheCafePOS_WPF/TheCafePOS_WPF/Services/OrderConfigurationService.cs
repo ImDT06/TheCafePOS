@@ -25,6 +25,9 @@ public static class OrderConfigurationService
         string Resolve(bool enabled, List<string>? choices, string fallback, string? selected)
         {
             if (!product.IsBeverage || !enabled || choices is null) return "";
+            // An explicit choice the product does not offer is an error; only a missing choice falls back.
+            if (!string.IsNullOrWhiteSpace(selected) && !choices.Contains(selected))
+                throw new InvalidOperationException("Tùy chọn đường/đá không áp dụng cho món này.");
             var value = ResolveChoice(choices, selected, fallback);
             if (string.IsNullOrWhiteSpace(value) || !choices.Contains(value))
                 throw new InvalidOperationException("Tùy chọn đường/đá không áp dụng cho món này.");

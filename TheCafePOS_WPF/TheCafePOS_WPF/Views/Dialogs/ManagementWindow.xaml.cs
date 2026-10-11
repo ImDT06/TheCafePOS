@@ -180,14 +180,8 @@ public partial class ManagementWindow : Window
         if (MessageBox.Show(this, $"{(account.IsActive ? "Khóa" : "Mở khóa")} tài khoản {account.Username}?", "Tài khoản", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
         Run(() => AuthService.Instance.SetAccountActive(account.Username, !account.IsActive));
     }
-    private static readonly (DayOfWeek Day, string Label)[] Days = { (DayOfWeek.Monday, "T2"), (DayOfWeek.Tuesday, "T3"), (DayOfWeek.Wednesday, "T4"), (DayOfWeek.Thursday, "T5"), (DayOfWeek.Friday, "T6"), (DayOfWeek.Saturday, "T7"), (DayOfWeek.Sunday, "CN") };
     private void LoadPromoAndBackup()
     {
-        var promo = _store.Promotions.FirstOrDefault() ?? new Promotion();
-        PromoActive.IsChecked = promo.IsActive; PromoName.Text = promo.Name; PromoPercent.Text = promo.Percent.ToString();
-        PromoStart.Text = promo.Start.ToString(@"hh\:mm"); PromoEnd.Text = promo.End.ToString(@"hh\:mm");
-        PromoDays.Children.Clear();
-        foreach (var (day, label) in Days) PromoDays.Children.Add(new CheckBox { Content = label, Tag = day, IsChecked = promo.Days.Contains(day), Margin = new Thickness(0, 0, 12, 6) });
         RefreshBackupInfo();
     }
     private void RefreshBackupInfo()
@@ -195,15 +189,15 @@ public partial class ManagementWindow : Window
         BackupInfo.Text = BackupService.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
         MemberInfo.Text = $"{_store.Customers.Count} thành viên · {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
-    private void SavePromo_Click(object sender, RoutedEventArgs e) => Run(() =>
+    private void OpenIngredients_Click(object sender, RoutedEventArgs e) { new IngredientWindow { Owner = this }.ShowDialog(); Refresh(); }
+    private void Recipe_Click(object sender, RoutedEventArgs e)
     {
-        if (!int.TryParse(PromoPercent.Text, out var percent) || percent is <= 0 or >= 100) throw FieldError.Mark(PromoPercent, "Nhập mức giảm từ 1 đến 99.");
-        if (!TimeSpan.TryParse(PromoStart.Text, out var start)) throw FieldError.Mark(PromoStart, "Nhập giờ dạng 14:00.");
-        if (!TimeSpan.TryParse(PromoEnd.Text, out var end) || end <= start) throw FieldError.Mark(PromoEnd, "Giờ kết thúc phải sau giờ bắt đầu.");
-        var id = _store.Promotions.FirstOrDefault()?.Id ?? Guid.NewGuid().ToString();
-        _store.SavePromotion(new Promotion { Id = id, Name = PromoName.Text.Trim(), Percent = percent, Start = start, End = end, IsActive = PromoActive.IsChecked == true,
-            Days = PromoDays.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (DayOfWeek)c.Tag).ToList() });
-    });
+        if (_store.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi khai báo công thức."; return; }
+        if (new RecipeWindow(product) { Owner = this }.ShowDialog() == true) { Refresh(); Toast.Show(this, "Đã lưu công thức."); }
+    }
+    private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (new StoreSettingsWindow { Owner = this }.ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
+    private void OpenPromotions_Click(object sender, RoutedEventArgs e) => new PromotionsWindow { Owner = this }.ShowDialog();
+    private void OpenCustomers_Click(object sender, RoutedEventArgs e) { new CustomerListWindow { Owner = this }.ShowDialog(); RefreshBackupInfo(); }
     private void BackupNow_Click(object sender, RoutedEventArgs e)
     {
         try { BackupService.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }

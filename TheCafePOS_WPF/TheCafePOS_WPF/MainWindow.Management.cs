@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Views.Dialogs;
@@ -28,7 +28,7 @@ public partial class MainWindow
     private void Management_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ManagementWindow { Owner = this }.ShowDialog(); _selectedCategoryId = "ALL"; RenderCategories(); RenderProducts(); }
+        try { new ManagementWindow { Owner = this }.ShowDialog(); _selectedCategoryId = "ALL"; RenderCategories(); RenderProducts(); LoadChannels(); UpdateCartTotal(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void Reports_Click(object sender, RoutedEventArgs e)

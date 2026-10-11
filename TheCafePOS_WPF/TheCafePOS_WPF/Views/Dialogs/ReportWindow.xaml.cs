@@ -1,7 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
@@ -26,6 +27,7 @@ public partial class ReportWindow : Window
         Orders.ItemsSource = report.Orders; Items.ItemsSource = null; TopProducts.ItemsSource = report.Products;
         Shifts.ItemsSource = store.Shifts.Where(s => s.EndTime?.Date >= from.Date && s.EndTime?.Date <= to.Date && (string.IsNullOrEmpty(shiftId) || s.Id == shiftId)).ToList();
         Refunds.ItemsSource = report.Refunds; CashEntries.ItemsSource = report.CashEntries;
+        RenderInsights(report, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId);
         Summary.Text = $"{report.Orders.Count} đơn | Bán hàng: {report.Revenue:N0}đ | Hoàn: {report.Refunded:N0}đ | Thuần: {report.NetRevenue:N0}đ\nBán tiền mặt: {report.Cash:N0}đ · Hoàn tiền mặt: {report.CashRefunded:N0}đ | Bán QR: {report.Transfer:N0}đ · Hoàn QR: {report.TransferRefunded:N0}đ\nThu ngoài bán hàng: {report.CashIn:N0}đ | Chi ngoài bán hàng: {report.CashOut:N0}đ";
         RevenueMetric.Text = $"{report.Revenue:N0}đ";
         NetMetric.Text = $"{report.NetRevenue:N0}đ";
@@ -73,6 +75,40 @@ public partial class ReportWindow : Window
     }
     private void Refresh_Click(object sender, RoutedEventArgs e) { try { RefreshReport(); } catch (Exception ex) { MessageBox.Show(this, ex.Message); } }
     private void OrderSelected(object sender, SelectionChangedEventArgs e) => Items.ItemsSource = (Orders.SelectedItem as Order)?.Items;
+    private void ExportExcel_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var report = RefreshReport();
+            var dialog = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"bao-cao-{From.SelectedDate:yyyyMMdd}-{To.SelectedDate:yyyyMMdd}.xlsx" };
+            if (dialog.ShowDialog(this) != true) return;
+            string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Platform" => "Nền tảng", _ => m };
+            XlsxWriter.Write(dialog.FileName, new (string, IReadOnlyList<string>, IEnumerable<object?[]>)[]
+            {
+                ("Tổng quan", new[] { "Chỉ số", "Giá trị" }, new object?[][]
+                {
+                    new object?[] { "Cửa hàng", DataStoreService.Instance.Settings.DisplayName },
+                    new object?[] { "Từ ngày", From.SelectedDate }, new object?[] { "Đến ngày", To.SelectedDate },
+                    new object?[] { "Số đơn", report.Orders.Count }, new object?[] { "Doanh thu bán hàng", report.Revenue },
+                    new object?[] { "Hoàn tiền", report.Refunded }, new object?[] { "Doanh thu thuần", report.NetRevenue },
+                    new object?[] { "Tiền mặt", report.Cash }, new object?[] { "VietQR", report.Transfer },
+                    new object?[] { "Giảm giá thủ công", report.Orders.Sum(o => o.DiscountAmount) }, new object?[] { "Khuyến mãi", report.Orders.Sum(o => o.PromotionAmount) },
+                    new object?[] { "Đổi điểm", report.Orders.Sum(o => o.LoyaltyAmount) }, new object?[] { "Giá trị TB/đơn", Math.Round(report.AverageOrderValue) }
+                }),
+                ("Đơn hàng", new[] { "Mã đơn", "Thời gian", "Kênh", "Loại đơn", "Thanh toán", "Tạm tính", "Phụ thu kênh", "Khuyến mãi", "Đổi điểm", "Giảm giá", "Thực thu", "Đã hoàn", "Khách", "Trạng thái" },
+                    report.Orders.Select(o => new object?[] { o.DailyOrderNumberFormatted, o.CreatedAt, o.Channel, o.ServiceType, Pay(o.PaymentMethod), o.SubtotalAmount, o.ChannelSurcharge, o.PromotionAmount, o.LoyaltyAmount, o.DiscountAmount, o.TotalAmount, o.RefundedAmount, o.CustomerPhone, o.IsCancelled ? "Đã hủy" : o.RefundStatus })),
+                ("Chi tiết món", new[] { "Mã đơn", "Món", "Size", "Số lượng", "Thành tiền" },
+                    report.Orders.SelectMany(o => o.Items.Select(i => new object?[] { o.DailyOrderNumberFormatted, i.ProductName, i.Size, i.Quantity, i.TotalPrice }))),
+                ("Món bán", new[] { "Món", "Số lượng", "Doanh thu" }, report.Products.Select(p => new object?[] { p.ProductName, p.Quantity, p.Revenue })),
+                ("Hoàn tiền", new[] { "Thời gian", "Mã đơn", "Số tiền", "Phương thức", "Lý do", "Mã GD", "Nhân viên", "Người duyệt" },
+                    report.Refunds.Select(r => new object?[] { r.CreatedAt, r.OrderId, r.Amount, Pay(r.Method), r.Reason, r.Reference, r.Operator, r.Approver })),
+                ("Thu chi", new[] { "Thời gian", "Loại", "Số tiền", "Lý do", "Nhân viên", "Người duyệt" },
+                    report.CashEntries.Select(c => new object?[] { c.CreatedAt, c.Type == "In" ? "Thu" : "Chi", c.Amount, c.Reason, c.Operator, c.Approver }))
+            });
+            TheCafePOS_WPF.Core.Toast.Show(this, "Đã xuất file Excel.");
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message); }
+    }
     private void Export_Click(object sender, RoutedEventArgs e)
     {
         try

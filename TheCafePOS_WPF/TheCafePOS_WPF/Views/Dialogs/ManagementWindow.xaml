@@ -45,6 +45,7 @@
                   <CheckBox x:Name="ProductActive" Content="Đang bán (bỏ chọn để ẩn khỏi thực đơn)" IsChecked="True" Margin="0,4,0,6" />
                   <CheckBox x:Name="ProductSoldOut" Content="Hết hàng tạm thời (vẫn hiện, làm mờ)" Margin="0,4,0,10" />
                   <Button Content="Cấu hình size / topping / đường đá" Padding="8" Margin="0,8,0,0" Click="ConfigureProduct_Click" />
+                  <Button Content="Công thức (định lượng nguyên liệu)…" Padding="8" Margin="0,8,0,0" Click="Recipe_Click" />
                   <Button Content="Xóa món" Style="{StaticResource DangerButton}" Padding="8" Margin="0,24,0,0" Click="DeleteProduct_Click" />
                 </StackPanel>
               </ScrollViewer>
@@ -136,28 +137,18 @@
           </Border>
         </ScrollViewer>
       </TabItem>
-      <TabItem Header="Khuyến mãi &amp; Sao lưu">
+      <TabItem Header="Cửa hàng &amp; Sao lưu">
         <Grid Margin="0,12,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
           <Border Style="{StaticResource SurfaceCard}" Margin="0,0,8,0">
-            <DockPanel>
-              <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="Lưu khuyến mãi" Padding="8" Margin="0,14,0,0" Click="SavePromo_Click" />
-              <StackPanel>
-                <TextBlock Text="Khuyến mãi theo khung giờ" FontWeight="Bold" />
-                <TextBlock Text="Tự giảm % tạm tính cho mọi đơn trong khung giờ, không cần quản lý duyệt." Style="{StaticResource Hint}" />
-                <CheckBox x:Name="PromoActive" Content="Đang bật" Margin="0,0,0,10" />
-                <TextBlock Text="Tên chương trình" />
-                <TextBox x:Name="PromoName" Padding="6" Margin="0,4,0,10" />
-                <TextBlock Text="Mức giảm (%)" />
-                <TextBox x:Name="PromoPercent" touch:TouchInput.Numeric="True" Padding="6" Margin="0,4,0,10" />
-                <UniformGrid Columns="2">
-                  <StackPanel Margin="0,0,6,0"><TextBlock Text="Từ (giờ:phút)" /><TextBox x:Name="PromoStart" Padding="6" Margin="0,4,0,10" ToolTip="Ví dụ 14:00" /></StackPanel>
-                  <StackPanel Margin="6,0,0,0"><TextBlock Text="Đến (giờ:phút)" /><TextBox x:Name="PromoEnd" Padding="6" Margin="0,4,0,10" ToolTip="Ví dụ 16:00" /></StackPanel>
-                </UniformGrid>
-                <TextBlock Text="Áp dụng các ngày (không chọn = mọi ngày)" Margin="0,0,0,4" />
-                <WrapPanel x:Name="PromoDays" />
-              </StackPanel>
-            </DockPanel>
+            <StackPanel>
+              <TextBlock Text="Cửa hàng &amp; bán hàng" FontWeight="Bold" />
+              <TextBlock Text="Thông tin quán, hạn mức giảm giá của thu ngân và các kênh app giao hàng." Style="{StaticResource Hint}" />
+              <Button Style="{StaticResource PrimaryButton}" Content="Cài đặt cửa hàng…" Padding="8" Click="OpenStoreSettings_Click" />
+              <TextBlock Text="Khuyến mãi" FontWeight="Bold" Margin="0,24,0,0" />
+              <TextBlock Text="Giờ vàng giảm %, mua X tặng Y, combo giá cố định. Các chương trình đang bật được cộng dồn tự động." Style="{StaticResource Hint}" />
+              <Button Content="Chương trình khuyến mãi…" Padding="8" Click="OpenPromotions_Click" />
+            </StackPanel>
           </Border>
           <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Margin="8,0,0,0">
             <StackPanel>
@@ -168,6 +159,9 @@
               <Button Content="Mở thư mục sao lưu" Padding="8" Margin="0,8,0,0" Click="OpenBackups_Click" />
               <TextBlock Text="Khách hàng thành viên" FontWeight="Bold" Margin="0,24,0,0" />
               <TextBlock x:Name="MemberInfo" Style="{StaticResource Hint}" />
+              <Button Content="Quản lý khách hàng…" Padding="8" Click="OpenCustomers_Click" />
+              <TextBlock Text="Kho nguyên liệu" FontWeight="Bold" Margin="0,24,0,8" />
+              <Button Content="Mở kho nguyên liệu…" Padding="8" Click="OpenIngredients_Click" />
             </StackPanel>
           </Border>
         </Grid>

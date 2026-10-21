@@ -25,6 +25,11 @@ Chọn **Giữ đăng nhập trên máy này (30 ngày)** để mở lại ứng
 
 ### Giao diện cảm ứng
 
+- Thực đơn có các mục **Combo 20/10**, **Món Mới Phải Thử** và **Ưu đãi riêng bạn**. Món có thể xuất hiện ở mục nổi bật và danh mục chính mà không nhân đôi sản phẩm; các combo ưu đãi hiển thị giá bán và giá gốc gạch ngang.
+- Giỏ hàng dùng icon Material, các thao tác số lượng/xóa/menu **⋯** nằm cùng hàng. Menu **⋯** mở sửa tùy chọn hoặc tách một sản phẩm. Xóa món có **Hoàn tác** trong 6 giây; thao tác này hết hiệu lực khi giữ đơn, thanh toán, gọi đơn khác hoặc xác nhận xóa toàn giỏ.
+- Chọn **Tiền mặt (F4)** để mở hộp thoại nhập tiền khách đưa, chọn nhanh số tiền và xem tiền thối. Hủy hộp thoại giữ nguyên giỏ; xác nhận chỉ tiếp tục khi tiền khách đưa đủ.
+- Topping hiển thị tối đa **4 món mỗi trang** (2 × 2), giữ số phần đã chọn khi chuyển trang.
+
 - Tùy chỉnh món dùng bố cục tĩnh: kích cỡ/đường/đá bên trái, topping bên phải có nút chuyển trang. Ghi chú trải hết chiều ngang phía dưới, tự xuống dòng, tối đa 300 ký tự; không có vùng cuộn trong hộp tùy chỉnh. Nút số lượng và xác nhận luôn ở chân hộp thoại.
 
 - Các chức năng mở/chốt ca, báo cáo, quản trị, hoàn tiền/thu chi và tài khoản nằm trong **Tiện ích** ở góc trên bên phải màn hình bán hàng. **Đơn giữ** và **Kho bao bì** vẫn truy cập trực tiếp.

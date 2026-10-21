@@ -11,8 +11,8 @@ internal static class AmericanoRegression
             Console.WriteLine("PASS " + message);
         }
         var store = DataStoreService.Instance;
-        Check(store.Products.Count(p => p.IsActive && !p.IsTopping) == 79 && store.Products.Count(p => p.IsActive && p.IsTopping) == 22, "Complete public menu and topping catalog imported");
-        Check(store.Categories.Count(c => c.IsActive) == 14, "Menu grouped into fourteen categories without featured duplicates");
+        Check(store.Products.Count(p => p.IsActive && !p.IsTopping) == 87 && store.Products.Count(p => p.IsActive && p.IsTopping) == 22, "Complete public menu, homepage additions, two deals and topping catalog imported");
+        Check(store.Categories.Count(c => c.IsActive) == 18, "Menu includes sixteen source categories and two featured sections");
         Check(store.Products.Where(p => p.IsActive && !p.IsTopping).All(p => File.Exists(Path.Combine(AppContext.BaseDirectory, p.ImageUrl))), "Every sale product has a packaged image");
         Check(store.Products.Where(p => p.IsActive && p.IsBeverage).All(p => p.Sizes.Any(s => s.Name == p.DefaultSize) && p.Sizes.All(s => s.ExtraPrice >= 0)), "Every beverage has valid default size and nonnegative adjustments");
         Check(store.Products.Where(p => p.IsActive).All(p => p.AllowedToppingIds.All(id => store.Products.Any(t => t.Id == id && t.IsActive && t.IsTopping))), "Imported toppings resolve after existing ID remapping");
@@ -49,6 +49,6 @@ internal static class AmericanoRegression
         store.Save();
         reload.Invoke(store, null);
         Check(store.Products.Count == count && !store.Products.Single(p => p.Name == "Americano Nóng").IsActive, "Reload neither duplicates nor reactivates coffee");
-        Check(LocalDatabase.Instance.Read<StoreState>("store")!.MenuSchemaVersion == 4, "Menu upgrade persisted");
+        Check(LocalDatabase.Instance.Read<StoreState>("store")!.MenuSchemaVersion == 7, "Menu and homepage upgrades persisted");
     }
 }

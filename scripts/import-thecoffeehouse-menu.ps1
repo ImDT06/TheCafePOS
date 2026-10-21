@@ -1,8 +1,9 @@
-param([string]$SourcePath = 'artifacts/menu-source/menu.json')
+﻿param([string]$SourcePath = 'artifacts/menu-source/menu.json', [string]$CheckedDate = '2026-10-12')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $source = Get-Content (Join-Path $root $SourcePath) -Raw -Encoding UTF8 | ConvertFrom-Json
 $localImages = @{
+ 'Combo Sắc Xinh - Matcha Latte Tây Bắc (M)'='combo-sac-xinh-matcha-latte-tay-bac.png'
  'Americano Classic'='americano-classic.png'; 'Americano Nóng'='americano-nong.png'
  'Cappuccino Đá'='cappuccino-da.png'; 'Cappuccino Nóng'='cappuccino-nong.png'
  'Caramel Macchiato Đá'='caramel-macchiato-da.png'; 'Caramel Macchiato Nóng'='caramel-macchiato-nong.png'
@@ -27,11 +28,12 @@ foreach ($cat in $source.menu) {
  if ($cat.id -eq 92) { continue } # Featured items are duplicates; retain their real categories.
  $catId = 'tch-cat-' + $cat.id
  $categories += [ordered]@{Id=$catId;Name=$cat.name;DisplayOrder=$categories.Count;IsActive=$true}
- $retail = $cat.id -in @(102,101,7373,7676)
+ $retail = $cat.id -in @(102,101,7373,7676,7171)
  foreach ($p in $cat.products) {
   if ($seen.ContainsKey($p.id)) { continue }; $seen[$p.id]=$true
   $sizeGroup = $p.options | Where-Object name -eq 'Size' | Select-Object -First 1
   $basePrice = [decimal](($sizeGroup.items | Measure-Object price -Minimum).Minimum)
+  if (-not $retail -and $basePrice -le 0) { throw "Expected full size prices from product details, not menu-list surcharges: $($p.name)" }
   $sizeNames = @{ 'Nhỏ'='S';'Vừa'='M';'Lớn'='L' }
   $sizes = @()
   if (-not $retail) {
@@ -58,10 +60,14 @@ foreach ($cat in $source.menu) {
 }
 $categories += [ordered]@{Id='tch-toppings';Name='Topping';DisplayOrder=$categories.Count;IsActive=$true}
 $products += @($toppings.Values | Sort-Object Name)
-$catalog = [ordered]@{Source='https://order.thecoffeehouse.com/order';ApiSource='https://api.thecoffeehouse.com/api/v5/menu';CheckedDate='2026-10-08';Categories=$categories;Products=$products}
+$catalog = [ordered]@{Source='https://order.thecoffeehouse.com/order';ApiSource='https://api.thecoffeehouse.com/api/v5/menu';CheckedDate=$CheckedDate;Categories=$categories;Products=$products}
 $destination = Join-Path $root 'TheCafePOS_WPF/TheCafePOS_WPF/Assets/Menu'
 New-Item -ItemType Directory -Force $destination | Out-Null
 $catalog | ConvertTo-Json -Depth 12 | Set-Content -Encoding UTF8 (Join-Path $destination 'thecoffeehouse.json')
 $downloads | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 (Join-Path $root 'artifacts/menu-source/image-downloads.json')
 Write-Output ("Imported {0} categories; {1} sale products; {2} toppings; {3} remote images" -f $categories.Count,$seen.Count,$toppings.Count,$downloads.Count)
 & (Join-Path $PSScriptRoot 'import-coffeehouse-options.ps1') -SourcePath $SourcePath
+$products | ForEach-Object {
+ $product = $_
+ [pscustomobject]@{Name=$product.Name;Category=($categories | Where-Object Id -eq $product.CategoryId).Name;DefaultSize=$product.DefaultSize;BasePrice=$product.BasePrice;Sizes=(($product.Sizes | ForEach-Object { '{0}:{1}' -f $_.Name,($product.BasePrice+$_.ExtraPrice) }) -join ' / ');Image=$product.ImageUrl;Source=$catalog.Source;CheckedDate=$CheckedDate}
+} | Export-Csv (Join-Path $destination 'menu-reference.csv') -NoTypeInformation -Encoding UTF8

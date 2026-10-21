@@ -5,6 +5,28 @@ namespace TheCafePOS_WPF.Services;
 
 public partial class DataStoreService
 {
+    private void AddHomepageMenu()
+    {
+        using var stream = typeof(DataStoreService).Assembly.GetManifestResourceStream("TheCafePOS_WPF.Assets.Menu.thecoffeehouse.json")!;
+        var catalog = JsonSerializer.Deserialize<StoreState>(stream)!;
+        foreach (var category in catalog.Categories)
+            if (Categories.All(c => c.Id != category.Id)) Categories.Add(category);
+        Product? Existing(Product source) => Products.FirstOrDefault(p => p.Id == source.Id)
+            ?? Products.FirstOrDefault(p => p.Name.Trim().Equals(source.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+        var ids = catalog.Products.ToDictionary(p => p.Id, p => Existing(p)?.Id ?? p.Id);
+        foreach (var source in catalog.Products)
+        {
+            var existing = Existing(source);
+            if (existing is null)
+            {
+                source.AllowedToppingIds = source.AllowedToppingIds.Select(id => ids.GetValueOrDefault(id, id)).ToList();
+                Products.Add(source);
+            }
+            else if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(source.ImageUrl))
+                existing.ImageUrl = source.ImageUrl;
+        }
+    }
+
     private void ImportCoffeeHouseOptions()
     {
         using var stream = typeof(DataStoreService).Assembly.GetManifestResourceStream("TheCafePOS_WPF.Assets.Menu.thecoffeehouse.json")!;
@@ -29,11 +51,53 @@ public partial class DataStoreService
             ?? throw new InvalidOperationException("Không tìm thấy bảng đổi tên ảnh.");
         var paths = JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
         var changes = Products.Where(p => paths.ContainsKey(p.ImageUrl.Replace('\\', '/'))).ToList();
-        if (changes.Count == 0) return;
+        var dealImages = new[]
+        {
+            (Id: "deal-combo-pizza-nuoc", Old: "Images/pizza-tomyum-hai-san.png", Image: "Images/combo-pizza-nuoc.png"),
+            (Id: "deal-combo-pasta-nuoc", Old: "Images/wafu-pasta-ca-bao-trung-onsen-xot-mentaiko.png", Image: "Images/combo-pasta-nuoc.png")
+        };
+        var deals = dealImages.Select(fix => (Product: Products.FirstOrDefault(p => p.Id == fix.Id && p.ImageUrl.Replace('\\', '/') == fix.Old), fix.Image))
+            .Where(fix => fix.Product is not null).ToList();
+        using var catalogStream = typeof(DataStoreService).Assembly.GetManifestResourceStream("TheCafePOS_WPF.Assets.Menu.thecoffeehouse.json")!;
+        var catalog = JsonSerializer.Deserialize<StoreState>(catalogStream)!;
+        var toppingImages = catalog.Products.Where(p => p.IsTopping && !string.IsNullOrWhiteSpace(p.ImageUrl))
+            .Select(source => (Product: Products.FirstOrDefault(p => p.IsTopping && p.Id == source.Id)
+                ?? Products.FirstOrDefault(p => p.IsTopping && p.Name.Trim().Equals(source.Name.Trim(), StringComparison.OrdinalIgnoreCase)), source.ImageUrl))
+            .Where(fix => fix.Product is not null && string.IsNullOrWhiteSpace(fix.Product.ImageUrl)).ToList();
+        if (changes.Count == 0 && deals.Count == 0 && toppingImages.Count == 0) return;
         Mutate(() =>
         {
             foreach (var product in changes) product.ImageUrl = paths[product.ImageUrl.Replace('\\', '/')];
+            foreach (var fix in deals) fix.Product!.ImageUrl = fix.Image;
+            foreach (var fix in toppingImages) fix.Product!.ImageUrl = fix.ImageUrl;
         });
+    }
+
+    public const string NewCategoryId = "tch-cat-92", DealCategoryId = "tch-cat-deals", SeasonalComboCategoryId = "tch-cat-7171";
+
+    // Featured sections mirrored from order.thecoffeehouse.com (checked 2026-10-12). Idempotent: keeps manager edits.
+    private void AddFeaturedMenu()
+    {
+        void Category(string id, string name, int order)
+        {
+            if (Categories.All(c => c.Id != id)) Categories.Add(new Category { Id = id, Name = name, IsActive = true, DisplayOrder = order });
+        }
+        Category(SeasonalComboCategoryId, "Combo 20/10", -3);
+        Category(NewCategoryId, "Món Mới Phải Thử", -2);
+        Category(DealCategoryId, "Ưu đãi riêng bạn", -1);
+        // The web renamed "Butter Croissant Sữa Đặc" to "Butter Croissant Mama"; follow it unless a manager renamed it.
+        if (Products.FirstOrDefault(p => p.Id == "tch-656952a89375030019b6da2c" && p.Name == "Butter Croissant Sữa Đặc") is { } mama) mama.Name = "Butter Croissant Mama";
+        foreach (var id in new[] { "tch-699eafedbde92e0012ac3304", "tch-67e13816c6fcd7001a826690", "tch-656952a89375030019b6da2c" })
+            if (Products.FirstOrDefault(p => p.Id == id) is { } featured && !featured.FeaturedCategoryIds.Contains(NewCategoryId))
+                featured.FeaturedCategoryIds.Add(NewCategoryId);
+        void Bundle(string id, string category, string name, decimal price, decimal original, string image)
+        {
+            if (Products.Any(p => p.Id == id)) return;
+            Products.Add(new Product { Id = id, CategoryId = category, Name = name, BasePrice = price, OriginalPrice = original, ImageUrl = image, IsRetailItem = true, Sizes = new(), AllowSugar = false, AllowIce = false, IsActive = true });
+        }
+        Bundle("tch-6ac3f014e0a2d40012d588a9", SeasonalComboCategoryId, "Combo Sắc Xinh - Matcha Latte Tây Bắc (M)", 119000, 0, "Images/combo-sac-xinh-matcha-latte-tay-bac.png");
+        Bundle("deal-combo-pizza-nuoc", DealCategoryId, "Combo Pizza & Nước", 79000, 98000, "Images/combo-pizza-nuoc.png");
+        Bundle("deal-combo-pasta-nuoc", DealCategoryId, "Combo Pasta & Nước", 95000, 108000, "Images/combo-pasta-nuoc.png");
     }
 
     private void ImportCoffeeHouseMenu()

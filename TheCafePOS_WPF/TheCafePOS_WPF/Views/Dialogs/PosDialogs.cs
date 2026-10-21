@@ -142,6 +142,40 @@ public sealed class CustomerModal
     }
 }
 
+// Cash step of checkout: total, quick notes, amount given and live change. Returns the amount or null.
+public static class CashPaymentModal
+{
+    public static decimal? Show(Window owner, decimal total)
+    {
+        var w = PosUi.Dialog(owner, "Thanh toán tiền mặt", 460);
+        var amount = new TextBox { FontSize = 26, Padding = new Thickness(8), Margin = new Thickness(0, 4, 0, 8), HorizontalContentAlignment = HorizontalAlignment.Right };
+        TouchInput.SetNumeric(amount, true);
+        var change = PosUi.Text("", 22, true, PosUi.Accent);
+        decimal? result = null;
+        void Update()
+        {
+            bool ok = decimal.TryParse(amount.Text, out var a);
+            change.Text = !ok ? "Tiền thối: 0đ" : a >= total ? $"Tiền thối: {a - total:N0}đ" : $"Còn thiếu {total - a:N0}đ";
+            change.Foreground = ok && a < total ? Brushes.Firebrick : PosUi.Accent;
+        }
+        amount.TextChanged += (_, _) => Update();
+        var notes = new[] { 10000m, 20000m, 50000m, 100000m, 200000m, 500000m }.Select(n => Math.Ceiling(total / n) * n).Where(v => v > total).Distinct().OrderBy(v => v).Take(4);
+        var quick = new UniformGrid { Columns = 5, Margin = new Thickness(-4, 0, -4, 8) };
+        quick.Children.Add(PosUi.Button("Đúng số", (_, _) => amount.Text = total.ToString("0"), minHeight: 48));
+        foreach (var n in notes) quick.Children.Add(PosUi.Button($"{n / 1000:0}k", (_, _) => amount.Text = n.ToString("0"), minHeight: 48));
+        var pay = PosUi.Button("Xác nhận đã thu (Enter)", (_, _) =>
+        {
+            if (!decimal.TryParse(amount.Text, out var a) || a < total) { FieldError.Mark(amount, "Số tiền khách đưa chưa đủ."); return; }
+            result = a; w.DialogResult = true;
+        }, "PrimaryButton", 56);
+        pay.IsDefault = true;
+        var actions = new UniformGrid { Columns = 2, Margin = new Thickness(-4, 12, -4, 0), Children = { PosUi.Button("Quay lại", (_, _) => w.DialogResult = false, minHeight: 56), pay } };
+        w.Content = new StackPanel { Margin = new Thickness(20), Children = { PosUi.Text("Cần thu", 14, color: PosUi.Muted), PosUi.Text($"{total:N0}đ", 34, true, PosUi.Accent), new Border { Height = 10 }, PosUi.Text("Tiền khách đưa"), amount, quick, change, actions } };
+        w.Loaded += (_, _) => { amount.Text = total.ToString("0"); amount.Focus(); amount.SelectAll(); Update(); };
+        return w.ShowDialog() == true ? result : null;
+    }
+}
+
 public static class OrderCompleteModal
 {
     // Big confirmation so the cashier can read the call number to the customer; Enter starts the next order.

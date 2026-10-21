@@ -30,7 +30,7 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 4, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 7, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings };
     private void Restore(StoreState state)
     {
         Draft = state.Draft;
@@ -71,6 +71,16 @@ public partial class DataStoreService
         if (state is null || state.MenuSchemaVersion < 4)
         {
             ImportCoffeeHouseOptions();
+            Save();
+        }
+        if (state is null || state.MenuSchemaVersion < 6)
+        {
+            AddFeaturedMenu();
+            Save();
+        }
+        if (state is null || state.MenuSchemaVersion < 7)
+        {
+            AddHomepageMenu();
             Save();
         }
         NormalizeProductImagePaths();

@@ -11,7 +11,7 @@ using System.Windows.Media.Imaging;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Views.Dialogs;
-class Preview {
+partial class Preview {
  static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject {
   for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var child=VisualTreeHelper.GetChild(root,i);if(child is T t)yield return t;foreach(var d in Descendants<T>(child))yield return d;}
  }
@@ -92,6 +92,7 @@ class Preview {
   }));
   TheCafePOS_WPF.Core.TouchInput.OpenCommand.Execute(null,cashBox);
   Check(cashBox.Text=="200000" && store.CompletedOrders.Count==orderCount,"Apply updates cash field without creating payment");
+  CheckCartFlows(main, store);
   main.Close();app.Shutdown();
  }
 }

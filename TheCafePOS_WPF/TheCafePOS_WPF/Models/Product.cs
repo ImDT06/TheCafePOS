@@ -16,6 +16,10 @@ namespace TheCafePOS_WPF.Models
     // Set when IsSoldOut came from an empty ingredient, so restocking can clear it again.
     public bool SoldOutByStock { get; set; }
     public List<RecipeLine> Recipe { get; set; } = new();
+    // Price shown struck through next to BasePrice (e.g. combo deals); 0 = none.
+    public decimal OriginalPrice { get; set; }
+    // Extra menu sections the product also appears in, like "Món Mới Phải Thử" on The Coffee House.
+    public List<string> FeaturedCategoryIds { get; set; } = new();
         public bool IsTopping { get; set; }
         public bool IsRetailItem { get; set; }
         public bool IsBeverage => !IsTopping && !IsRetailItem;

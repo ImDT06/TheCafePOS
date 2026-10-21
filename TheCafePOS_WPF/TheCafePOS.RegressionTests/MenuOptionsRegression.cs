@@ -54,7 +54,37 @@ internal static class MenuOptionsRegression
         Check(JsonSerializer.Serialize(store.CompletedOrders.ToList()) == history, "Migration leaves completed orders untouched");
         Find("Americano Classic").DefaultIceChoice = "Ít đá"; store.Save(); reload.Invoke(store, null);
         Check(Find("Americano Classic").DefaultIceChoice == "Ít đá", "Reload preserves manager's chosen default");
-        Check(LocalDatabase.Instance.Read<StoreState>("store")!.MenuSchemaVersion == 4, "Options migration persisted once");
+        Check(LocalDatabase.Instance.Read<StoreState>("store")!.MenuSchemaVersion >= 4, "Options migration persisted alongside later menu migrations");
+        var additions = new[] { "Shan Nhài Cam Đào", "Shan Xoài Chanh Leo", "Frappe Xôi Xoài Dừa Non", "Shan Xanh Quýt Cam", "Shan Xanh Vải Hibiscus" };
+        state = LocalDatabase.Instance.Read<StoreState>("store")!;
+        state.MenuSchemaVersion = 6;
+        state.Products.RemoveAll(p => additions.Contains(p.Name));
+        state.Products.Single(p => p.Name == "Hạt Sen").ImageUrl = "";
+        LocalDatabase.Instance.Write("store", state);
+        reload.Invoke(store, null);
+        Check(additions.All(name => Find(name).FeaturedCategoryIds.Contains(DataStoreService.NewCategoryId)), "v6 databases receive all five homepage drinks in the featured section");
+        Check(Find("Shan Nhài Cam Đào").BasePrice == 79000 && Find("Shan Xoài Chanh Leo").BasePrice == 79000 && Find("Frappe Xôi Xoài Dừa Non").BasePrice == 89000, "New single-size drink prices match homepage");
+        Check(new[] { "Shan Xanh Quýt Cam", "Shan Xanh Vải Hibiscus" }.All(name => Find(name).DefaultSize == "M" && Find(name).BasePrice + Find(name).Sizes.Single(s => s.Name == "M").ExtraPrice == 65000), "Shan default M prices match 65000 shown on homepage");
+        Check(Find("Hạt Sen").ImageUrl == "Images/hat-sen.png" && Find("Americano Classic").ImageUrl == "Images/custom.png", "Image migration fills missing toppings while preserving custom images");
+        Check(JsonSerializer.Serialize(store.CompletedOrders.ToList()) == history && Find("Americano Classic").BasePrice == 60000, "Homepage migration preserves order history and manager prices");
+        reload.Invoke(store, null);
+        Check(additions.All(name => store.Products.Count(p => p.Name == name) == 1), "Homepage migration does not duplicate drinks after reload");
+        Find("Combo Pizza & Nước").ImageUrl = "Images/pizza-tomyum-hai-san.png";
+        Find("Combo Pasta & Nước").ImageUrl = "Images/wafu-pasta-ca-bao-trung-onsen-xot-mentaiko.png";
+        store.Save(); reload.Invoke(store, null);
+        Check(Find("Combo Pizza & Nước").ImageUrl == "Images/combo-pizza-nuoc.png" && Find("Combo Pasta & Nước").ImageUrl == "Images/combo-pasta-nuoc.png", "Existing deals receive actual combo photos");
+        Check(Find("Pizza Tomyum Hải Sản").ImageUrl == "Images/pizza-tomyum-hai-san.png", "Fixing combo images does not replace standalone dish photos");
+        Find("Combo Pizza & Nước").ImageUrl = "Images/shop-combo.png";
+        store.Save(); reload.Invoke(store, null);
+        Check(Find("Combo Pizza & Nước").ImageUrl == "Images/shop-combo.png", "Deal image correction preserves manager custom photos");
+        var recoveredToppings = new[] { "Shot Espresso", "Hạt Nổ Củ Năng", "Foam Phô Mai", "Hạt Nổ Yến Mạch" };
+        foreach (var name in recoveredToppings) Find(name).ImageUrl = "";
+        store.Save(); reload.Invoke(store, null);
+        Check(recoveredToppings.All(name => !string.IsNullOrWhiteSpace(Find(name).ImageUrl)), "Latest databases receive missing official topping detail images");
+        Find("Shot Espresso").ImageUrl = "Images/shop-espresso.png";
+        store.Save(); reload.Invoke(store, null);
+        Check(Find("Shot Espresso").ImageUrl == "Images/shop-espresso.png", "Topping image fill preserves manager custom images");
+        Check(string.IsNullOrEmpty(Find("Shot Espresso SOE").ImageUrl), "Missing SOE photo is not replaced with a different espresso product");
         Console.WriteLine($"Completed {checks} menu option checks.");
     }
 }

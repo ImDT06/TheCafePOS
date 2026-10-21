@@ -20,6 +20,11 @@ internal static class ManagementRegression
         auth.CreateAccount("mgmt-owner", "OwnerPass!2026", "Owner");
         auth.Login("mgmt-owner", "OwnerPass!2026");
 
+        // Featured sections mirrored from The Coffee House
+        Check(store.Categories.Any(c => c.Id == DataStoreService.NewCategoryId) && store.Categories.Any(c => c.Id == DataStoreService.DealCategoryId), "Featured menu sections are seeded");
+        Check(store.Products.Single(p => p.Id == "deal-combo-pizza-nuoc") is { BasePrice: 79000, OriginalPrice: 98000 }, "Deal combo keeps its struck-through original price");
+        Check(store.Products.Any(p => p.FeaturedCategoryIds.Contains(DataStoreService.NewCategoryId) && p.CategoryId != DataStoreService.NewCategoryId), "New items also stay in their own category");
+
         // Products and categories
         var category = new Category { Name = "Mgmt category" };
         store.SaveCategory(category);

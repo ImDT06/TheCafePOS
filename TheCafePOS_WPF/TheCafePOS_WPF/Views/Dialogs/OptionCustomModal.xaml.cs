@@ -20,7 +20,7 @@ public partial class OptionCustomModal : Window
     private readonly bool _editing;
     private readonly List<ToppingChoice> _toppings = new();
     private int _quantity, _sugar, _ice;
-    private int _toppingPage, _toppingsPerPage = 6;
+    private int _toppingPage, _toppingsPerPage = 4;
     private string _size = "";
     private string? _sugarChoice, _iceChoice;
     private bool _ready;
@@ -108,13 +108,13 @@ public partial class OptionCustomModal : Window
     }
     private void AddTopping(Product product, int count)
     {
-        var surface = new Border { VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(6), Margin = new Thickness(0, 0, 6, 6) };
+        var surface = new Border { VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 0, 6, 6) };
         var content = new StackPanel(); surface.Child = content;
         var header = new DockPanel();
         var photo = MainWindow.LoadProductImage(product.ImageUrl);
-        if (photo != null) header.Children.Add(new Image { Source = photo, Width = 40, Height = 40, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 6, 0) });
+        if (photo != null) header.Children.Add(new Image { Source = photo, Width = 34, Height = 34, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 6, 0) });
         var labels = new StackPanel(); header.Children.Add(labels); content.Children.Add(header);
-        labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 34, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });
+        labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });
         labels.Children.Add(new TextBlock { Text = $"+{product.BasePrice:N0}đ / phần", FontSize = 11, Foreground = Brushes.SlateGray, Margin = new Thickness(0, 0, 0, 2) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var minus = new Button { Content = "−", Style = (Style)FindResource("Action"), ToolTip = "Bớt " + product.Name };
@@ -132,10 +132,8 @@ public partial class OptionCustomModal : Window
     private void ResizeToppingPage()
     {
         if (ToppingSection.ActualHeight <= 0 || _toppings.Count == 0) return;
-        double available = ToppingSection.ActualHeight - 28;
-        int rows = Math.Clamp((int)(available / 120), 1, 3);
-        if (_toppings.Count > rows * 2) rows = Math.Clamp((int)((available - 54) / 120), 1, 3);
-        int capacity = rows * 2;
+        // Fixed 2×2 page: four toppings are easy to scan and each tile keeps a touch-sized − / + pair.
+        int rows = 2, capacity = 4;
         if (_toppingsPerPage != capacity)
         {
             int firstVisible = _toppingPage * _toppingsPerPage;

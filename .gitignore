@@ -11,6 +11,8 @@
 .DS_Store
 Thumbs.db
 artifacts/
+.vscode/
+/test.xml
 *.db
 *.db-shm
 *.db-wal

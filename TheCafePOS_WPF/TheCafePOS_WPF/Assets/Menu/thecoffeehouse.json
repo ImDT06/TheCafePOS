@@ -1,94 +1,136 @@
 ﻿{
     "Source":  "https://order.thecoffeehouse.com/order",
     "ApiSource":  "https://api.thecoffeehouse.com/api/v5/menu",
-    "CheckedDate":  "2026-10-08",
+    "CheckedDate":  "2026-10-12",
     "Categories":  [
+                       {
+                           "Id":  "tch-cat-7171",
+                           "Name":  "Combo 20/10",
+                           "DisplayOrder":  0,
+                           "IsActive":  true
+                       },
                        {
                            "Id":  "tch-cat-7677",
                            "Name":  "Americano",
-                           "DisplayOrder":  0,
+                           "DisplayOrder":  1,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-7678",
                            "Name":  "Espresso",
-                           "DisplayOrder":  1,
+                           "DisplayOrder":  2,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-7679",
                            "Name":  "Latte",
-                           "DisplayOrder":  2,
+                           "DisplayOrder":  3,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-1",
                            "Name":  "Cà Phê Phin",
-                           "DisplayOrder":  3,
+                           "DisplayOrder":  4,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-7680",
                            "Name":  "Cold Brew",
-                           "DisplayOrder":  4,
+                           "DisplayOrder":  5,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-94",
                            "Name":  "Matcha",
-                           "DisplayOrder":  5,
+                           "DisplayOrder":  6,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-93",
                            "Name":  "Frappe",
-                           "DisplayOrder":  6,
+                           "DisplayOrder":  7,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-103",
                            "Name":  "Trà Sữa",
-                           "DisplayOrder":  7,
+                           "DisplayOrder":  8,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-5",
                            "Name":  "Trà Trái Cây",
-                           "DisplayOrder":  8,
+                           "DisplayOrder":  9,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-102",
                            "Name":  "Bánh Ngọt",
-                           "DisplayOrder":  9,
+                           "DisplayOrder":  10,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-101",
                            "Name":  "Bánh Mặn",
-                           "DisplayOrder":  10,
+                           "DisplayOrder":  11,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-7373",
                            "Name":  "Pizza \u0026 Pasta",
-                           "DisplayOrder":  11,
+                           "DisplayOrder":  12,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-cat-7676",
                            "Name":  "Merchandise",
-                           "DisplayOrder":  12,
+                           "DisplayOrder":  13,
+                           "IsActive":  true
+                       },
+                       {
+                           "Id":  "tch-cat-7682",
+                           "Name":  "Trà Shan",
+                           "DisplayOrder":  14,
                            "IsActive":  true
                        },
                        {
                            "Id":  "tch-toppings",
                            "Name":  "Topping",
-                           "DisplayOrder":  13,
+                           "DisplayOrder":  15,
                            "IsActive":  true
                        }
                    ],
     "Products":  [
+                     {
+                         "Id":  "tch-6ac3f014e0a2d40012d588a9",
+                         "CategoryId":  "tch-cat-7171",
+                         "Name":  "Combo Sắc Xinh - Matcha Latte Tây Bắc (M)",
+                         "BasePrice":  119000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+
+                                   ],
+                         "ImageUrl":  "Images/combo-sac-xinh-matcha-latte-tay-bac.png",
+                         "IsRetailItem":  true,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  false,
+                         "AllowIce":  false,
+                         "DefaultIce":  0,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+
+                                          ],
+                         "DefaultSugarChoice":  "",
+                         "IceChoices":  [
+
+                                        ],
+                         "DefaultIceChoice":  ""
+                     },
                      {
                          "Id":  "tch-689d6a009843e40012394b40",
                          "CategoryId":  "tch-cat-7677",
@@ -244,7 +286,7 @@
                          "Sizes":  [
                                        {
                                            "Name":  "M",
-                                           "ExtraPrice":  0.0,
+                                           "ExtraPrice":  0,
                                            "PackagingId":  "pack-1"
                                        }
                                    ],
@@ -2515,6 +2557,45 @@
                          "DefaultIceChoice":  ""
                      },
                      {
+                         "Id":  "tch-6a9055c544bff30012e26825",
+                         "CategoryId":  "tch-cat-93",
+                         "Name":  "Frappe Xôi Xoài Dừa Non",
+                         "BasePrice":  89000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+                                       {
+                                           "Name":  "M",
+                                           "ExtraPrice":  0,
+                                           "PackagingId":  "pack-1"
+                                       }
+                                   ],
+                         "ImageUrl":  "Images/frappe-xoi-xoai-dua-non.png",
+                         "IsRetailItem":  false,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  true,
+                         "AllowIce":  false,
+                         "DefaultIce":  100,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+                                              "Bình thường",
+                                              "Ít ngọt",
+                                              "Thêm ngọt"
+                                          ],
+                         "DefaultSugarChoice":  "Bình thường",
+                         "IceChoices":  [
+
+                                        ],
+                         "DefaultIceChoice":  "",
+                         "FeaturedCategoryIds":  [
+                                                     "tch-cat-92"
+                                                 ]
+                     },
+                     {
                          "Id":  "tch-6a09df8b38563d00135b4910",
                          "CategoryId":  "tch-cat-103",
                          "Name":  "Shan Sữa Khói Hoàng Kim",
@@ -3813,6 +3894,222 @@
                          "DefaultIceChoice":  ""
                      },
                      {
+                         "Id":  "tch-6a9055c544bff30012e26827",
+                         "CategoryId":  "tch-cat-7682",
+                         "Name":  "Shan Nhài Cam Đào",
+                         "BasePrice":  79000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+                                       {
+                                           "Name":  "M",
+                                           "ExtraPrice":  0,
+                                           "PackagingId":  "pack-1"
+                                       }
+                                   ],
+                         "ImageUrl":  "Images/shan-nhai-cam-dao.png",
+                         "IsRetailItem":  false,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  true,
+                         "AllowIce":  true,
+                         "DefaultIce":  100,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+                                                   "tch-topping-10100016",
+                                                   "tch-topping-10100017",
+                                                   "tch-topping-10100019",
+                                                   "tch-topping-10100020",
+                                                   "tch-topping-10100021",
+                                                   "tch-topping-10100024",
+                                                   "tch-topping-10100044",
+                                                   "tch-topping-10100050"
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+                                              "Bình thường",
+                                              "Ít ngọt",
+                                              "Thêm ngọt"
+                                          ],
+                         "DefaultSugarChoice":  "Bình thường",
+                         "IceChoices":  [
+                                            "Bình thường",
+                                            "Đá riêng",
+                                            "Ít đá"
+                                        ],
+                         "DefaultIceChoice":  "Bình thường",
+                         "FeaturedCategoryIds":  [
+                                                     "tch-cat-92"
+                                                 ]
+                     },
+                     {
+                         "Id":  "tch-6a9055c544bff30012e26826",
+                         "CategoryId":  "tch-cat-7682",
+                         "Name":  "Shan Xoài Chanh Leo",
+                         "BasePrice":  79000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+                                       {
+                                           "Name":  "M",
+                                           "ExtraPrice":  0,
+                                           "PackagingId":  "pack-1"
+                                       }
+                                   ],
+                         "ImageUrl":  "Images/shan-xoai-chanh-leo.png",
+                         "IsRetailItem":  false,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  true,
+                         "AllowIce":  true,
+                         "DefaultIce":  100,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+                                                   "tch-topping-10100016",
+                                                   "tch-topping-10100017",
+                                                   "tch-topping-10100019",
+                                                   "tch-topping-10100020",
+                                                   "tch-topping-10100021",
+                                                   "tch-topping-10100024",
+                                                   "tch-topping-10100044",
+                                                   "tch-topping-10100050"
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+                                              "Bình thường",
+                                              "Ít ngọt",
+                                              "Thêm ngọt"
+                                          ],
+                         "DefaultSugarChoice":  "Bình thường",
+                         "IceChoices":  [
+                                            "Bình thường",
+                                            "Đá riêng",
+                                            "Ít đá"
+                                        ],
+                         "DefaultIceChoice":  "Bình thường",
+                         "FeaturedCategoryIds":  [
+                                                     "tch-cat-92"
+                                                 ]
+                     },
+                     {
+                         "Id":  "tch-6a09df8b38563d00135b4914",
+                         "CategoryId":  "tch-cat-7682",
+                         "Name":  "Shan Xanh Quýt Cam",
+                         "BasePrice":  55000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+                                       {
+                                           "Name":  "S",
+                                           "ExtraPrice":  0,
+                                           "PackagingId":  "pack-1"
+                                       },
+                                       {
+                                           "Name":  "M",
+                                           "ExtraPrice":  10000,
+                                           "PackagingId":  "pack-1"
+                                       },
+                                       {
+                                           "Name":  "L",
+                                           "ExtraPrice":  20000,
+                                           "PackagingId":  "pack-2"
+                                       }
+                                   ],
+                         "ImageUrl":  "Images/shan-xanh-quyt-cam.png",
+                         "IsRetailItem":  false,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  true,
+                         "AllowIce":  true,
+                         "DefaultIce":  100,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+                                                   "tch-topping-10100003",
+                                                   "tch-topping-10100016",
+                                                   "tch-topping-10100017",
+                                                   "tch-topping-10100019",
+                                                   "tch-topping-10100020",
+                                                   "tch-topping-10100021",
+                                                   "tch-topping-10100024",
+                                                   "tch-topping-10100044",
+                                                   "tch-topping-10100050",
+                                                   "tch-topping-10100137"
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+                                              "Bình thường",
+                                              "Ít ngọt",
+                                              "Thêm ngọt"
+                                          ],
+                         "DefaultSugarChoice":  "Bình thường",
+                         "IceChoices":  [
+                                            "Bình thường",
+                                            "Đá riêng",
+                                            "Ít đá"
+                                        ],
+                         "DefaultIceChoice":  "Bình thường",
+                         "FeaturedCategoryIds":  [
+                                                     "tch-cat-92"
+                                                 ]
+                     },
+                     {
+                         "Id":  "tch-6a09df8b38563d00135b4913",
+                         "CategoryId":  "tch-cat-7682",
+                         "Name":  "Shan Xanh Vải Hibiscus",
+                         "BasePrice":  55000,
+                         "DefaultSize":  "M",
+                         "Sizes":  [
+                                       {
+                                           "Name":  "S",
+                                           "ExtraPrice":  0,
+                                           "PackagingId":  "pack-1"
+                                       },
+                                       {
+                                           "Name":  "M",
+                                           "ExtraPrice":  10000,
+                                           "PackagingId":  "pack-1"
+                                       },
+                                       {
+                                           "Name":  "L",
+                                           "ExtraPrice":  20000,
+                                           "PackagingId":  "pack-2"
+                                       }
+                                   ],
+                         "ImageUrl":  "Images/shan-xanh-vai-hibiscus.png",
+                         "IsRetailItem":  false,
+                         "IsTopping":  false,
+                         "SoldSeparately":  true,
+                         "AllowSugar":  true,
+                         "AllowIce":  true,
+                         "DefaultIce":  100,
+                         "DefaultSugar":  100,
+                         "AllowedToppingIds":  [
+                                                   "tch-topping-10100003",
+                                                   "tch-topping-10100016",
+                                                   "tch-topping-10100017",
+                                                   "tch-topping-10100019",
+                                                   "tch-topping-10100020",
+                                                   "tch-topping-10100021",
+                                                   "tch-topping-10100024",
+                                                   "tch-topping-10100044",
+                                                   "tch-topping-10100050",
+                                                   "tch-topping-10100137"
+                                               ],
+                         "IsActive":  true,
+                         "SugarChoices":  [
+                                              "Bình thường",
+                                              "Ít ngọt",
+                                              "Thêm ngọt"
+                                          ],
+                         "DefaultSugarChoice":  "Bình thường",
+                         "IceChoices":  [
+                                            "Bình thường",
+                                            "Đá riêng",
+                                            "Ít đá"
+                                        ],
+                         "DefaultIceChoice":  "Bình thường",
+                         "FeaturedCategoryIds":  [
+                                                     "tch-cat-92"
+                                                 ]
+                     },
+                     {
                          "Id":  "tch-topping-10100019",
                          "Name":  "Xốt Caramel",
                          "CategoryId":  "tch-toppings",
@@ -3868,7 +4165,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/shot-espresso.png",
                          "SugarChoices":  [
 
                                           ],
@@ -3890,7 +4187,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/hat-no-cu-nang.png",
                          "SugarChoices":  [
 
                                           ],
@@ -3912,7 +4209,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/trai-vai.png",
                          "SugarChoices":  [
 
                                           ],
@@ -3934,7 +4231,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/sua-dac.png",
                          "SugarChoices":  [
 
                                           ],
@@ -3956,7 +4253,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/tran-chau-cu-nang.png",
                          "SugarChoices":  [
 
                                           ],
@@ -3978,7 +4275,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/foam-pho-mai.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4000,7 +4297,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/hat-no-yen-mach.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4022,7 +4319,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/sua-tuoi.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4066,7 +4363,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/dai-hoa-hibiscus.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4088,7 +4385,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/thach-suong-sao.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4154,7 +4451,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/sua-yen-mach.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4198,7 +4495,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/hat-sen.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4220,7 +4517,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/tran-chau-hoang-kim.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4264,7 +4561,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/foam-dua.png",
                          "SugarChoices":  [
 
                                           ],
@@ -4286,7 +4583,7 @@
                          "Sizes":  [
 
                                    ],
-                         "ImageUrl":  "",
+                         "ImageUrl":  "Images/kem-pho-mai-macchiato.png",
                          "SugarChoices":  [
 
                                           ],

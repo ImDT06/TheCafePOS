@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -8,7 +8,8 @@ namespace TheCafePOS_WPF.Core;
 // Non-blocking notification shown at the owner's bottom-right corner; replaces OK-only message boxes.
 public static class Toast
 {
-    public static void Show(Window? owner, string message, bool error = false)
+    // Optional action (e.g. "Hoàn tác") adds a button and keeps the toast up longer.
+    public static void Show(Window? owner, string message, bool error = false, (string Text, Action Run)? action = null)
     {
         owner ??= Application.Current.MainWindow;
         var toast = new Window
@@ -20,9 +21,16 @@ public static class Toast
             {
                 Background = new SolidColorBrush(error ? Color.FromRgb(0xB9, 0x1C, 0x1C) : Color.FromRgb(0x12, 0x63, 0x4B)),
                 CornerRadius = new CornerRadius(8), Padding = new Thickness(16, 12, 16, 12), MaxWidth = 420,
-                Child = new TextBlock { Text = (error ? "⚠  " : "✓  ") + message, Foreground = Brushes.White, FontSize = 15, TextWrapping = TextWrapping.Wrap }
+                Child = new DockPanel { Children = { new TextBlock { Text = (error ? "⚠  " : "✓  ") + message, Foreground = Brushes.White, FontSize = 15, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center } } }
             }
         };
+        if (action is { } act && toast.Content is Border { Child: DockPanel row })
+        {
+            var button = new Button { Content = act.Text, Margin = new Thickness(16, 0, 0, 0), Padding = new Thickness(12, 4, 12, 4), MinHeight = 36, FontWeight = FontWeights.Bold };
+            button.Click += (_, _) => { toast.Close(); act.Run(); };
+            DockPanel.SetDock(button, Dock.Right);
+            row.Children.Insert(0, button);
+        }
         toast.MouseLeftButtonUp += (_, _) => toast.Close();
         toast.Loaded += (_, _) =>
         {
@@ -30,8 +38,9 @@ public static class Toast
             toast.Left = area.Right - toast.ActualWidth - 24;
             toast.Top = area.Bottom - toast.ActualHeight - 24;
         };
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(error ? 4 : 2.5) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(action is not null ? 6 : error ? 4 : 2.5) };
         timer.Tick += (_, _) => { timer.Stop(); toast.Close(); };
+        toast.Closed += (_, _) => timer.Stop();
         toast.Show();
         timer.Start();
     }

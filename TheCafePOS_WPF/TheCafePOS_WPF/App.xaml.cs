@@ -26,6 +26,7 @@ namespace TheCafePOS_WPF
             services.AddSingleton<IAuthService>(_ => AuthService.Instance);
             services.AddSingleton<IHoldOrderService>(_ => HoldOrderService.Instance);
             services.AddSingleton<IStickerPrinterService>(_ => StickerPrinterService.Instance);
+            services.AddTransient<ViewModels.MainViewModel>();
             services.AddTransient<MainWindow>();
             return services.BuildServiceProvider();
         }

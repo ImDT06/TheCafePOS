@@ -30,7 +30,7 @@ partial class Preview
 
         var product = store.Products.First(p => p.IsActive && p.IsBeverage && p.AllowedToppingIds.Count > 4);
         var search = (TextBox)main.FindName("TxtSearch"); search.Text = product.Name; Flush();
-        var products = (Panel)main.FindName("PnlProducts");
+        var products = (ItemsControl)main.FindName("PnlProducts");
         InModal<OptionCustomModal>(options =>
         {
             var rows = (UniformGrid)options.FindName("ToppingRows");
@@ -45,7 +45,7 @@ partial class Preview
             Click((Button)options.FindName("PlusQuantity"));
             Click((Button)options.FindName("ConfirmButton"));
         });
-        Click(products.Children.OfType<Button>().Single()); CheckModal();
+        Click(Descendants<Button>(products).Single()); CheckModal();
         var cart = (ListBox)main.FindName("LbCartItems");
         Check(cart.Items.Count == 1, "Selecting a product adds a cart row");
         var added = (TheCafePOS_WPF.Models.OrderItem)cart.Items[0];
@@ -141,7 +141,7 @@ partial class Preview
         Check(cart.Items.Count == 0, "Undo from a held order cannot insert an item into the next draft");
 
         InModal<OptionCustomModal>(options => Click((Button)options.FindName("ConfirmButton")));
-        Click(products.Children.OfType<Button>().Single()); CheckModal();
+        Click(Descendants<Button>(products).Single()); CheckModal();
         var previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         previewTimer.Tick += (_, _) =>
         {

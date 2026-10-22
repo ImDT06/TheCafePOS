@@ -35,6 +35,27 @@ internal static class CartViewModelRegression
         Check(vm.FilterProducts("không-có-món").Count == 0, "Unknown keyword returns no products");
         vm.SelectCategory(MainViewModel.AllCategories);
 
+        // Menu grid bindings
+        vm.ReloadMenu();
+        Check(vm.CategoryList[0].Id == MainViewModel.AllCategories && vm.CategoryList[0].IsSelected && vm.CategoryList.Any(c => c.Id == category.Id), "Menu reload lists active categories with Tất cả selected");
+        var chips = vm.CategoryList;
+        vm.SelectCategory(category.Id);
+        Check(ReferenceEquals(chips, vm.CategoryList) && chips.Single(c => c.IsSelected).Id == category.Id, "Selecting a category flips chips in place");
+        Check(vm.MenuItems.Select(t => t.Product.Id).SequenceEqual(new[] { product.Id, soldOut.Id }) && vm.MenuCountText == "2 món", "Menu grid shows the category with sold-out items last");
+        vm.SearchText = "latte";
+        Check(vm.MenuItems.Single().Name == product.Name && !vm.HasNoProducts, "Typing in search refilters the grid");
+        vm.SearchText = "không-có-món";
+        Check(vm.HasNoProducts, "No match shows the empty state");
+        vm.ResetMenuFilter();
+        Check(vm.SearchText == "" && vm.SelectedCategoryId == MainViewModel.AllCategories && vm.CategoryList[0].IsSelected, "Reset clears search and returns to Tất cả");
+        var tile = new MenuTile(soldOut);
+        Check(tile.IsSoldOut && tile.SoldOutMenuText == "Báo có hàng lại" && tile.AutomationName.EndsWith("hết hàng"), "Sold-out tile offers restocking and announces its state");
+        vm.ToggleSoldOut(soldOut);
+        Check(!store.Products.Single(p => p.Id == soldOut.Id).IsSoldOut && vm.MenuItems.Any(t => t.Product.Id == soldOut.Id && !t.IsSoldOut), "Restocking refreshes the grid");
+        vm.ToggleSoldOut(soldOut);
+        var discounted = new MenuTile(new Product { Name = "Giảm giá", BasePrice = 20000, OriginalPrice = 25000, Sizes = new() });
+        Check(discounted.MetaText == $"{25000:N0}đ" && discounted.MetaStrikethrough, "Old price alone is struck through");
+
         // Cart lines
         var line = Make(2);
         vm.AddItem(line);

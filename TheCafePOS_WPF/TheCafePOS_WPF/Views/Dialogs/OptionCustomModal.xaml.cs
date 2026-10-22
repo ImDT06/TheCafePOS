@@ -35,7 +35,7 @@ public partial class OptionCustomModal : Window
         MinWidth = Math.Min(MinWidth, MaxWidth);
         Height = Math.Min(Height, MaxHeight); Width = Math.Min(Width, MaxWidth);
         Heading.Text = product.Name;
-        ProductPhoto.Source = MainWindow.LoadProductImage(product.ImageUrl);
+        ProductPhoto.Source = Core.ProductImages.Load(product.ImageUrl);
         PhotoFrame.Visibility = ProductPhoto.Source is null ? Visibility.Collapsed : Visibility.Visible;
         ContextLabel.Text = singleUnit ? "Tách 1 món để chỉnh riêng" : _editing ? "Sửa món trong giỏ" : $"Thêm món vào đơn #{dailyOrderNumber:D2}";
         PriceNotice.Text = _editing ? "Giá khi lưu được tính theo thực đơn hiện tại." : $"Giá từ {product.BasePrice + (!product.IsBeverage ? 0 : product.Sizes.Select(s => s.ExtraPrice).DefaultIfEmpty(0).Min()):N0}đ";
@@ -111,7 +111,7 @@ public partial class OptionCustomModal : Window
         var surface = new Border { VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 0, 6, 6) };
         var content = new StackPanel(); surface.Child = content;
         var header = new DockPanel();
-        var photo = MainWindow.LoadProductImage(product.ImageUrl);
+        var photo = Core.ProductImages.Load(product.ImageUrl);
         if (photo != null) header.Children.Add(new Image { Source = photo, Width = 34, Height = 34, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 6, 0) });
         var labels = new StackPanel(); header.Children.Add(labels); content.Children.Add(header);
         labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });

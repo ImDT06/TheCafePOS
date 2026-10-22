@@ -24,6 +24,7 @@ namespace TheCafePOS_WPF
         private readonly IAuthService _auth;
         private readonly MainViewModel _vm;
         private readonly IDialogFactory _dialogs;
+        private readonly IVietQRService _bank;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
         private readonly System.Windows.Threading.DispatcherTimer _wallClock = new() { Interval = TimeSpan.FromSeconds(1) };
         private static readonly System.Globalization.CultureInfo Vietnamese = new("vi-VN");
@@ -35,10 +36,11 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank)
         {
             _vm = vm;
             _dialogs = dialogs;
+            _bank = bank;
             _shifts = shifts;
             _auth = auth;
             InitializeComponent();
@@ -189,7 +191,7 @@ namespace TheCafePOS_WPF
             if (!_vm.BeginCheckout()) return;
             try
             {
-                VietQRService.ValidateSettings();
+                _bank.ValidateSettings();
                 var qrModal = _dialogs.Create<VietQRModal>(this, _vm.PayableTotal, _vm.CurrentDailyOrderNumber, _vm.CheckoutId);
                 if (qrModal.ShowDialog() == true) CompletePayment("VietQR", qrApproved: true);
             }

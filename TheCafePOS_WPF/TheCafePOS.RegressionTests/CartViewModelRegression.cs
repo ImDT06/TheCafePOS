@@ -7,8 +7,8 @@ internal static class CartViewModelRegression
     public static void Run()
     {
         void Check(bool condition, string message) { if (!condition) throw new Exception(message); Console.WriteLine("PASS " + message); }
-        var auth = AuthService.Instance;
-        var store = DataStoreService.Instance;
+        var auth = TestHost.Auth;
+        var store = TestHost.Store;
         auth.CreateAccount("cart-owner", "CartPass!2026", "Owner");
         auth.Login("cart-owner", "CartPass!2026");
         var category = new Category { Name = "Cart test" }; store.SaveCategory(category);
@@ -18,7 +18,7 @@ internal static class CartViewModelRegression
         store.SetProductSoldOut(soldOut.Id, true);
         OrderItem Make(int quantity) => OrderConfigurationService.Create(product, "M", 100, 100, quantity, Array.Empty<(string, int)>(), "", store.Products);
 
-        var vm = new MainViewModel(store, store, store, store, store, store, auth, HoldOrderService.Instance, StickerPrinterService.Instance);
+        var vm = new MainViewModel(store, store, store, store, store, store, auth, TestHost.Holds, TestHost.Stickers);
         var messages = new List<PosMessage>();
         var changed = new List<string?>();
         vm.MessageRaised += (_, m) => messages.Add(m);
@@ -158,7 +158,7 @@ internal static class CartViewModelRegression
         string beforeHold = vm.CheckoutId;
         vm.HoldCurrentOrder();
         Check(!vm.HasItems && vm.HeldOrderCount == held + 1 && vm.CheckoutId != beforeHold, "Holding an order empties the cart under a new id");
-        var heldOrder = HoldOrderService.Instance.HeldOrders.Last();
+        var heldOrder = TestHost.Holds.HeldOrders.Last();
         vm.RecallHeldOrder(heldOrder);
         Check(vm.TotalCups == 1 && vm.Subtotal == 25000, "Recalling a held order restores its lines");
     }

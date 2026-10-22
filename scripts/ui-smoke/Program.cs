@@ -26,13 +26,14 @@ partial class Preview {
  [STAThread] static void Main(){
   Directory.CreateDirectory("artifacts/dialog-preview");
   Environment.SetEnvironmentVariable("THECAFEPOS_DATA_DIR",Path.GetFullPath("artifacts/dialog-preview/data-"+Guid.NewGuid().ToString("N")));
+  // Same container as the app, built after the data directory is chosen.
+  var services=TheCafePOS_WPF.App.BuildServices();
   var app=new Application { ShutdownMode=ShutdownMode.OnExplicitShutdown }; foreach(var theme in new[]{"Touch","Workspace"}) app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source=new Uri("/TheCafePOS_WPF;component/Themes/"+theme+".xaml",UriKind.Relative) });
-  var auth=AuthService.Instance;auth.CreateAccount("quan-ly","PreviewOnly!2026","Owner");auth.Login("quan-ly","PreviewOnly!2026");auth.CreateAccount("thu-ngan","PreviewOnly!2026","Cashier");
-  var store=DataStoreService.Instance;store.OpenShift(500000);
+  var auth=services.GetRequiredService<AuthService>();auth.CreateAccount("quan-ly","PreviewOnly!2026","Owner");auth.Login("quan-ly","PreviewOnly!2026");auth.CreateAccount("thu-ngan","PreviewOnly!2026","Cashier");
+  var store=services.GetRequiredService<DataStoreService>();store.OpenShift(500000);
   var coffee=store.Products.Single(p=>p.Name=="Americano Classic");var item=OrderConfigurationService.Create(coffee,"M",100,100,2,Array.Empty<(string,int)>(),"Ít đá",store.Products);
-  store.Checkout(new[]{item},"Cash",200000,"preview-order");HoldOrderService.Instance.HoldOrder(new ObservableCollection<OrderItem>{item},110000,"Khách chờ bạn");
-  // Same container as the app, so every window gets the dependencies it gets in production.
-  var services=TheCafePOS_WPF.App.BuildServices();var dialogs=services.GetRequiredService<TheCafePOS_WPF.Views.IDialogFactory>();
+  store.Checkout(new[]{item},"Cash",200000,"preview-order");services.GetRequiredService<HoldOrderService>().HoldOrder(new ObservableCollection<OrderItem>{item},110000,"Khách chờ bạn");
+  var dialogs=services.GetRequiredService<TheCafePOS_WPF.Views.IDialogFactory>();
   var windows=new Window[]{dialogs.Create<ManagementWindow>(null),dialogs.Create<FinanceWindow>(null),dialogs.Create<PackagingStatusModal>(null),dialogs.Create<ReportWindow>(null),dialogs.Create<HeldOrdersModal>(null),dialogs.Create<BlindDropModal>(null,store.ExpectedCash),dialogs.Create<PinApprovalModal>(null,"Hoàn tiền đơn #01 · 55.000đ"),dialogs.Create<PasswordWindow>(null),dialogs.Create<ProductConfigurationWindow>(null,coffee),new TheCafePOS_WPF.Core.NumberPad("500000",false),dialogs.Create<ReprintStickerModal>(null,new PrintedStickerInfo {ProductName="Americano Classic"}),dialogs.Create<LoginWindow>(null),dialogs.Create<VietQRModal>(null,110000m,1,"preview-order"),dialogs.Create<OptionCustomModal>(null,coffee)};
   foreach(var window in windows){
    double width=double.IsNaN(window.Width)?600:window.Width;double height=double.IsNaN(window.Height)?650:window.Height-32;

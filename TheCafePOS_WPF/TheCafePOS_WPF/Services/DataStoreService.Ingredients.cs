@@ -12,7 +12,7 @@ public partial class DataStoreService
 
     public void SaveIngredient(Ingredient item)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         string name = item.Name.Trim(), unit = item.Unit.Trim();
         if (name.Length == 0 || unit.Length == 0) throw new InvalidOperationException("Nhập tên và đơn vị nguyên liệu.");
         if (item.WarningThreshold < 0) throw new InvalidOperationException("Ngưỡng cảnh báo không được âm.");
@@ -25,7 +25,7 @@ public partial class DataStoreService
 
     public void DeleteIngredient(string id)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var item = Ingredients.FirstOrDefault(i => i.Id == id) ?? throw new InvalidOperationException("Nguyên liệu không tồn tại.");
         var users = Products.Where(p => p.Recipe.Any(r => r.IngredientId == id)).Select(p => p.Name).ToList();
         if (users.Count > 0) throw new InvalidOperationException("Nguyên liệu đang dùng trong công thức: " + string.Join(", ", users.Take(5)) + (users.Count > 5 ? "…" : ""));
@@ -35,7 +35,7 @@ public partial class DataStoreService
     // type: "Nhập kho" adds quantity; "Kiểm kê" sets the counted stock.
     public void AdjustIngredient(string id, string type, decimal quantity, string reason)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var item = Ingredients.FirstOrDefault(i => i.Id == id) ?? throw new InvalidOperationException("Nguyên liệu không tồn tại.");
         if (type == "Nhập kho" && quantity <= 0) throw new InvalidOperationException("Số lượng nhập phải lớn hơn 0.");
         if (type == "Kiểm kê" && quantity < 0) throw new InvalidOperationException("Tồn kiểm kê không được âm.");
@@ -51,7 +51,7 @@ public partial class DataStoreService
 
     public void SaveRecipe(string productId, List<RecipeLine> lines)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var product = Products.FirstOrDefault(p => p.Id == productId) ?? throw new InvalidOperationException("Món không tồn tại.");
         if (lines.Any(l => l.Amount <= 0 || !Ingredients.Any(i => i.Id == l.IngredientId))) throw new InvalidOperationException("Mỗi dòng công thức cần nguyên liệu hợp lệ và định lượng > 0.");
         if (lines.GroupBy(l => l.IngredientId).Any(g => g.Count() > 1)) throw new InvalidOperationException("Mỗi nguyên liệu chỉ khai báo một lần.");
@@ -98,5 +98,5 @@ public partial class DataStoreService
     }
 
     private void Log(Ingredient ing, string type, decimal change, string reason) =>
-        IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = type, Change = change, After = ing.Stock, Reason = reason.Trim(), Operator = AuthService.Instance.CurrentUser?.Username ?? "" });
+        IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = type, Change = change, After = ing.Stock, Reason = reason.Trim(), Operator = _auth.CurrentUser?.Username ?? "" });
 }

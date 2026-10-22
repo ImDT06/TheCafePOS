@@ -39,7 +39,7 @@ Mỗi dòng dưới là một ca hoặc nhóm ca tham số hóa; khi triển kha
 
 ### REQ-BH — Bán hàng và tính tiền
 
-Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), [MenuOptionsRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/MenuOptionsRegression.cs), [CartChecks.cs](../scripts/ui-smoke/CartChecks.cs).
+Nguồn: [CoreRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/CoreRegression.cs), [MenuOptionsRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/MenuOptionsRegression.cs), [CartChecks.cs](../scripts/ui-smoke/CartChecks.cs).
 
 | Mã | Đầu vào / thao tác | Kết quả mong đợi | Kỹ thuật | Đối chiếu hiện tại |
 |---|---|---|---|---|
@@ -52,7 +52,7 @@ Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), 
 
 ### REQ-TT — Thanh toán
 
-Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), [CartChecks.cs](../scripts/ui-smoke/CartChecks.cs).
+Nguồn: [CoreRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/CoreRegression.cs), [CartChecks.cs](../scripts/ui-smoke/CartChecks.cs).
 
 | Mã | Đầu vào / thao tác | Kết quả mong đợi | Kỹ thuật | Đối chiếu hiện tại |
 |---|---|---|---|---|
@@ -65,7 +65,7 @@ Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), 
 
 ### REQ-KHO — Quản lý kho bao bì
 
-Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), [ManagementRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/ManagementRegression.cs).
+Nguồn: [CoreRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/CoreRegression.cs), [ManagementRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/ManagementRegression.cs).
 
 | Mã | Đầu vào / thao tác | Kết quả mong đợi | Kỹ thuật | Đối chiếu hiện tại |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), 
 
 ### REQ-DN — Đăng nhập và phân quyền
 
-Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), [FinanceRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/FinanceRegression.cs).
+Nguồn: [CoreRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/CoreRegression.cs), [FinanceRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/FinanceRegression.cs).
 
 | Mã | Đầu vào / thao tác | Kết quả mong đợi | Kỹ thuật | Đối chiếu hiện tại |
 |---|---|---|---|---|
@@ -91,7 +91,7 @@ Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), 
 
 ### REQ-TD — Quản lý thực đơn
 
-Nguồn: [Program.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/Program.cs), [ManagementRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/ManagementRegression.cs), [MenuOptionsRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/MenuOptionsRegression.cs), [AmericanoRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/AmericanoRegression.cs).
+Nguồn: [CoreRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/CoreRegression.cs), [ManagementRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/ManagementRegression.cs), [MenuOptionsRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/MenuOptionsRegression.cs), [AmericanoRegression.cs](../TheCafePOS_WPF/TheCafePOS.RegressionTests/AmericanoRegression.cs).
 
 | Mã | Đầu vào / thao tác | Kết quả mong đợi | Kỹ thuật | Đối chiếu hiện tại |
 |---|---|---|---|---|

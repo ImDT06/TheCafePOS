@@ -12,7 +12,8 @@ internal static class DialogWiringRegression
     public static void Run()
     {
         void Check(bool condition, string message) { if (!condition) throw new Exception(message); Console.WriteLine("PASS " + message); }
-        var services = TheCafePOS_WPF.App.BuildServices();
+        // Never build a container without a test data directory: the default is the shop's real database.
+        var services = TestHost.Container;
         var registry = services.GetRequiredService<IServiceProviderIsService>();
 
         void Wire<T>(params Type[] runtimeArgs)

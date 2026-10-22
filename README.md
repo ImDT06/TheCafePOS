@@ -116,7 +116,7 @@ Phạm vi cho môn Kiểm chứng phần mềm tập trung vào **bán hàng/tí
 powershell -File scripts/test-regressions.ps1
 ```
 
-Đây là chương trình kiểm thử hồi quy độc lập, trả mã lỗi khi có kiểm tra thất bại. Kiểm tra: phân quyền, băm mật khẩu, khóa đăng nhập, dữ liệu thực đơn, tiền mặt thiếu/âm, duyệt QR, thanh toán trùng, hoàn tác khi thiếu kho, đóng/mở ca, tổng hợp báo cáo và CSV. Lượt chạy thứ hai mở lại cơ sở dữ liệu bằng tiến trình mới để kiểm tra dữ liệu tồn tại qua khởi động lại.
+Bộ kiểm thử hồi quy dùng xUnit (`dotnet test`, cũng chạy được từ Test Explorer của Visual Studio). Mỗi test chạy các service thật trên một cơ sở dữ liệu tạm riêng, không đụng dữ liệu của quán. Kiểm tra: phân quyền, băm mật khẩu, khóa đăng nhập, dữ liệu thực đơn, tiền mặt thiếu/âm, duyệt QR, thanh toán trùng, hoàn tác khi thiếu kho, đóng/mở ca, tổng hợp báo cáo và CSV. Kiểm tra dữ liệu tồn tại qua khởi động lại bằng cách dựng lại toàn bộ service trên cùng cơ sở dữ liệu. GitHub Actions chạy bộ test này và kiểm thử giao diện cho mọi pull request.
 
 Kiểm tra giao diện thủ công: tạo chủ quán → thêm nhân viên/món → mở ca → bán tiền mặt → giữ/gọi đơn → cấu hình QR và quản lý duyệt → chốt ca → lọc báo cáo/xuất CSV → đóng/mở lại ứng dụng và kiểm tra dữ liệu.
 

@@ -23,6 +23,15 @@ namespace TheCafePOS_WPF
             var services = new ServiceCollection();
             // Các service vẫn giữ .Instance trong giai đoạn chuyển tiếp, nên container trỏ về đúng các instance đó.
             services.AddSingleton<IDataStoreService>(_ => DataStoreService.Instance);
+            // Each focused view resolves to the same store, so all of them see one consistent snapshot.
+            services.AddSingleton<ICatalogService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IInventoryService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IShiftService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IFinanceService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<ICustomerService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IPromotionService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IStoreSettingsService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IOrderService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IAuthService>(_ => AuthService.Instance);
             services.AddSingleton<IHoldOrderService>(_ => HoldOrderService.Instance);
             services.AddSingleton<IStickerPrinterService>(_ => StickerPrinterService.Instance);

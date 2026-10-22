@@ -13,6 +13,7 @@ using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Services.Interfaces;
 using TheCafePOS_WPF.ViewModels;
+using TheCafePOS_WPF.Views;
 using TheCafePOS_WPF.Views.Dialogs;
 
 namespace TheCafePOS_WPF
@@ -22,6 +23,7 @@ namespace TheCafePOS_WPF
         private readonly IShiftService _shifts;
         private readonly IAuthService _auth;
         private readonly MainViewModel _vm;
+        private readonly IDialogFactory _dialogs;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
         private readonly System.Windows.Threading.DispatcherTimer _wallClock = new() { Interval = TimeSpan.FromSeconds(1) };
         private static readonly System.Globalization.CultureInfo Vietnamese = new("vi-VN");
@@ -33,9 +35,10 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs)
         {
             _vm = vm;
+            _dialogs = dialogs;
             _shifts = shifts;
             _auth = auth;
             InitializeComponent();
@@ -145,7 +148,7 @@ namespace TheCafePOS_WPF
 
         private void OpenProductOptionModal(Product p)
         {
-            var modal = new OptionCustomModal(p, _vm.CurrentDailyOrderNumber) { Owner = this };
+            var modal = _dialogs.Create<OptionCustomModal>(this, p, _vm.CurrentDailyOrderNumber);
             if (modal.ShowDialog() == true && modal.ResultItem != null)
             {
                 _vm.AddItem(modal.ResultItem);
@@ -187,7 +190,7 @@ namespace TheCafePOS_WPF
             try
             {
                 VietQRService.ValidateSettings();
-                var qrModal = new VietQRModal(_vm.PayableTotal, _vm.CurrentDailyOrderNumber, _vm.CheckoutId) { Owner = this };
+                var qrModal = _dialogs.Create<VietQRModal>(this, _vm.PayableTotal, _vm.CurrentDailyOrderNumber, _vm.CheckoutId);
                 if (qrModal.ShowDialog() == true) CompletePayment("VietQR", qrApproved: true);
             }
             catch (Exception ex) { _vm.SetCheckoutError(ex.Message); }
@@ -204,7 +207,7 @@ namespace TheCafePOS_WPF
             {
                 _vm.StartNewOrder();
                 if (_vm.PrintStickers(order) is { } stickerError) Toast.Show(this, $"Đơn đã lưu, nhưng chưa tạo được dữ liệu tem: {stickerError}", true);
-                OrderCompleteModal.Show(this, order);
+                OrderCompleteModal.Show(this, order, _vm.FindCustomer(order.CustomerPhone));
                 TxtSearch.Focus();
             }
             catch (Exception ex) { _vm.SetCheckoutError($"Đơn đã lưu. Không thanh toán lại. {ex.Message}"); }
@@ -227,13 +230,13 @@ namespace TheCafePOS_WPF
             if (!_vm.HasItems) return;
             var modal = new DiscountModal();
             if (!modal.Show(this, _vm.Subtotal, _vm.Discount, _vm.DiscountReason)) return;
-            if (_vm.DiscountNeedsApproval(modal.Amount) && new PinApprovalModal(_vm.DiscountApprovalAction(modal.Amount, modal.Reason)) { Owner = this }.ShowDialog() != true) return;
+            if (_vm.DiscountNeedsApproval(modal.Amount) && _dialogs.Create<PinApprovalModal>(this, _vm.DiscountApprovalAction(modal.Amount, modal.Reason)).ShowDialog() != true) return;
             _vm.ApplyDiscount(modal.Amount, modal.Reason);
         }
 
         private void BtnCustomer_Click(object sender, RoutedEventArgs e)
         {
-            var modal = new CustomerModal();
+            var modal = _dialogs.Create<CustomerModal>(null);
             if (!modal.Show(this, _vm.PayableTotal + _vm.RedeemValue, _vm.CustomerPhone, _vm.RedeemPoints)) return;
             _vm.SetCustomer(modal.Phone, modal.RedeemPoints);
         }
@@ -245,7 +248,7 @@ namespace TheCafePOS_WPF
             TxtBrand.Text = _vm.StoreName;
         }
 
-        private void BtnQueue_Click(object sender, RoutedEventArgs e) => new OrderQueueWindow { Owner = this }.Show();
+        private void BtnQueue_Click(object sender, RoutedEventArgs e) => _dialogs.Create<OrderQueueWindow>(this).Show();
 
         private void BtnHoldOrder_Click(object sender, RoutedEventArgs e)
         {
@@ -265,7 +268,7 @@ namespace TheCafePOS_WPF
                 return;
             }
 
-            var modal = new HeldOrdersModal() { Owner = this };
+            var modal = _dialogs.Create<HeldOrdersModal>(this);
             if (modal.ShowDialog() == true && modal.SelectedHeldOrder != null)
             {
                 _vm.RecallHeldOrder(modal.SelectedHeldOrder);
@@ -277,14 +280,14 @@ namespace TheCafePOS_WPF
         {
             if (sender is Button btn && btn.Tag is PrintedStickerInfo sticker)
             {
-                var modal = new ReprintStickerModal(sticker) { Owner = this };
+                var modal = _dialogs.Create<ReprintStickerModal>(this, sticker);
                 modal.ShowDialog();
             }
         }
 
         private void BtnPackaging_Click(object sender, RoutedEventArgs e)
         {
-            var modal = new PackagingStatusModal() { Owner = this };
+            var modal = _dialogs.Create<PackagingStatusModal>(this);
             modal.ShowDialog();
         }
 
@@ -294,7 +297,7 @@ namespace TheCafePOS_WPF
             catch (Exception ex) { MessageBox.Show(this, ex.Message); return; }
             if (_vm.HasItems) { Toast.Show(this, "Hãy giữ hoặc hoàn tất đơn trước khi chốt ca.", true); return; }
             decimal expectedCash = _shifts.ExpectedCash;
-            var modal = new BlindDropModal(expectedCash) { Owner = this };
+            var modal = _dialogs.Create<BlindDropModal>(this, expectedCash);
             if (modal.ShowDialog() == true)
             {
                 Toast.Show(this, "Đã hoàn tất chốt ca mù!");

@@ -3,13 +3,20 @@ using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 namespace TheCafePOS_WPF.Views.Dialogs;
 
 public sealed class ProductConfigurationWindow : Window
 {
-    public ProductConfigurationWindow(Product original)
+    private readonly ICatalogService _catalog;
+    private readonly IInventoryService _inventory;
+    private readonly IAuthService _auth;
+    public ProductConfigurationWindow(Product original, ICatalogService catalog, IInventoryService inventory, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
+        _catalog = catalog;
+        _inventory = inventory;
+        _auth = auth;
+        _auth.RequireManager();
         var product = JsonSerializer.Deserialize<Product>(JsonSerializer.Serialize(original))!;
         Title = "Cấu hình: " + product.Name; Width = 650; Height = 730; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new StackPanel { Margin = new Thickness(20) };
@@ -53,12 +60,12 @@ public sealed class ProductConfigurationWindow : Window
             var extra = new TextBox { Text = (size?.ExtraPrice ?? 0).ToString("0"), Width = 140, Padding = new Thickness(5) };
             TheCafePOS_WPF.Core.TouchInput.SetNumeric(extra, true);
             Core.TouchInput.SetLabel(extra, "Phụ thu size " + name);
-            var packaging = new ComboBox { ItemsSource = DataStoreService.Instance.PackagingInventory, DisplayMemberPath = "Name", SelectedValuePath = "Id", SelectedValue = size?.PackagingId, Width = 260, Margin = new Thickness(10, 0, 0, 0) };
+            var packaging = new ComboBox { ItemsSource = _inventory.PackagingInventory, DisplayMemberPath = "Name", SelectedValuePath = "Id", SelectedValue = size?.PackagingId, Width = 260, Margin = new Thickness(10, 0, 0, 0) };
             panel.Children.Add(enabled); panel.Children.Add(extra); panel.Children.Add(packaging); drinks.Children.Add(panel); rows.Add((name, enabled, extra, packaging));
         }
         drinks.Children.Add(new TextBlock { Text = "Topping được thêm vào món này", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 12, 0, 8) });
         var toppings = new List<(string Id, CheckBox Box)>();
-        foreach (var topping in DataStoreService.Instance.Products.Where(p => p.IsTopping && p.Id != product.Id))
+        foreach (var topping in _catalog.Products.Where(p => p.IsTopping && p.Id != product.Id))
         {
             var box = new CheckBox { Content = $"{topping.Name} ({topping.BasePrice:N0}đ)", IsChecked = product.AllowedToppingIds.Contains(topping.Id), Margin = new Thickness(0, 5, 0, 5) };
             drinks.Children.Add(box); toppings.Add((topping.Id, box));
@@ -99,7 +106,7 @@ public sealed class ProductConfigurationWindow : Window
                 product.DefaultSugarChoice = namedSugar.SelectedItem as string ?? "";
                 product.DefaultIceChoice = namedIce.SelectedItem as string ?? "";
                 product.Sizes = sizes; product.AllowedToppingIds = !product.IsBeverage ? new() : toppings.Where(t => t.Box.IsChecked == true).Select(t => t.Id).ToList();
-                DataStoreService.Instance.SaveProduct(product); DialogResult = true;
+                _catalog.SaveProduct(product); DialogResult = true;
             }
             catch (Exception ex) { status.Text = ex.Message; }
         };

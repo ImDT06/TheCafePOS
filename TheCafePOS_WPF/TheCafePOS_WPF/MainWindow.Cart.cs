@@ -47,7 +47,7 @@ public partial class MainWindow
         if (product is null) { MessageBox.Show(this, "Món đã ngừng bán. Hãy xóa và chọn món khác."); return; }
         var draft = OrderConfigurationService.Clone(item);
         if (split) draft.Quantity = 1;
-        var modal = new OptionCustomModal(product, _vm.CurrentDailyOrderNumber, draft, split) { Owner = this };
+        var modal = _dialogs.Create<OptionCustomModal>(this, product, _vm.CurrentDailyOrderNumber, draft, split);
         if (modal.ShowDialog() != true) return;
         if (split) _vm.SplitItem(item, modal.ResultItem);
         else _vm.ReplaceItem(item, modal.ResultItem);

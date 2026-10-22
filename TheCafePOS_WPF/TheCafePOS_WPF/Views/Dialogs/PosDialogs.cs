@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
@@ -87,13 +88,18 @@ public sealed class DiscountModal
 
 public sealed class CustomerModal
 {
+    private readonly ICustomerService _customers;
+
+    public CustomerModal(ICustomerService customers)
+    {
+        _customers = customers;
+    }
     public string Phone { get; private set; } = "";
     public int RedeemPoints { get; private set; }
 
     // Look up or register a member by phone, then optionally redeem points (1 điểm = 1.000đ).
     public bool Show(Window owner, decimal payableBeforePoints, string currentPhone, int currentRedeem)
     {
-        var store = DataStoreService.Instance;
         var w = PosUi.Dialog(owner, "Khách hàng thành viên", 480);
         var phone = new TextBox { Text = currentPhone, FontSize = 22, Padding = new Thickness(8), Margin = new Thickness(0, 4, 0, 8) };
         TouchInput.SetNumeric(phone, true);
@@ -107,7 +113,7 @@ public sealed class CustomerModal
         Customer? member = null;
         void Lookup()
         {
-            member = store.FindCustomer(phone.Text);
+            member = _customers.FindCustomer(phone.Text);
             bool valid = phone.Text.Count(char.IsDigit) >= 10;
             registerPanel.Visibility = valid && member is null ? Visibility.Visible : Visibility.Collapsed;
             redeemPanel.Visibility = member is { Points: > 0 } ? Visibility.Visible : Visibility.Collapsed;
@@ -129,7 +135,7 @@ public sealed class CustomerModal
         {
             try
             {
-                member ??= registerPanel.IsVisible ? store.RegisterCustomer(phone.Text, name.Text) : throw FieldError.Mark(phone, "Số điện thoại phải gồm 10 chữ số.");
+                member ??= registerPanel.IsVisible ? _customers.RegisterCustomer(phone.Text, name.Text) : throw FieldError.Mark(phone, "Số điện thoại phải gồm 10 chữ số.");
                 int points = 0;
                 if (redeemPanel.IsVisible && redeem.Text.Trim().Length > 0 && (!int.TryParse(redeem.Text, out points) || points < 0 || points > maxRedeem))
                     throw FieldError.Mark(redeem, $"Đổi từ 0 đến {maxRedeem} điểm.");
@@ -194,7 +200,7 @@ public static class CashPaymentModal
 public static class OrderCompleteModal
 {
     // Big confirmation so the cashier can read the call number to the customer; Enter starts the next order.
-    public static void Show(Window owner, Order order)
+    public static void Show(Window owner, Order order, Customer? member)
     {
         var w = PosUi.Dialog(owner, "Thanh toán thành công", 440);
         var next = PosUi.Button("Đơn mới (Enter)", (_, _) => w.Close(), "PrimaryButton", 60);
@@ -218,7 +224,7 @@ public static class OrderCompleteModal
         if (order.DiscountAmount > 0) Row(string.IsNullOrWhiteSpace(order.DiscountReason) ? "Giảm giá" : $"Giảm giá ({order.DiscountReason})", $"−{order.DiscountAmount:N0}đ");
         Row("Tổng thu", $"{order.TotalAmount:N0}đ", true);
         if (order.PaymentMethod == "Cash") { Row("Khách đưa", $"{order.CashGiven:N0}đ"); Row("Tiền thối", $"{order.ChangeReturned:N0}đ", true); }
-        if (DataStoreService.Instance.FindCustomer(order.CustomerPhone) is { } member)
+        if (member is not null)
             panel.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF2, 0xED)), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0),
                 Child = PosUi.Text($"{member.Name}: +{order.PointsEarned} điểm, hiện có {member.Points} điểm (hạng {member.Tier})", 14, true, PosUi.Accent) });
         panel.Children.Add(new Border { Height = 16 });
@@ -243,13 +249,15 @@ public static class OrderCompleteModal
 
 public sealed class OrderQueueWindow : Window
 {
+    private readonly IOrderService _orders;
     private readonly WrapPanel _cards = new() { Orientation = Orientation.Horizontal };
     private readonly TextBlock _summary = PosUi.Text("", 14, color: PosUi.Muted);
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private static readonly string[] Finished = { "Đã giao", "Dừng phục vụ", "Legacy" };
 
-    public OrderQueueWindow()
+    public OrderQueueWindow(IOrderService orders)
     {
+        _orders = orders;
         Title = "Hàng chờ pha chế"; Width = 1100; Height = 720; MinWidth = 700; MinHeight = 480; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         var header = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
@@ -269,8 +277,7 @@ public sealed class OrderQueueWindow : Window
 
     private void Refresh()
     {
-        var store = DataStoreService.Instance;
-        var open = store.CompletedOrders.Where(o => !Finished.Contains(o.FulfillmentStatus) && o.CreatedAt.Date == DateTime.Today)
+        var open = _orders.CompletedOrders.Where(o => !Finished.Contains(o.FulfillmentStatus) && o.CreatedAt.Date == DateTime.Today)
             .OrderBy(o => o.CreatedAt).ToList();
         _summary.Text = open.Count == 0 ? "Không có đơn đang chờ." : $"{open.Count} đơn chưa giao, cũ nhất ở bên trái.";
         _cards.Children.Clear();
@@ -309,7 +316,7 @@ public sealed class OrderQueueWindow : Window
 
     private void Act(Order order, string action)
     {
-        try { DataStoreService.Instance.UpdateFulfillment(order.Id, action); Refresh(); }
+        try { _orders.UpdateFulfillment(order.Id, action); Refresh(); }
         catch (Exception ex) { Toast.Show(this, ex.Message, true); }
     }
 }

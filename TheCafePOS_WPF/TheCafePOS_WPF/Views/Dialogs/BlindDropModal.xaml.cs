@@ -2,18 +2,21 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class BlindDropModal : Window
     {
+        private readonly IShiftService _shifts;
         private readonly decimal _expectedCash;
 
-        public BlindDropModal(decimal expectedCash)
+        public BlindDropModal(decimal expectedCash, IShiftService shifts)
         {
+            _shifts = shifts;
             InitializeComponent();
             _expectedCash = expectedCash;
-            TxtInitialCash.Text = $"{DataStoreService.Instance.CurrentShift.InitialCash:N0}đ";
+            TxtInitialCash.Text = $"{_shifts.CurrentShift.InitialCash:N0}đ";
         }
 
         private void TxtActualCashInput_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -40,7 +43,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
             BtnConfirmDrop.Click -= BtnConfirmDrop_Click;
             BtnConfirmDrop.Click += (s, ev) =>
             {
-                try { DataStoreService.Instance.CloseShift(actualCash); DialogResult = true; }
+                try { _shifts.CloseShift(actualCash); DialogResult = true; }
                 catch (System.Exception ex) { MessageBox.Show(this, ex.Message); }
             };
         }

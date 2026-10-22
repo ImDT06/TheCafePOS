@@ -6,26 +6,37 @@ using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 namespace TheCafePOS_WPF.Views.Dialogs;
 public partial class ReportWindow : Window
 {
-    public ReportWindow()
+    private readonly ICatalogService _catalog;
+    private readonly IShiftService _shifts;
+    private readonly IFinanceService _finance;
+    private readonly IStoreSettingsService _settings;
+    private readonly IOrderService _orders;
+    private readonly IAuthService _auth;
+    public ReportWindow(ICatalogService catalog, IShiftService shifts, IFinanceService finance, IStoreSettingsService settings, IOrderService orders, IAuthService auth)
     {
-        AuthService.Instance.RequireManager(); InitializeComponent();
+        _catalog = catalog;
+        _shifts = shifts;
+        _finance = finance;
+        _settings = settings;
+        _orders = orders;
+        _auth = auth;
+        _auth.RequireManager(); InitializeComponent();
         From.SelectedDate = DateTime.Today; To.SelectedDate = DateTime.Today;
-        var store = DataStoreService.Instance;
-        ShiftFilter.ItemsSource = new[] { new { Id = "", Label = "Tất cả ca" } }.Concat(store.Shifts.Append(store.CurrentShift).DistinctBy(s => s.Id).Select(s => new { Id = s.Id, Label = $"{s.StartTime:dd/MM HH:mm} — {s.CashierName}" })).ToList();
+        ShiftFilter.ItemsSource = new[] { new { Id = "", Label = "Tất cả ca" } }.Concat(_shifts.Shifts.Append(_shifts.CurrentShift).DistinctBy(s => s.Id).Select(s => new { Id = s.Id, Label = $"{s.StartTime:dd/MM HH:mm} — {s.CashierName}" })).ToList();
         ShiftFilter.SelectedIndex = 0; Refresh_Click(this, new RoutedEventArgs());
     }
     private SalesReport RefreshReport()
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (From.SelectedDate is not DateTime from || To.SelectedDate is not DateTime to) throw new InvalidOperationException("Chọn ngày bắt đầu và kết thúc.");
         var shiftId = ShiftFilter.SelectedValue as string;
-        var store = DataStoreService.Instance;
-        var report = ReportService.Build(store.CompletedOrders, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId, store.Refunds, store.CashEntries);
+        var report = ReportService.Build(_orders.CompletedOrders, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId, _finance.Refunds, _finance.CashEntries);
         Orders.ItemsSource = report.Orders; Items.ItemsSource = null; TopProducts.ItemsSource = report.Products;
-        Shifts.ItemsSource = store.Shifts.Where(s => s.EndTime?.Date >= from.Date && s.EndTime?.Date <= to.Date && (string.IsNullOrEmpty(shiftId) || s.Id == shiftId)).ToList();
+        Shifts.ItemsSource = _shifts.Shifts.Where(s => s.EndTime?.Date >= from.Date && s.EndTime?.Date <= to.Date && (string.IsNullOrEmpty(shiftId) || s.Id == shiftId)).ToList();
         Refunds.ItemsSource = report.Refunds; CashEntries.ItemsSource = report.CashEntries;
         RenderInsights(report, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId);
         Summary.Text = $"Tiền mặt: bán {report.Cash:N0}đ, hoàn {report.CashRefunded:N0}đ\nChuyển khoản: bán {report.Transfer:N0}đ, hoàn {report.TransferRefunded:N0}đ\nNgoài bán hàng: thu {report.CashIn:N0}đ, chi {report.CashOut:N0}đ";
@@ -87,7 +98,7 @@ public partial class ReportWindow : Window
             {
                 ("Tổng quan", new[] { "Chỉ số", "Giá trị" }, new object?[][]
                 {
-                    new object?[] { "Cửa hàng", DataStoreService.Instance.Settings.DisplayName },
+                    new object?[] { "Cửa hàng", _settings.Settings.DisplayName },
                     new object?[] { "Từ ngày", From.SelectedDate }, new object?[] { "Đến ngày", To.SelectedDate },
                     new object?[] { "Số đơn", report.Orders.Count }, new object?[] { "Doanh thu bán hàng", report.Revenue },
                     new object?[] { "Hoàn tiền", report.Refunded }, new object?[] { "Doanh thu thuần", report.NetRevenue },

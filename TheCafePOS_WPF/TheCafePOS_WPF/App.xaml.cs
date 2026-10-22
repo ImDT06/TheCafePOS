@@ -18,7 +18,8 @@ namespace TheCafePOS_WPF
         /// <summary>Composition root: mọi service và window chính được đăng ký tại đây.</summary>
         public static IServiceProvider Services { get; private set; } = null!;
 
-        private static IServiceProvider ConfigureServices()
+        /// <summary>Builds the application's service container; regression and UI smoke harnesses use the same wiring.</summary>
+        public static IServiceProvider BuildServices()
         {
             var services = new ServiceCollection();
             // Các service vẫn giữ .Instance trong giai đoạn chuyển tiếp, nên container trỏ về đúng các instance đó.
@@ -35,6 +36,7 @@ namespace TheCafePOS_WPF
             services.AddSingleton<IAuthService>(_ => AuthService.Instance);
             services.AddSingleton<IHoldOrderService>(_ => HoldOrderService.Instance);
             services.AddSingleton<IStickerPrinterService>(_ => StickerPrinterService.Instance);
+            services.AddSingleton<Views.IDialogFactory, Views.DialogFactory>();
             services.AddTransient<ViewModels.MainViewModel>();
             services.AddTransient<MainWindow>();
             return services.BuildServiceProvider();
@@ -63,9 +65,9 @@ namespace TheCafePOS_WPF
             {
                 _instanceMutex = new Mutex(true, "Local\\TheCafePOS_WPF_SingleInstance", out bool created);
                 if (!created) { MessageBox.Show("TheCafePOS đang chạy. Vui lòng sử dụng cửa sổ hiện có."); Shutdown(); return; }
-                Services = ConfigureServices();
+                Services = BuildServices();
                 _ = Services.GetRequiredService<IDataStoreService>();
-                if (!Services.GetRequiredService<IAuthService>().TryRestoreSession() && new LoginWindow().ShowDialog() != true) { Shutdown(); return; }
+                if (!Services.GetRequiredService<IAuthService>().TryRestoreSession() && Services.GetRequiredService<Views.IDialogFactory>().Create<LoginWindow>(null).ShowDialog() != true) { Shutdown(); return; }
                 MainWindow = Services.GetRequiredService<MainWindow>();
                 ShutdownMode = ShutdownMode.OnMainWindowClose;
                 MainWindow.Show();

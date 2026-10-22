@@ -7,17 +7,22 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class VietQRModal : Window
     {
+        private readonly IAuthService _auth;
+        private readonly IDialogFactory _dialogs;
         private readonly decimal _amount;
         private readonly int _dailyOrderNumber;
         private readonly string _reference;
 
-        public VietQRModal(decimal amount, int dailyOrderNumber, string reference)
+        public VietQRModal(decimal amount, int dailyOrderNumber, string reference, IAuthService auth, IDialogFactory dialogs)
         {
+            _auth = auth;
+            _dialogs = dialogs;
             InitializeComponent();
             Loaded += (_, _) => StartAutoConfirm();
             _amount = amount;
@@ -87,7 +92,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
                     var txId = await SePayService.FindTransferAsync(memo, _amount, since);
                     if (txId is null) return;
                     _poll.Stop();
-                    AuthService.Instance.ApproveBySystem(AuthService.PaymentApprovalAction(_reference, _amount), "SePay:" + txId);
+                    _auth.ApproveBySystem(AuthService.PaymentApprovalAction(_reference, _amount), "SePay:" + txId);
                     SystemSounds.Asterisk.Play();
                     DialogResult = true;
                 }
@@ -100,7 +105,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
 
         private void BtnSimulateSuccess_Click(object sender, RoutedEventArgs e)
         {
-            var approval = new PinApprovalModal(AuthService.PaymentApprovalAction(_reference, _amount)) { Owner = this };
+            var approval = _dialogs.Create<PinApprovalModal>(this, AuthService.PaymentApprovalAction(_reference, _amount));
             if (approval.ShowDialog() == true) DialogResult = true;
         }
 

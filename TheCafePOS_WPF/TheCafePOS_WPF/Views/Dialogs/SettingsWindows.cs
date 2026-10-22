@@ -7,17 +7,21 @@ using System.Windows.Data;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
 // Shop information, cashier discount limit and delivery-app channels.
 public sealed class StoreSettingsWindow : Window
 {
-    public StoreSettingsWindow()
+    private readonly IStoreSettingsService _settings;
+    private readonly IAuthService _auth;
+    public StoreSettingsWindow(IStoreSettingsService settings, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
-        var store = DataStoreService.Instance;
-        var s = JsonSerializer.Deserialize<StoreSettings>(JsonSerializer.Serialize(store.Settings))!;
+        _settings = settings;
+        _auth = auth;
+        _auth.RequireManager();
+        var s = JsonSerializer.Deserialize<StoreSettings>(JsonSerializer.Serialize(_settings.Settings))!;
         Title = "Cài đặt cửa hàng"; Width = 760; Height = 720; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         TextBox Field(string value) => new() { Text = value, Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) };
@@ -37,7 +41,7 @@ public sealed class StoreSettingsWindow : Window
             try
             {
                 if (!int.TryParse(limit.Text, out var l) || l is < 0 or > 100) throw FieldError.Mark(limit, "Nhập từ 0 đến 100.");
-                store.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
+                _settings.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
                 DialogResult = true;
             }
             catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
@@ -67,7 +71,9 @@ public sealed class StoreSettingsWindow : Window
 // List of promotions; each can be a time-window %, buy X get Y, or a fixed-price combo.
 public sealed class PromotionsWindow : Window
 {
-    private readonly DataStoreService _store = DataStoreService.Instance;
+    private readonly ICatalogService _catalog;
+    private readonly IPromotionService _promotions;
+    private readonly IAuthService _auth;
     private readonly ListBox _list = new() { DisplayMemberPath = "Name", MinWidth = 240 };
     private readonly ComboBox _type = new() { ItemsSource = new[] { "Giờ vàng", "Mua X tặng Y", "Combo" }, Margin = new Thickness(0, 4, 0, 8), MinHeight = 36 };
     private readonly TextBox _name = Box(), _percent = Box(true), _buy = Box(true), _free = Box(true), _comboPrice = Box(true), _start = Box(), _end = Box();
@@ -81,13 +87,16 @@ public sealed class PromotionsWindow : Window
     private static TextBox Box(bool numeric = false) { var b = new TextBox { Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) }; if (numeric) TouchInput.SetNumeric(b, true); return b; }
     private static readonly (DayOfWeek Day, string Label)[] Days = { (DayOfWeek.Monday, "T2"), (DayOfWeek.Tuesday, "T3"), (DayOfWeek.Wednesday, "T4"), (DayOfWeek.Thursday, "T5"), (DayOfWeek.Friday, "T6"), (DayOfWeek.Saturday, "T7"), (DayOfWeek.Sunday, "CN") };
 
-    public PromotionsWindow()
+    public PromotionsWindow(ICatalogService catalog, IPromotionService promotions, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
+        _catalog = catalog;
+        _promotions = promotions;
+        _auth = auth;
+        _auth.RequireManager();
         Title = "Chương trình khuyến mãi"; Width = 980; Height = 760; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         EmptyState.SetText(_list, "Chưa có chương trình");
-        _products.ItemsSource = _store.Products.Where(p => !p.IsTopping || p.SoldSeparately).OrderBy(p => p.Name).ToList();
+        _products.ItemsSource = _catalog.Products.Where(p => !p.IsTopping || p.SoldSeparately).OrderBy(p => p.Name).ToList();
         foreach (var (day, label) in Days) _days.Children.Add(new CheckBox { Content = label, Tag = day, Margin = new Thickness(0, 0, 12, 6) });
         _percentRow = new StackPanel { Children = { PosUi.Text("Mức giảm (%)"), _percent } };
         _bxgyRow = new StackPanel { Children = { new UniformGrid { Columns = 2, Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Mua (X)"), _buy } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Tặng (Y) — món rẻ nhất"), _free } } } } } };
@@ -117,7 +126,7 @@ public sealed class PromotionsWindow : Window
         DockPanel.SetDock(head, Dock.Top); DockPanel.SetDock(left, Dock.Left);
         root.Children.Add(head); root.Children.Add(left); root.Children.Add(side);
         Content = root;
-        Loaded += (_, _) => { Refresh(); Load(_store.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true }); };
+        Loaded += (_, _) => { Refresh(); Load(_promotions.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true }); };
     }
 
     private void UpdateTypeRows()
@@ -130,7 +139,7 @@ public sealed class PromotionsWindow : Window
         _productHint.Text = type switch { "Mua X tặng Y" => "Không chọn = mọi đồ uống.", "Combo" => "Chọn từ 2 món; mỗi combo gồm 1 phần mỗi món.", _ => "Giờ vàng áp dụng cho cả đơn." };
     }
 
-    private void Refresh() { _list.ItemsSource = null; _list.ItemsSource = _store.Promotions.ToList(); _list.SelectedItem = _store.Promotions.FirstOrDefault(p => p.Id == _id); }
+    private void Refresh() { _list.ItemsSource = null; _list.ItemsSource = _promotions.Promotions.ToList(); _list.SelectedItem = _promotions.Promotions.FirstOrDefault(p => p.Id == _id); }
 
     private void Load(Promotion p)
     {
@@ -158,7 +167,7 @@ public sealed class PromotionsWindow : Window
                 Days = _days.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (DayOfWeek)c.Tag).ToList(),
                 ProductIds = type == "Giờ vàng" ? new() : _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList()
             };
-            _store.SavePromotion(promo);
+            _promotions.SavePromotion(promo);
             _id = promo.Id; Refresh(); Toast.Show(this, "Đã lưu chương trình.");
         }
         catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
@@ -166,8 +175,8 @@ public sealed class PromotionsWindow : Window
 
     private void Delete()
     {
-        if (_id is null || _store.Promotions.All(p => p.Id != _id)) { Toast.Show(this, "Chọn chương trình trước.", true); return; }
+        if (_id is null || _promotions.Promotions.All(p => p.Id != _id)) { Toast.Show(this, "Chọn chương trình trước.", true); return; }
         if (MessageBox.Show(this, $"Xóa chương trình {_name.Text}?", "Xóa khuyến mãi", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        _store.DeletePromotion(_id); _id = null; Refresh(); Load(_store.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true });
+        _promotions.DeletePromotion(_id); _id = null; Refresh(); Load(_promotions.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true });
     }
 }

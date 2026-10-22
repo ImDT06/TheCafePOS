@@ -1,11 +1,14 @@
 using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 namespace TheCafePOS_WPF.Views.Dialogs;
 public sealed class PasswordWindow : Window
 {
-    public PasswordWindow(string? resetUsername = null)
+    private readonly IAuthService _auth;
+    public PasswordWindow(IAuthService auth, string? resetUsername = null)
     {
+        _auth = auth;
         Title = resetUsername is null ? "Đổi mật khẩu" : "Đặt lại mật khẩu: " + resetUsername;
         Width = 520; Height = 630; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var panel = new StackPanel { Margin = new Thickness(24) }; Content = panel;
@@ -28,8 +31,8 @@ public sealed class PasswordWindow : Window
             try
             {
                 if (password.Password != confirm.Password) throw new InvalidOperationException("Mật khẩu nhập lại chưa khớp.");
-                if (resetUsername is null) AuthService.Instance.ChangePassword(old!.Password, password.Password);
-                else AuthService.Instance.ResetPassword(resetUsername, password.Password);
+                if (resetUsername is null) _auth.ChangePassword(old!.Password, password.Password);
+                else _auth.ResetPassword(resetUsername, password.Password);
                 DialogResult = true;
             }
             catch (Exception ex) { error.Text = ex.Message; }

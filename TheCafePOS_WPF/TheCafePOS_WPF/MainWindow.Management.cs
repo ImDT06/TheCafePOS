@@ -13,8 +13,7 @@ public partial class MainWindow
         var shift = _store.CurrentShift;
         TxtSession.Text = $"{user?.Username} ({user?.Role}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
         BtnManagement.Visibility = BtnReports.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
-        _vm.SetCheckoutError(null);
-        RefreshCheckoutNotice();
+        _vm.SetCheckoutError(null); // also re-evaluates the shift hint
     }
     private void Finance_Click(object sender, RoutedEventArgs e)
     {
@@ -31,7 +30,7 @@ public partial class MainWindow
     private void Management_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.SelectCategory(MainViewModel.AllCategories); RenderCategories(); RenderProducts(); LoadChannels(); UpdateCartTotal(); }
+        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.SelectCategory(MainViewModel.AllCategories); RenderCategories(); RenderProducts(); LoadStoreSettings(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void Reports_Click(object sender, RoutedEventArgs e)

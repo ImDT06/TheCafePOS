@@ -19,8 +19,13 @@ internal static class CartViewModelRegression
         OrderItem Make(int quantity) => OrderConfigurationService.Create(product, "M", 100, 100, quantity, Array.Empty<(string, int)>(), "", store.Products);
 
         var vm = new MainViewModel(store, auth, HoldOrderService.Instance, StickerPrinterService.Instance);
+        var messages = new List<PosMessage>();
+        var changed = new List<string?>();
+        vm.MessageRaised += (_, m) => messages.Add(m);
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         vm.LoadNextOrderNumber();
         Check(!vm.HasItems && vm.PayableTotal == 0 && vm.CartStartedAt is null, "New order starts empty with no start time");
+        Check(vm.IsCartEmpty && vm.CartTitle == "Đơn mới" && vm.GrandTotalText == "0đ" && !vm.CanPay, "Empty cart shows guidance and cannot be paid");
 
         // Menu filtering
         vm.SelectCategory(category.Id);
@@ -34,9 +39,16 @@ internal static class CartViewModelRegression
         var line = Make(2);
         vm.AddItem(line);
         Check(vm.Subtotal == 50000 && vm.TotalCups == 2 && vm.CartStartedAt is not null, "Adding a line updates subtotal, cup count and start time");
+        Check(changed.Contains(string.Empty), "Cart changes notify every binding");
+        Check(vm.CanPay && vm.CartTitle == $"Đơn #{vm.CurrentDailyOrderNumber:D2}" && vm.ItemCountText == "Tổng cộng (2 món)" && vm.GrandTotalText == $"{50000:N0}đ", "Display text follows the cart");
+        vm.IncreaseQuantityCommand.Execute(line);
+        vm.DecreaseQuantityCommand.Execute(line);
+        Check(line.Quantity == 2, "Quantity commands change the bound line");
         Check(vm.IncreaseQuantity(line) && vm.Subtotal == 75000, "Increasing quantity reprices the line");
         line.Quantity = MainViewModel.MaxLineQuantity;
+        messages.Clear();
         Check(!vm.IncreaseQuantity(line) && line.Quantity == MainViewModel.MaxLineQuantity, "Quantity is capped per line");
+        Check(messages.Single().IsError, "The cap is reported to the cashier");
         line.Quantity = 1;
         Check(!vm.DecreaseQuantity(line) && line.Quantity == 1, "Quantity never drops below one");
         line.Quantity = 2;
@@ -57,22 +69,35 @@ internal static class CartViewModelRegression
         vm.AddItem(splitSource);
         vm.SplitItem(splitSource, Make(1));
         Check(vm.CartItems.Count == 2 && splitSource.Quantity == 2 && vm.TotalCups == 3, "Splitting moves one unit into its own line");
+        messages.Clear();
+        vm.RemoveItemCommand.Execute(splitSource);
+        var removed = messages.Single();
+        Check(vm.CartItems.Count == 1 && removed.ActionLabel == "Hoàn tác" && removed.Action is not null, "Remove command offers undo through a message");
+        removed.Action!();
+        Check(vm.CartItems.IndexOf(splitSource) == 0, "Undo from the message restores the line");
         vm.ClearCart();
 
         // Channels and adjustments
         vm.AddItem(Make(2));
         vm.SetCustomer("0900000000", 0);
         vm.ApplyDiscount(5000, "Khách quen");
-        vm.SetServiceType("Tại chỗ");
-        vm.SetChannel("GrabFood");
+        vm.SetServiceTypeCommand.Execute(MainViewModel.DineIn);
+        Check(vm.IsDineIn && !vm.IsTakeAway, "Service type command selects dine-in");
+        var options = vm.ChannelOptions;
+        vm.Channel = "GrabFood";
+        Check(ReferenceEquals(options, vm.ChannelOptions), "Channel options keep their instance so the bound picker keeps its selection");
+        Check(vm.CashButtonText.Contains("GrabFood") && !vm.IsCounterOrder, "Cash button records app orders for the channel");
         Check(vm.IsAppOrder && vm.ChannelSurcharge == 13000, "App channel adds its markup rounded up to 1.000đ");
         Check(vm.Discount == 0 && vm.CustomerPhone == "" && vm.ServiceType == MainViewModel.DefaultServiceType && vm.PromoAmount == 0, "App orders drop in-store discount, membership, dine-in and promotions");
         Check(vm.PayableTotal == 63000, "App order total is subtotal plus channel surcharge");
         vm.SetChannel(null);
         Check(!vm.IsAppOrder && vm.ChannelSurcharge == 0, "Unknown channel falls back to the counter");
 
+        vm.ApplyDiscount(4000, "Khách quen");
+        Check(vm.ShowDiscountLine && vm.ShowSubtotalLine && vm.DiscountButtonText == "Sửa giảm giá", "Discount shows its line and the subtotal");
+        messages.Clear();
         vm.ApplyDiscount(vm.Subtotal + 1000, "Quá mức");
-        Check(vm.DropInvalidAdjustments() && vm.Discount == 0 && vm.DiscountReason == "", "Discount larger than the total is dropped and reported");
+        Check(vm.Discount == 0 && vm.DiscountReason == "" && messages.Single().IsError, "Discount larger than the total is dropped and reported");
         Check(!vm.DropInvalidAdjustments(), "Nothing is reported when there is nothing to drop");
 
         Check(MainViewModel.SuggestCashNotes(47000).SequenceEqual(new[] { 50000m, 60000m, 100000m, 200000m }), "Cash suggestions for 47k are 50k, 60k, 100k, 200k");
@@ -81,6 +106,9 @@ internal static class CartViewModelRegression
         // Checkout
         Check(vm.CheckoutNotice.Contains("Chưa mở ca") && !vm.ShiftOpen, "Notice explains a closed shift");
         Check(!vm.BeginCheckout() && vm.CheckoutError is not null && !vm.CheckoutInProgress, "Checkout cannot start without an open shift");
+        Check(vm.HasCheckoutNotice && vm.CheckoutNotice == vm.CheckoutError && vm.ShowOpenShiftHint, "Payment error replaces the shift hint");
+        vm.SetServiceType(MainViewModel.DefaultServiceType);
+        Check(vm.CheckoutError is null, "Editing the order clears the previous payment error");
         store.OpenShift(0);
         foreach (var id in new[] { "pack-1", "pack-3", "pack-5" }) store.UpdateStock(id, "Kiểm kê", 10, "Cart test");
         Check(vm.BeginCheckout() && vm.CheckoutInProgress && vm.CheckoutError is null, "Checkout starts once the shift is open");
@@ -88,7 +116,9 @@ internal static class CartViewModelRegression
         var lockedUndo = vm.RemoveItem(vm.CartItems[0]);
         lockedUndo!();
         Check(vm.CartItems.Count == 0, "Undo is ignored while a checkout is in progress");
+        vm.SetCheckoutError("Lỗi thử");
         vm.EndCheckout();
+        Check(vm.CheckoutError == "Lỗi thử" && vm.CanEditCart, "Ending checkout unlocks the cart but keeps its error visible");
         vm.AddItem(Make(2));
         Check(vm.BeginCheckout(), "Checkout restarts after the previous attempt ended");
         int orderNumber = vm.CurrentDailyOrderNumber;

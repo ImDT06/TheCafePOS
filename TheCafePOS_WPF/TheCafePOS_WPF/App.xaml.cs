@@ -44,6 +44,7 @@ namespace TheCafePOS_WPF
             services.AddSingleton<IStickerPrinterService>(sp => sp.GetRequiredService<StickerPrinterService>());
             services.AddSingleton<IVietQRService, VietQRService>();
             services.AddSingleton<ISePayService, SePayService>();
+            services.AddSingleton<ICloudBackupClient>(_ => new SupabaseStorageClient(new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) }, SupabaseOptions.FromEnvironment()));
             services.AddSingleton<IBackupService, BackupService>();
             services.AddSingleton<Views.IDialogFactory, Views.DialogFactory>();
             services.AddTransient<ViewModels.MainViewModel>();
@@ -74,7 +75,7 @@ namespace TheCafePOS_WPF
                 _instanceMutex = new Mutex(true, "Local\\TheCafePOS_WPF_SingleInstance", out bool created);
                 if (!created) { MessageBox.Show("TheCafePOS đang chạy. Vui lòng sử dụng cửa sổ hiện có."); Shutdown(); return; }
                 Services = BuildServices();
-                System.Threading.Tasks.Task.Run(Services.GetRequiredService<IBackupService>().BackupDailyQuietly);
+                System.Threading.Tasks.Task.Run(Services.GetRequiredService<IBackupService>().BackupDailyQuietlyAsync);
                 _ = Services.GetRequiredService<IDataStoreService>();
                 if (!Services.GetRequiredService<IAuthService>().TryRestoreSession() && Services.GetRequiredService<Views.IDialogFactory>().Create<LoginWindow>(null).ShowDialog() != true) { Shutdown(); return; }
                 MainWindow = Services.GetRequiredService<MainWindow>();

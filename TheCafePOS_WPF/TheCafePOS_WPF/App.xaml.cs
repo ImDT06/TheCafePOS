@@ -18,11 +18,12 @@ namespace TheCafePOS_WPF
         /// <summary>Composition root: mọi service và window chính được đăng ký tại đây.</summary>
         public static IServiceProvider Services { get; private set; } = null!;
 
-        /// <summary>Builds the application's service container; regression and UI smoke harnesses use the same wiring.</summary>
-        public static IServiceProvider BuildServices()
+        /// <summary>Builds the application's service container; tests and the UI smoke harness use the same wiring.</summary>
+        /// <param name="dataDirectory">Folder for the shop database; null uses THECAFEPOS_DATA_DIR or the user's app data folder.</param>
+        public static IServiceProvider BuildServices(string? dataDirectory = null)
         {
             var services = new ServiceCollection();
-            services.AddSingleton(_ => new LocalDatabase());
+            services.AddSingleton(_ => new LocalDatabase(dataDirectory is null ? null : System.IO.Path.Combine(dataDirectory, "cafe.db")));
             // Auth reads the current shift only when an account change needs it, which breaks the auth <-> store cycle.
             services.AddSingleton(sp => new AuthService(sp.GetRequiredService<LocalDatabase>(), () => sp.GetRequiredService<IShiftService>().CurrentShift));
             services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<AuthService>());

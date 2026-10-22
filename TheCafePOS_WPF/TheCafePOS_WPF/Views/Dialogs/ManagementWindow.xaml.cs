@@ -199,6 +199,7 @@ public partial class ManagementWindow : Window
     private void RefreshBackupInfo()
     {
         BackupInfo.Text = _backup.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
+        CloudInfo.Text = CloudText();
         MemberInfo.Text = $"{_customers.Customers.Count} thành viên, {_customers.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
     private void OpenIngredients_Click(object sender, RoutedEventArgs e) { _dialogs.Create<IngredientWindow>(this).ShowDialog(); Refresh(); }
@@ -210,10 +211,43 @@ public partial class ManagementWindow : Window
     private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (_dialogs.Create<StoreSettingsWindow>(this).ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
     private void OpenPromotions_Click(object sender, RoutedEventArgs e) => _dialogs.Create<PromotionsWindow>(this).ShowDialog();
     private void OpenCustomers_Click(object sender, RoutedEventArgs e) { _dialogs.Create<CustomerListWindow>(this).ShowDialog(); RefreshBackupInfo(); }
-    private void BackupNow_Click(object sender, RoutedEventArgs e)
+    private string CloudText()
     {
-        try { _backup.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }
-        catch (Exception ex) { Status.Text = ex.Message; }
+        if (_backup.CloudProblem is { } problem) return "Sao lưu cloud: " + problem;
+        var status = _backup.CloudStatus;
+        int pending = _backup.PendingUploads;
+        string last = status.LastUploadAt is DateTime at ? $"Đã đưa lên Supabase lúc {at:dd/MM/yyyy HH:mm}" : "Chưa đưa bản nào lên Supabase";
+        string queue = pending > 0 ? $"; còn {pending} bản chờ tải lên" : "; đã tải lên đủ";
+        return last + queue + (status.LastError.Length > 0 ? ". Lỗi gần nhất: " + status.LastError : ".");
+    }
+    private async void BackupNow_Click(object sender, RoutedEventArgs e)
+    {
+        try { _backup.BackupNow(); }
+        catch (Exception ex) { Status.Text = ex.Message; return; }
+        RefreshBackupInfo();
+        if (_backup.CloudProblem is not null) { Toast.Show(this, "Đã sao lưu trên máy."); return; }
+        BackupNowButton.IsEnabled = false;
+        CloudInfo.Text = "Đang đưa lên Supabase…";
+        try { await _backup.UploadPendingAsync(); }
+        finally { BackupNowButton.IsEnabled = true; }
+        RefreshBackupInfo();
+        bool uploaded = _backup.PendingUploads == 0;
+        Toast.Show(this, uploaded ? "Đã sao lưu và đưa lên Supabase." : "Đã sao lưu trên máy; chưa đưa lên được Supabase.", !uploaded);
+    }
+    private void RestoreBackup_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Microsoft.Win32.OpenFileDialog { Title = "Chọn bản sao lưu để khôi phục", Filter = "Bản sao lưu TheCafePOS (*.db)|*.db", InitialDirectory = _backup.Folder };
+        if (picker.ShowDialog(this) != true) return;
+        var confirm = MessageBox.Show(this,
+            $"Thay toàn bộ dữ liệu hiện tại bằng bản sao lưu:\n{System.IO.Path.GetFileName(picker.FileName)}\n\nDữ liệu hiện tại sẽ được giữ lại thành một bản sao lưu an toàn. Ứng dụng sẽ đóng sau khi khôi phục.",
+            "Khôi phục dữ liệu", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (confirm != MessageBoxResult.Yes) return;
+        string safetyCopy;
+        try { safetyCopy = _backup.Restore(picker.FileName); }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Không khôi phục được"); return; }
+        MessageBox.Show(this, $"Đã khôi phục dữ liệu. Bản dữ liệu trước đó được giữ tại:\n{safetyCopy}\n\nHãy mở lại TheCafePOS.", "Khôi phục xong");
+        // Every service still holds the old data in memory; exiting now (without the usual save-on-close) keeps the restored file intact.
+        Environment.Exit(0);
     }
     private void OpenBackups_Click(object sender, RoutedEventArgs e)
     {

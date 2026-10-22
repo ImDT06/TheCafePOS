@@ -60,4 +60,45 @@ public sealed class LocalDatabase
         }
         transaction.Commit();
     }
+
+    // SQLite's online backup copies a consistent snapshot even while the POS is writing, unlike a raw file copy.
+    public void BackupTo(string targetPath)
+    {
+        using var source = Open();
+        using var target = OpenFile(targetPath, SqliteOpenMode.ReadWriteCreate);
+        source.BackupDatabase(target);
+    }
+
+    /// <summary>Replaces every document with the contents of <paramref name="backupPath"/> in one step.</summary>
+    public void RestoreFrom(string backupPath)
+    {
+        if (!IsValidBackup(backupPath)) throw new InvalidOperationException("File đã chọn không phải bản sao lưu TheCafePOS hợp lệ.");
+        using var source = OpenFile(backupPath, SqliteOpenMode.ReadOnly);
+        using var target = Open();
+        source.BackupDatabase(target);
+    }
+
+    /// <summary>True when the file is an intact SQLite database holding TheCafePOS documents.</summary>
+    public static bool IsValidBackup(string path)
+    {
+        if (!File.Exists(path)) return false;
+        try
+        {
+            using var connection = OpenFile(path, SqliteOpenMode.ReadOnly);
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA integrity_check";
+            if (command.ExecuteScalar() as string != "ok") return false;
+            command.CommandText = "SELECT COUNT(*) FROM documents WHERE id='store'";
+            return Convert.ToInt64(command.ExecuteScalar()) == 1;
+        }
+        catch (SqliteException) { return false; }
+    }
+
+    // Unpooled, so the file is released as soon as the copy finishes and can be uploaded or deleted.
+    private static SqliteConnection OpenFile(string path, SqliteOpenMode mode)
+    {
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Mode = mode, Pooling = false }.ToString());
+        connection.Open();
+        return connection;
+    }
 }

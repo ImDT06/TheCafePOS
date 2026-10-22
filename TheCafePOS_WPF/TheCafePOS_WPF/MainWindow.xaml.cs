@@ -25,6 +25,7 @@ namespace TheCafePOS_WPF
         private readonly MainViewModel _vm;
         private readonly IDialogFactory _dialogs;
         private readonly IVietQRService _bank;
+        private readonly IBackupService _backup;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
         private readonly System.Windows.Threading.DispatcherTimer _wallClock = new() { Interval = TimeSpan.FromSeconds(1) };
         private static readonly System.Globalization.CultureInfo Vietnamese = new("vi-VN");
@@ -36,8 +37,9 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup)
         {
+            _backup = backup;
             _vm = vm;
             _dialogs = dialogs;
             _bank = bank;
@@ -303,6 +305,8 @@ namespace TheCafePOS_WPF
             if (modal.ShowDialog() == true)
             {
                 Toast.Show(this, "Đã hoàn tất chốt ca mù!");
+                // The shift's sales are final now: copy them off the machine without holding up the till.
+                _ = System.Threading.Tasks.Task.Run(_backup.BackupAfterShiftQuietlyAsync);
                 RefreshSession();
             }
         }

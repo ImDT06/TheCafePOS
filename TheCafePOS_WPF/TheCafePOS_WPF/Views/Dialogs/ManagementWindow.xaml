@@ -141,10 +141,12 @@
           <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Margin="8,0,0,0">
             <StackPanel>
               <TextBlock Text="Sao lưu dữ liệu" FontWeight="Bold" />
-              <TextBlock Text="App tự sao lưu mỗi ngày khi mở và giữ 14 bản gần nhất. Để khôi phục: đóng app, chép bản sao lưu đè lên file dữ liệu gốc." Style="{StaticResource Hint}" />
-              <TextBlock x:Name="BackupInfo" Margin="0,0,0,12" TextWrapping="Wrap" />
-              <Button Style="{StaticResource PrimaryButton}" Content="Sao lưu ngay" Padding="8" Click="BackupNow_Click" />
+              <TextBlock Text="App tự sao lưu mỗi ngày và sau mỗi lần chốt ca, giữ 14 bản gần nhất trên máy và đưa từng bản lên Supabase để máy hỏng không mất dữ liệu." Style="{StaticResource Hint}" />
+              <TextBlock x:Name="BackupInfo" Margin="0,0,0,4" TextWrapping="Wrap" />
+              <TextBlock x:Name="CloudInfo" Margin="0,0,0,12" TextWrapping="Wrap" />
+              <Button x:Name="BackupNowButton" Style="{StaticResource PrimaryButton}" Content="Sao lưu ngay" Padding="8" Click="BackupNow_Click" />
               <Button Content="Mở thư mục sao lưu" Padding="8" Margin="0,8,0,0" Click="OpenBackups_Click" />
+              <Button Content="Khôi phục từ bản sao lưu…" Style="{StaticResource DangerButton}" Padding="8" Margin="0,8,0,0" Click="RestoreBackup_Click" />
               <TextBlock Text="Khách hàng thành viên" FontWeight="Bold" Margin="0,24,0,0" />
               <TextBlock x:Name="MemberInfo" Style="{StaticResource Hint}" />
               <Button Content="Quản lý khách hàng…" Padding="8" Click="OpenCustomers_Click" />

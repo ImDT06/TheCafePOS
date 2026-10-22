@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <!-- The only colours the UI should use. Hard-coded hex values outside this file are a smell. -->
+ <SolidColorBrush x:Key="PosAccent" Color="#12634B"/>
+ <SolidColorBrush x:Key="PosAccentDark" Color="#123D35"/>
+ <SolidColorBrush x:Key="PosAccentSoft" Color="#E8F2ED"/>
+ <SolidColorBrush x:Key="PosSelected" Color="#DCEEE4"/>
+ <SolidColorBrush x:Key="PosSubtle" Color="#F1F6F3"/>
+ <SolidColorBrush x:Key="PosInk" Color="#183D34"/>
+ <SolidColorBrush x:Key="PosMuted" Color="#52665F"/>
+ <SolidColorBrush x:Key="PosCanvas" Color="#F3F5F4"/>
+ <SolidColorBrush x:Key="PosSurface" Color="#FFFFFF"/>
+ <SolidColorBrush x:Key="PosBorder" Color="#DFE7E2"/>
+ <SolidColorBrush x:Key="PosBorderStrong" Color="#B8C8BF"/>
+ <SolidColorBrush x:Key="PosDanger" Color="#B42318"/>
+ <SolidColorBrush x:Key="PosDangerSoft" Color="#FFF1F0"/>
+ <SolidColorBrush x:Key="PosDangerBorder" Color="#F2C7C2"/>
+ <SolidColorBrush x:Key="PosWarning" Color="#B45309"/>
+ <SolidColorBrush x:Key="PosWarningInk" Color="#92400E"/>
+ <SolidColorBrush x:Key="PosWarningSoft" Color="#FFF7ED"/>
+ <SolidColorBrush x:Key="PosWarningBorder" Color="#FED7AA"/>
+ <SolidColorBrush x:Key="PosInfo" Color="#1D4ED8"/>
+</ResourceDictionary>

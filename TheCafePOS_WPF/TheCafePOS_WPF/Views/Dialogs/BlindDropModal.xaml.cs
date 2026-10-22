@@ -36,7 +36,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
             TxtExpectedCash.Text = $"Hệ thống ghi nhận: {_expectedCash:N0}đ";
             TxtDiscrepancy.Text = $"Chênh lệch thực tế: {diff:N0}đ ({(diff >= 0 ? "Thừa" : "Thiếu")})";
 
-            BtnConfirmDrop.Content = "HOÀN TẤT CHỐT CA";
+            BtnConfirmDrop.Content = "Hoàn tất chốt ca";
             BtnConfirmDrop.Click -= BtnConfirmDrop_Click;
             BtnConfirmDrop.Click += (s, ev) =>
             {

@@ -13,7 +13,8 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 internal static class PosUi
 {
     public static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0x12, 0x63, 0x4B));
-    public static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B));
+    public static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x52, 0x66, 0x5F));
+    public static readonly Brush Danger = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
 
     public static Window Dialog(Window owner, string title, double width)
     {
@@ -41,21 +42,23 @@ public sealed class DiscountModal
     public bool Show(Window owner, decimal subtotal, decimal current, string currentReason)
     {
         var w = PosUi.Dialog(owner, "Giảm giá", 460);
-        var amount = new TextBox { Text = current > 0 ? current.ToString("0") : "", FontSize = 20, Padding = new Thickness(8), Margin = new Thickness(0, 4, 0, 10) };
+        var amount = new TextBox { Text = current > 0 ? current.ToString("0") : "", FontSize = 20, Margin = new Thickness(0, 8, 0, 10) };
         TouchInput.SetNumeric(amount, true);
-        var reason = new ComboBox { IsEditable = true, Text = currentReason, FontSize = 16, Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 4), ItemsSource = new[] { "Khách quen", "Khuyến mãi khai trương", "Bù món lỗi / chờ lâu", "Nhân viên", "Voucher" } };
+        MaterialDesignThemes.Wpf.HintAssist.SetHint(amount, "Số tiền giảm (đồng)");
+        var reason = new ComboBox { IsEditable = true, Text = currentReason, FontSize = 16, Margin = new Thickness(0, 4, 0, 4), ItemsSource = new[] { "Khách quen", "Khuyến mãi khai trương", "Bù món lỗi / chờ lâu", "Nhân viên", "Voucher" } };
+        MaterialDesignThemes.Wpf.HintAssist.SetHint(reason, "Lý do giảm giá");
         var preview = PosUi.Text("", 15, true, PosUi.Accent);
         void Update()
         {
             decimal.TryParse(amount.Text, out var a);
             preview.Text = a > 0 && a < subtotal ? $"Còn phải thu: {subtotal - a:N0}đ" : a >= subtotal ? "Số tiền giảm phải nhỏ hơn tạm tính" : "";
-            preview.Foreground = a >= subtotal ? Brushes.Firebrick : PosUi.Accent;
+            preview.Foreground = a >= subtotal ? PosUi.Danger : PosUi.Accent;
         }
         amount.TextChanged += (_, _) => Update();
         var percents = new UniformGrid { Columns = 4, Margin = new Thickness(-4, 0, -4, 8) };
         foreach (var p in new[] { 5, 10, 15, 20 })
             percents.Children.Add(PosUi.Button($"{p}%", (_, _) => amount.Text = Math.Floor(subtotal * p / 100 / 1000 * 1000).ToString("0"), minHeight: 44));
-        var error = PosUi.Text("", 13, color: Brushes.Firebrick);
+        var error = PosUi.Text("", 13, color: PosUi.Danger);
         var actions = new UniformGrid { Columns = 3, Margin = new Thickness(-4, 12, -4, 0) };
         actions.Children.Add(PosUi.Button("Bỏ giảm giá", (_, _) => { Amount = 0; Reason = ""; w.DialogResult = true; }));
         actions.Children.Add(PosUi.Button("Hủy", (_, _) => w.DialogResult = false));
@@ -72,9 +75,9 @@ public sealed class DiscountModal
             Margin = new Thickness(20),
             Children =
             {
-                PosUi.Text("Giảm giá đơn hàng", 20, true), PosUi.Text($"Tạm tính {subtotal:N0}đ · cần quản lý duyệt bằng mật khẩu", 13, color: PosUi.Muted),
+                PosUi.Text("Giảm giá đơn hàng", 20, true), PosUi.Text($"Tạm tính {subtotal:N0}đ", 13, color: PosUi.Muted),
                 new Border { Height = 12 }, PosUi.Text("Giảm nhanh theo %"), percents,
-                PosUi.Text("Số tiền giảm (đồng)"), amount, PosUi.Text("Lý do"), reason, preview, error, actions
+                amount, reason, preview, error, actions
             }
         };
         w.Loaded += (_, _) => { amount.Focus(); amount.SelectAll(); Update(); };
@@ -109,7 +112,7 @@ public sealed class CustomerModal
             registerPanel.Visibility = valid && member is null ? Visibility.Visible : Visibility.Collapsed;
             redeemPanel.Visibility = member is { Points: > 0 } ? Visibility.Visible : Visibility.Collapsed;
             maxRedeem = member is null ? 0 : (int)Math.Min(member.Points, Math.Floor((payableBeforePoints - 1000) / DataStoreService.PointValue));
-            info.Text = member is not null ? $"{member.Name} · hạng {member.Tier} · {member.Points} điểm · {member.VisitCount} lần mua"
+            info.Text = member is not null ? $"{member.Name}, hạng {member.Tier}: {member.Points} điểm, {member.VisitCount} lần mua"
                 : valid ? "Chưa là thành viên — bấm Đăng ký để tích điểm từ đơn này." : "Nhập số điện thoại để tìm hoặc đăng ký.";
             info.Foreground = member is null ? PosUi.Muted : PosUi.Accent;
         }
@@ -118,7 +121,7 @@ public sealed class CustomerModal
         redeemPanel.Children.Add(PosUi.Text("Đổi điểm (1 điểm = 1.000đ)"));
         redeemPanel.Children.Add(new DockPanel { Children = { useAll, redeem } });
         DockPanel.SetDock(useAll, Dock.Right);
-        var error = PosUi.Text("", 13, color: Brushes.Firebrick);
+        var error = PosUi.Text("", 13, color: PosUi.Danger);
         var actions = new UniformGrid { Columns = 3, Margin = new Thickness(-4, 12, -4, 0) };
         actions.Children.Add(PosUi.Button("Bỏ khách", (_, _) => { Phone = ""; RedeemPoints = 0; w.DialogResult = true; }));
         actions.Children.Add(PosUi.Button("Hủy", (_, _) => w.DialogResult = false));
@@ -150,27 +153,39 @@ public static class CashPaymentModal
         var w = PosUi.Dialog(owner, "Thanh toán tiền mặt", 460);
         var amount = new TextBox { FontSize = 26, Padding = new Thickness(8), Margin = new Thickness(0, 4, 0, 8), HorizontalContentAlignment = HorizontalAlignment.Right };
         TouchInput.SetNumeric(amount, true);
+        TouchInput.SetLabel(amount, "Tiền khách đưa");
+        TouchInput.SetDue(amount, total);
+        System.Windows.Automation.AutomationProperties.SetName(amount, "Tiền khách đưa, số nguyên đồng");
         var change = PosUi.Text("", 22, true, PosUi.Accent);
+        var error = PosUi.Text("", 13, color: PosUi.Danger);
+        error.Visibility = Visibility.Collapsed;
+        Button? pay = null;
         decimal? result = null;
         void Update()
         {
-            bool ok = decimal.TryParse(amount.Text, out var a);
-            change.Text = !ok ? "Tiền thối: 0đ" : a >= total ? $"Tiền thối: {a - total:N0}đ" : $"Còn thiếu {total - a:N0}đ";
-            change.Foreground = ok && a < total ? Brushes.Firebrick : PosUi.Accent;
+            bool ok = CashAmount.TryParse(amount.Text, out var a);
+            error.Text = ok ? "" : "Nhập số tiền nguyên từ 0 đến 999.999.999.999đ, không dùng dấu phân cách.";
+            error.Visibility = ok ? Visibility.Collapsed : Visibility.Visible;
+            change.Text = !ok ? "Tiền thối: —" : a >= total ? $"Tiền thối: {a - total:N0}đ" : $"Còn thiếu {total - a:N0}đ";
+            change.Foreground = ok && a < total ? PosUi.Danger : PosUi.Accent;
+            if (pay != null) pay.IsEnabled = ok && a >= total;
         }
         amount.TextChanged += (_, _) => Update();
         var notes = new[] { 10000m, 20000m, 50000m, 100000m, 200000m, 500000m }.Select(n => Math.Ceiling(total / n) * n).Where(v => v > total).Distinct().OrderBy(v => v).Take(4);
         var quick = new UniformGrid { Columns = 5, Margin = new Thickness(-4, 0, -4, 8) };
         quick.Children.Add(PosUi.Button("Đúng số", (_, _) => amount.Text = total.ToString("0"), minHeight: 48));
         foreach (var n in notes) quick.Children.Add(PosUi.Button($"{n / 1000:0}k", (_, _) => amount.Text = n.ToString("0"), minHeight: 48));
-        var pay = PosUi.Button("Xác nhận đã thu (Enter)", (_, _) =>
+        pay = PosUi.Button("Xác nhận đã thu (Enter)", (_, _) =>
         {
-            if (!decimal.TryParse(amount.Text, out var a) || a < total) { FieldError.Mark(amount, "Số tiền khách đưa chưa đủ."); return; }
+            if (!CashAmount.TryParse(amount.Text, out var a) || a < total) { Update(); amount.Focus(); return; }
+            if (result.HasValue) return;
             result = a; w.DialogResult = true;
         }, "PrimaryButton", 56);
         pay.IsDefault = true;
-        var actions = new UniformGrid { Columns = 2, Margin = new Thickness(-4, 12, -4, 0), Children = { PosUi.Button("Quay lại", (_, _) => w.DialogResult = false, minHeight: 56), pay } };
-        w.Content = new StackPanel { Margin = new Thickness(20), Children = { PosUi.Text("Cần thu", 14, color: PosUi.Muted), PosUi.Text($"{total:N0}đ", 34, true, PosUi.Accent), new Border { Height = 10 }, PosUi.Text("Tiền khách đưa"), amount, quick, change, actions } };
+        var back = PosUi.Button("Quay lại", (_, _) => w.DialogResult = false, minHeight: 56);
+        back.IsCancel = true;
+        var actions = new UniformGrid { Columns = 2, Margin = new Thickness(-4, 12, -4, 0), Children = { back, pay } };
+        w.Content = new StackPanel { Margin = new Thickness(20), Children = { PosUi.Text("Cần thu", 14, color: PosUi.Muted), PosUi.Text($"{total:N0}đ", 34, true, PosUi.Accent), new Border { Height = 10 }, PosUi.Text("Tiền khách đưa"), amount, quick, error, change, actions } };
         w.Loaded += (_, _) => { amount.Text = total.ToString("0"); amount.Focus(); amount.SelectAll(); Update(); };
         return w.ShowDialog() == true ? result : null;
     }
@@ -185,10 +200,11 @@ public static class OrderCompleteModal
         var next = PosUi.Button("Đơn mới (Enter)", (_, _) => w.Close(), "PrimaryButton", 60);
         next.IsDefault = true;
         var panel = new StackPanel { Margin = new Thickness(24), HorizontalAlignment = HorizontalAlignment.Stretch };
-        panel.Children.Add(new TextBlock { Text = "✓", FontSize = 44, Foreground = PosUi.Accent, HorizontalAlignment = HorizontalAlignment.Center });
+        panel.Children.Add(new MaterialDesignThemes.Wpf.PackIcon { Kind = MaterialDesignThemes.Wpf.PackIconKind.CheckCircle, Width = 52, Height = 52, Foreground = PosUi.Accent, HorizontalAlignment = HorizontalAlignment.Center });
         panel.Children.Add(new TextBlock { Text = "Thanh toán thành công", FontSize = 18, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         panel.Children.Add(new TextBlock { Text = $"#{order.DailyOrderNumber:D2}", FontSize = 64, FontWeight = FontWeights.Bold, Foreground = PosUi.Accent, HorizontalAlignment = HorizontalAlignment.Center });
-        panel.Children.Add(new TextBlock { Text = $"{order.ServiceType} · {(order.PaymentMethod == "Cash" ? "Tiền mặt" : "VietQR")}", Foreground = PosUi.Muted, FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) });
+        var paymentLabel = order.PaymentMethod switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", _ => order.Channel };
+        panel.Children.Add(new TextBlock { Text = $"{order.ServiceType}, {paymentLabel}", Foreground = PosUi.Muted, FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) });
         void Row(string label, string value, bool strong = false)
         {
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
@@ -199,14 +215,27 @@ public static class OrderCompleteModal
         if (order.SubtotalAmount > order.TotalAmount) Row("Tạm tính", $"{order.SubtotalAmount:N0}đ");
         if (order.PromotionAmount > 0) Row(order.PromotionName, $"−{order.PromotionAmount:N0}đ");
         if (order.LoyaltyAmount > 0) Row($"Đổi {order.PointsRedeemed} điểm", $"−{order.LoyaltyAmount:N0}đ");
-        if (order.DiscountAmount > 0) Row("Giảm giá", $"−{order.DiscountAmount:N0}đ");
+        if (order.DiscountAmount > 0) Row(string.IsNullOrWhiteSpace(order.DiscountReason) ? "Giảm giá" : $"Giảm giá ({order.DiscountReason})", $"−{order.DiscountAmount:N0}đ");
         Row("Tổng thu", $"{order.TotalAmount:N0}đ", true);
         if (order.PaymentMethod == "Cash") { Row("Khách đưa", $"{order.CashGiven:N0}đ"); Row("Tiền thối", $"{order.ChangeReturned:N0}đ", true); }
         if (DataStoreService.Instance.FindCustomer(order.CustomerPhone) is { } member)
-            panel.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0xEF, 0xF7, 0xF2)), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0),
-                Child = PosUi.Text($"👤 {member.Name} · +{order.PointsEarned} điểm · hiện có {member.Points} điểm ({member.Tier})", 14, true, PosUi.Accent) });
+            panel.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF2, 0xED)), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0),
+                Child = PosUi.Text($"{member.Name}: +{order.PointsEarned} điểm, hiện có {member.Points} điểm (hạng {member.Tier})", 14, true, PosUi.Accent) });
         panel.Children.Add(new Border { Height = 16 });
         panel.Children.Add(next);
+        var countdown = PosUi.Text("Tự về bán hàng sau 3 giây", 13, color: PosUi.Muted);
+        countdown.HorizontalAlignment = HorizontalAlignment.Center;
+        countdown.Margin = new Thickness(0, 8, 0, 0);
+        panel.Children.Add(countdown);
+        int remaining = 3;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += (_, _) =>
+        {
+            if (--remaining == 0) { timer.Stop(); w.Close(); }
+            else countdown.Text = $"Tự về bán hàng sau {remaining} giây";
+        };
+        w.Loaded += (_, _) => timer.Start();
+        w.Closed += (_, _) => timer.Stop();
         w.Content = panel;
         w.ShowDialog();
     }
@@ -243,9 +272,9 @@ public sealed class OrderQueueWindow : Window
         var store = DataStoreService.Instance;
         var open = store.CompletedOrders.Where(o => !Finished.Contains(o.FulfillmentStatus) && o.CreatedAt.Date == DateTime.Today)
             .OrderBy(o => o.CreatedAt).ToList();
-        _summary.Text = open.Count == 0 ? "Không có đơn đang chờ — tự cập nhật mỗi 5 giây" : $"{open.Count} đơn chưa giao · cũ nhất ở bên trái · tự cập nhật mỗi 5 giây";
+        _summary.Text = open.Count == 0 ? "Không có đơn đang chờ." : $"{open.Count} đơn chưa giao, cũ nhất ở bên trái.";
         _cards.Children.Clear();
-        if (open.Count == 0) _cards.Children.Add(PosUi.Text("☕  Chưa có đơn nào cần pha chế.", 18, color: PosUi.Muted));
+        if (open.Count == 0) _cards.Children.Add(PosUi.Text("Chưa có đơn nào cần pha chế.", 18, color: PosUi.Muted));
         foreach (var order in open) _cards.Children.Add(Card(order));
     }
 
@@ -255,7 +284,7 @@ public sealed class OrderQueueWindow : Window
         var statusColor = order.FulfillmentStatus switch { "Chờ giao" => PosUi.Accent, "Đang làm" => Brushes.DarkOrange, _ => Brushes.SlateGray };
         var body = new StackPanel();
         var top = new DockPanel();
-        var time = PosUi.Text($"{waited} phút", 13, waited >= 10, waited >= 10 ? Brushes.Firebrick : PosUi.Muted); DockPanel.SetDock(time, Dock.Right);
+        var time = PosUi.Text($"{waited} phút", 13, waited >= 10, waited >= 10 ? PosUi.Danger : PosUi.Muted); DockPanel.SetDock(time, Dock.Right);
         top.Children.Add(time);
         top.Children.Add(PosUi.Text($"#{order.DailyOrderNumber:D2} · {order.ServiceType}", 20, true));
         body.Children.Add(top);
@@ -265,8 +294,8 @@ public sealed class OrderQueueWindow : Window
             string done = item.ReadyQuantity >= item.Quantity ? "✓ " : "";
             var line = PosUi.Text($"{done}{item.Quantity}× {item.ProductName}", 15, true, item.ReadyQuantity >= item.Quantity ? PosUi.Muted : null);
             body.Children.Add(line);
-            var detail = string.Join(" · ", new[] { item.Size, item.SugarChoice, item.IceChoice }.Where(s => !string.IsNullOrWhiteSpace(s)).Concat(item.Toppings.Select(t => "+" + t)));
-            if (!string.IsNullOrWhiteSpace(item.Note)) detail += (detail.Length > 0 ? " · " : "") + "Ghi chú: " + item.Note;
+            var detail = string.Join(", ", new[] { item.Size, item.SugarChoice, item.IceChoice }.Where(s => !string.IsNullOrWhiteSpace(s)).Concat(item.Toppings.Select(t => "+" + t)));
+            if (!string.IsNullOrWhiteSpace(item.Note)) detail += (detail.Length > 0 ? ", " : "") + "Ghi chú: " + item.Note;
             if (detail.Length > 0) body.Children.Add(PosUi.Text(detail, 13, color: PosUi.Muted));
             body.Children.Add(new Border { Height = 6 });
         }

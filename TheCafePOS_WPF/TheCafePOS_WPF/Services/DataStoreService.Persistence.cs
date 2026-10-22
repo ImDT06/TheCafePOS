@@ -31,10 +31,18 @@ public partial class DataStoreService
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
     private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 7, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings };
+    // Early seed data used emoji and all-caps names; show them like every other category.
+    private static readonly Dictionary<string, string> LegacyCategoryNames = new()
+    {
+        ["🔥 HỒNG TRÀ & TRÀ ĐEN"] = "Hồng trà & trà đen", ["🧋 TRÀ SỮA ĐẶC BIỆT"] = "Trà sữa đặc biệt", ["🍊 TRÀ TRÁI CÂY"] = "Trà trái cây",
+        ["🧊 MACHIATO & KEM"] = "Machiato & kem", ["🍡 TOPPING THÊM"] = "Topping thêm"
+    };
+
     private void Restore(StoreState state)
     {
         Draft = state.Draft;
         Categories = state.Categories; Products = state.Products; PackagingInventory = state.Packaging;
+        foreach (var c in Categories) if (LegacyCategoryNames.TryGetValue(c.Name, out var plain)) c.Name = plain;
         CompletedOrders = new ObservableCollection<Order>(state.Orders); Shifts = state.Shifts;
         CurrentShift = state.CurrentShift; StickerLogs = state.StickerLogs;
         StockMovements = state.StockMovements;
@@ -142,22 +150,7 @@ public partial class DataStoreService
         var existing = CompletedOrders.FirstOrDefault(o => o.Id == checkoutId);
         if (existing is not null) return existing;
         var items = JsonSerializer.Deserialize<List<OrderItem>>(JsonSerializer.Serialize(cart.ToList()))!;
-        if (items.Count == 0 || items.Any(i => i.Quantity <= 0 || i.UnitPrice < 0)) throw new InvalidOperationException("Đơn hàng không hợp lệ.");
-        if (items.Any(i => !Products.Any(p => p.Id == i.ProductId && p.IsActive && Categories.Any(c => c.Id == p.CategoryId && c.IsActive)))) throw new InvalidOperationException("Đơn có món đã ngừng bán. Vui lòng cập nhật giỏ hàng.");
-        foreach (var item in items)
-        {
-            var product = Products.Single(p => p.Id == item.ProductId);
-            if (item.Quantity > 999 || product.IsTopping && !product.SoldSeparately || item.IsBeverage != product.IsBeverage)
-                throw new InvalidOperationException("Loại món hoặc số lượng đã thay đổi. Vui lòng chọn lại món.");
-            if (product.IsBeverage && !product.Sizes.Any(s => s.Name == item.Size)) throw new InvalidOperationException("Size đã ngừng bán. Vui lòng sửa món.");
-            if (product.IsBeverage &&
-                ((product.AllowSugar && product.SugarChoices != null && !product.SugarChoices.Contains(item.SugarChoice)) ||
-                 (product.AllowIce && product.IceChoices != null && !product.IceChoices.Contains(item.IceChoice))))
-                throw new InvalidOperationException("Tùy chọn đường/đá đã thay đổi. Vui lòng sửa món trước khi thanh toán.");
-            if (item.SelectedToppings.Any(t => !product.AllowedToppingIds.Contains(t.ProductId) || !Products.Any(p => p.Id == t.ProductId && p.IsTopping && p.IsActive && Categories.Any(c => c.Id == p.CategoryId && c.IsActive))))
-                throw new InvalidOperationException("Topping đã ngừng bán hoặc không còn áp dụng. Vui lòng sửa món.");
-        }
-        if (items.Any(i => Products.Single(p => p.Id == i.ProductId).IsSoldOut)) throw new InvalidOperationException("Đơn có món đang hết hàng. Vui lòng bỏ món đó khỏi giỏ.");
+        ValidateCheckoutCart(items, channel == StoreSettings.Counter ? serviceType : "Mang đi");
         decimal subtotal = items.Sum(i => i.TotalPrice);
         var customer = string.IsNullOrWhiteSpace(customerPhone) ? null : FindCustomer(customerPhone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng thành viên.");
         if (redeemPoints < 0 || redeemPoints > 0 && (customer is null || customer.Points < redeemPoints)) throw new InvalidOperationException("Khách không đủ điểm để đổi.");
@@ -176,7 +169,8 @@ public partial class DataStoreService
         decimal total = subtotal + surcharge - discount - promoAmount - loyaltyAmount;
         if (total <= 0) throw new InvalidOperationException("Tổng tiền phải lớn hơn 0.");
         if (method is not ("Cash" or "VietQR" or "Platform")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
-        if (method == "Cash" && cash < total) throw new InvalidOperationException("Số tiền khách đưa chưa đủ hoặc không hợp lệ.");
+        if (method == "Cash" && !Core.CashAmount.IsValid(cash)) throw new InvalidOperationException("Tiền khách đưa phải là số nguyên không âm, tối đa 999.999.999.999đ.");
+        if (method == "Cash" && cash < total) throw new InvalidOperationException($"Tiền khách đưa còn thiếu {total - cash:N0}đ.");
         if (method == "VietQR" && (!qrApproved || !AuthService.Instance.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
         if (serviceType is not ("Mang đi" or "Tại chỗ")) throw new InvalidOperationException("Chọn loại đơn hợp lệ.");
         var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promos.Names, CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, Channel = channel, ChannelSurcharge = surcharge, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };

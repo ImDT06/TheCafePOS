@@ -87,6 +87,17 @@ internal static class ManagementRegression
         store.SavePromotion(new Promotion { Id = store.Promotions[0].Id, Name = "Test giờ vàng", IsActive = false, Percent = 10, Start = TimeSpan.Zero, End = new TimeSpan(23, 59, 59) });
         store.CloseShift(store.CompletedOrders.Where(o => o.ShiftId == store.CurrentShift.Id && o.PaymentMethod == "Cash").Sum(o => o.TotalAmount));
 
+        // Member edit / delete
+        var other = store.RegisterCustomer("0987654321", "Minh");
+        Reject(() => store.UpdateCustomer(member.Phone, "Lan", other.Phone), "Cannot move a member onto another member's phone");
+        int lanOrders = store.CustomerOrders(member.Phone).Count;
+        store.UpdateCustomer(member.Phone, "Lan Anh", "0911222333");
+        Check(member.Phone == "0911222333" && member.Name == "Lan Anh" && store.FindCustomer("0912345678") is null, "Member phone and name can be changed");
+        Check(store.CustomerOrders("0911222333").Count == lanOrders && store.CustomerOrders("0912345678").Count == 0, "Changing phone moves purchase history");
+        store.DeleteCustomer(other.Phone);
+        Check(store.FindCustomer("0987654321") is null, "Member can be deleted");
+        Reject(() => store.DeleteCustomer("0987654321"), "Deleting a missing member is rejected");
+
         // Ingredient inventory by recipe
         var beans = new Ingredient { Name = "Mgmt beans", Unit = "g", WarningThreshold = 5 };
         store.SaveIngredient(beans);

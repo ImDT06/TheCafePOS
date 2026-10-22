@@ -30,6 +30,20 @@ namespace TheCafePOS_WPF.Views.Dialogs
             }
         }
 
+        // Customer left without paying: remove the held cart after confirmation.
+        private void BtnDiscard_Click(object sender, RoutedEventArgs e)
+        {
+            if (LbHeldOrders.SelectedItem is not HeldOrderInfo item) return;
+            if (MessageBox.Show(this, $"Hủy đơn giữ lúc {item.HeldTime:HH:mm} ({item.Items.Count} dòng món, {item.TotalAmount:N0}đ)? Không thể khôi phục.", "Hủy đơn giữ", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            try
+            {
+                HoldOrderService.Instance.DiscardOrder(item.Id);
+                if (HoldOrderService.Instance.HeldOrders.Count > 0) LbHeldOrders.SelectedIndex = 0;
+                TheCafePOS_WPF.Core.Toast.Show(this, "Đã hủy đơn giữ.");
+            }
+            catch (System.Exception ex) { TheCafePOS_WPF.Core.Toast.Show(this, ex.Message, true); }
+        }
+
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;

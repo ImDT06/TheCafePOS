@@ -24,7 +24,7 @@ public class AuthState
     public List<StaffAccount> Accounts { get; set; } = new();
     public List<ApprovalRecord> Audit { get; set; } = new();
 }
-public sealed partial class AuthService
+public sealed partial class AuthService : Interfaces.IAuthService
 {
     static AuthService() { }
     public static AuthService Instance { get; } = new();

@@ -11,7 +11,7 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 public partial class ReportWindow
 {
     private static readonly Brush Bar = new SolidColorBrush(Color.FromRgb(0x12, 0x63, 0x4B));
-    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B));
+    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x52, 0x66, 0x5F));
 
     private void RenderInsights(SalesReport report, DateTime from, DateTime to, string? shiftId)
     {
@@ -78,7 +78,7 @@ public partial class ReportWindow
         {
             new TextBlock { Text = label, Foreground = Muted },
             new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.Bold },
-            new TextBlock { Text = note, FontSize = 12, Foreground = down ? Brushes.Firebrick : note.StartsWith("▲") ? Bar : Muted }
+            new TextBlock { Text = note, FontSize = 12, Foreground = down ? PosUi.Danger : note.StartsWith("▲") ? Bar : Muted }
         } });
     }
 

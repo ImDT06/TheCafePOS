@@ -41,6 +41,12 @@ partial class Preview {
   var products=(DataGrid)management.FindName("Products");if(products.Items.Count!=3)throw new Exception("Menu search failed");products.SelectedIndex=0;
   var category=(ComboBox)management.FindName("ProductCategory");if(category.SelectedItem==null)throw new Exception("Category selection lost");
   Render(management,"ManagementWindow-selected",1120,728);
+  management.Left=-10000;management.Top=-10000;management.ShowInTaskbar=false;management.Show();
+  var frame=new System.Windows.Threading.DispatcherFrame();var wait=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};wait.Tick+=(_,_)=>{wait.Stop();frame.Continue=false;};wait.Start();System.Windows.Threading.Dispatcher.PushFrame(frame);
+  Render(management,"ManagementWindow-shown",1120,728);management.Hide();
+  var report=(Window)windows[3];report.Left=-10000;report.Top=-10000;report.ShowInTaskbar=false;report.Show();
+  frame=new System.Windows.Threading.DispatcherFrame();wait.Start();System.Windows.Threading.Dispatcher.PushFrame(frame);
+  Render(report,"ReportWindow-shown",report.Width,report.Height-32);report.Hide();
   category.IsDropDownOpen=true;category.ApplyTemplate();if(category.Template.FindName("PART_Popup",category)==null)throw new Exception("ComboBox popup missing");category.IsDropDownOpen=false;
   if(Descendants<ScrollViewer>((DependencyObject)management.Content).Count()==0)throw new Exception("Scrolling missing");
     Console.WriteLine("PASS search, selection, dropdown template and scroll hosts");
@@ -92,6 +98,9 @@ partial class Preview {
   }));
   TheCafePOS_WPF.Core.TouchInput.OpenCommand.Execute(null,cashBox);
   Check(cashBox.Text=="200000" && store.CompletedOrders.Count==orderCount,"Apply updates cash field without creating payment");
+  TheCafePOS_WPF.Core.Toast.Show(main,"Đã xóa Americano Classic khỏi đơn",false,("Hoàn tác",()=>{}));Flush();
+  var toastWindow=Application.Current.Windows.OfType<Window>().Last(w=>w.Content is MaterialDesignThemes.Wpf.Snackbar);
+  Render(toastWindow,"Toast-undo",Math.Max(320,toastWindow.ActualWidth),Math.Max(60,toastWindow.ActualHeight));toastWindow.Close();
   CheckCartFlows(main, store);
   main.Close();app.Shutdown();
  }

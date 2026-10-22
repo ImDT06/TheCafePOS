@@ -1,4 +1,4 @@
-﻿<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.ManagementWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Quản trị cửa hàng" Width="1120" Height="760" MinWidth="920" MinHeight="620" WindowStartupLocation="CenterOwner" Background="#F3F5F4">
+﻿<Window xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes" Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.ManagementWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Quản trị cửa hàng" Width="1120" Height="760" MinWidth="920" MinHeight="620" WindowStartupLocation="CenterOwner" Background="{StaticResource PosCanvas}">
   <DockPanel Margin="18">
     <StackPanel DockPanel.Dock="Top">
       <TextBlock Text="Quản trị cửa hàng" Style="{StaticResource PageTitle}" />
@@ -14,16 +14,15 @@
           </Grid.ColumnDefinitions>
           <DockPanel Margin="0,0,15,0">
             <StackPanel DockPanel.Dock="Top">
-              <TextBlock Text="Tìm món trong thực đơn" Margin="0,0,0,6" Foreground="#52665F" />
-              <TextBox x:Name="MenuSearch" TextChanged="MenuSearch_TextChanged" AutomationProperties.Name="Tìm tên món trong quản trị" ToolTip="Tìm tên món" Margin="0,0,0,10" />
+              <TextBox md:HintAssist.Hint="Tìm món trong thực đơn" x:Name="MenuSearch" TextChanged="MenuSearch_TextChanged" AutomationProperties.Name="Tìm tên món trong quản trị" ToolTip="Tìm tên món" Margin="0,0,0,10" />
             </StackPanel>
             <Button DockPanel.Dock="Bottom" Content="+ Thêm món mới" Padding="8" Margin="0,10,0,0" Click="NewProduct_Click" />
             <DataGrid x:Name="Products" touch:EmptyState.Text="Không có món phù hợp — bấm &quot;+ Thêm món mới&quot;" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="ProductSelected">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="Tên món" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="Giá mặc định" Binding="{Binding FormattedPrice}" Width="125" />
-                <DataGridCheckBoxColumn Header="Đang bán" Binding="{Binding IsActive}" />
-                  <DataGridCheckBoxColumn Header="Hết hàng" Binding="{Binding IsSoldOut}" />
+                <DataGridCheckBoxColumn Header="Đang bán" Binding="{Binding IsActive}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
+                  <DataGridCheckBoxColumn Header="Hết hàng" Binding="{Binding IsSoldOut}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
               </DataGrid.Columns>
             </DataGrid>
           </DockPanel>
@@ -33,15 +32,12 @@
               <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                   <TextBlock Text="Thông tin món" Style="{StaticResource SectionTitle}" />
-                  <Border Height="130" CornerRadius="8" Background="#EEF2F0" Margin="0,4,0,8"><Grid><TextBlock x:Name="ProductImageHint" Text="Chưa có ảnh" Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center" /><Image x:Name="ProductImage" Stretch="Uniform" Margin="6" /></Grid></Border>
+                  <Border Height="130" CornerRadius="8" Background="{StaticResource PosBorder}" Margin="0,4,0,8"><Grid><TextBlock x:Name="ProductImageHint" Text="Chưa có ảnh" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" /><Image x:Name="ProductImage" Stretch="Uniform" Margin="6" /></Grid></Border>
                   <UniformGrid Columns="2" Margin="0,0,0,10"><Button Content="Chọn ảnh…" Padding="8" Margin="0,0,4,0" Click="PickImage_Click" /><Button Content="Gỡ ảnh" Padding="8" Margin="4,0,0,0" Click="RemoveImage_Click" /></UniformGrid>
                   <TextBlock Text="Chọn một món để sửa hoặc thêm món mới." Style="{StaticResource Hint}" />
-                  <TextBlock Text="Tên món" />
-                  <TextBox x:Name="ProductName" Padding="6" Margin="0,4,0,10" />
-                  <TextBlock Text="Danh mục" />
-                  <ComboBox x:Name="ProductCategory" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10" />
-                  <TextBlock Text="Giá cơ bản (đồng)" />
-                  <TextBox x:Name="ProductPrice" touch:TouchInput.Label="Giá cơ bản của món" touch:TouchInput.Numeric="True" Padding="6" Margin="0,4,0,10" />
+                  <TextBox md:HintAssist.Hint="Tên món" x:Name="ProductName" Margin="0,4,0,10" />
+                  <ComboBox md:HintAssist.Hint="Danh mục" x:Name="ProductCategory" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10" />
+                  <TextBox md:HintAssist.Hint="Giá cơ bản (đồng)" x:Name="ProductPrice" touch:TouchInput.Label="Giá cơ bản của món" touch:TouchInput.Numeric="True" Margin="0,4,0,10" />
                   <CheckBox x:Name="ProductActive" Content="Đang bán (bỏ chọn để ẩn khỏi thực đơn)" IsChecked="True" Margin="0,4,0,6" />
                   <CheckBox x:Name="ProductSoldOut" Content="Hết hàng tạm thời (vẫn hiện, làm mờ)" Margin="0,4,0,10" />
                   <Button Content="Cấu hình size / topping / đường đá" Padding="8" Margin="0,8,0,0" Click="ConfigureProduct_Click" />
@@ -67,8 +63,7 @@
                 <StackPanel>
                   <TextBlock Text="Nhóm thực đơn" Style="{StaticResource SectionTitle}" />
                   <TextBlock Text="Sắp nhóm giúp thu ngân tìm món nhanh hơn." Style="{StaticResource Hint}" />
-                  <TextBlock Text="Tên danh mục" />
-                  <TextBox x:Name="CategoryName" Padding="6" Margin="0,4,0,10" />
+                  <TextBox md:HintAssist.Hint="Tên danh mục" x:Name="CategoryName" Margin="0,4,0,10" />
                   <CheckBox x:Name="CategoryActive" Content="Đang hiển thị" IsChecked="True" Margin="0,4,0,10" />
                   <Button Content="Xóa danh mục" Style="{StaticResource DangerButton}" Padding="8" Margin="0,24,0,0" Click="DeleteCategory_Click" />
                 </StackPanel>
@@ -88,8 +83,8 @@
             <DataGrid.Columns>
               <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="*" />
               <DataGridTextColumn Header="Vai trò" Binding="{Binding Role}" Width="100" />
-              <DataGridCheckBoxColumn Header="Hoạt động" Binding="{Binding IsActive}" />
-              <DataGridCheckBoxColumn Header="Đổi mật khẩu" Binding="{Binding MustChangePassword}" />
+              <DataGridCheckBoxColumn Header="Hoạt động" Binding="{Binding IsActive}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
+              <DataGridCheckBoxColumn Header="Đổi mật khẩu" Binding="{Binding MustChangePassword}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
             </DataGrid.Columns>
           </DataGrid>
           </DockPanel>
@@ -99,12 +94,9 @@
               <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                   <TextBlock Text="Quản lý nhân viên" FontWeight="Bold" Margin="0,0,0,12" />
-                  <TextBlock Text="Tên đăng nhập" />
-                  <TextBox x:Name="StaffName" Padding="6" Margin="0,4,0,10" />
-                  <TextBlock Text="Mật khẩu mới (bỏ trống nếu không đổi)" />
-                  <PasswordBox x:Name="StaffPassword" Padding="6" Margin="0,4,0,10" />
-                  <TextBlock Text="Vai trò" Margin="0,4,0,4" />
-                  <ComboBox x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10">
+                  <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="StaffName" Margin="0,4,0,10" />
+                  <PasswordBox md:HintAssist.Hint="Mật khẩu mới (bỏ trống nếu không đổi)" x:Name="StaffPassword" Margin="0,4,0,10" />
+                  <ComboBox md:HintAssist.Hint="Vai trò" x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10">
                     <ComboBoxItem Content="Cashier" />
                     <ComboBoxItem Content="Manager" />
                   </ComboBox>
@@ -123,15 +115,11 @@
           <Border Style="{StaticResource SurfaceCard}" Margin="12" MaxWidth="560" HorizontalAlignment="Left">
             <StackPanel>
               <TextBlock Text="Thông tin tài khoản nhận tiền" FontWeight="Bold" FontSize="16" />
-              <TextBlock Text="Mã ngân hàng (ví dụ MB)" Margin="0,12,0,4" />
-              <TextBox x:Name="BankCode" Padding="6" />
-              <TextBlock Text="Số tài khoản" Margin="0,12,0,4" />
-              <TextBox x:Name="BankAccount" Padding="6" />
-              <TextBlock Text="Tên chủ tài khoản" Margin="0,12,0,4" />
-              <TextBox x:Name="BankOwner" Padding="6" />
-              <TextBlock Text="API Token SePay (không bắt buộc)" Margin="0,12,0,0" />
-<PasswordBox x:Name="SePayToken" Padding="6" ToolTip="my.sepay.vn → Cấu hình công ty → API Access → Thêm API" />
-<TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: quản lý kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="#64748B" Margin="0,8,0,16" />
+              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Mã ngân hàng (ví dụ MB)" x:Name="BankCode" />
+              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Số tài khoản" x:Name="BankAccount" />
+              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Tên chủ tài khoản" x:Name="BankOwner" />
+              <PasswordBox Margin="0,8,0,8" md:HintAssist.Hint="API Token SePay (không bắt buộc)" x:Name="SePayToken" ToolTip="my.sepay.vn → Cấu hình công ty → API Access → Thêm API" />
+<TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: quản lý kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,8,0,16" />
               <Button Style="{StaticResource PrimaryButton}" Content="Lưu thông tin chuyển khoản" Padding="8" Click="SaveBank_Click" />
             </StackPanel>
           </Border>

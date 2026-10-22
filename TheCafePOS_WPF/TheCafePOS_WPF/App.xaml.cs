@@ -3,6 +3,8 @@ using System.Windows;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Views.Dialogs;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF
 {
@@ -12,6 +14,22 @@ namespace TheCafePOS_WPF
     public partial class App : Application
     {
         private Mutex? _instanceMutex;
+
+        /// <summary>Composition root: mọi service và window chính được đăng ký tại đây.</summary>
+        public static IServiceProvider Services { get; private set; } = null!;
+
+        private static IServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+            // Các service vẫn giữ .Instance trong giai đoạn chuyển tiếp, nên container trỏ về đúng các instance đó.
+            services.AddSingleton<IDataStoreService>(_ => DataStoreService.Instance);
+            services.AddSingleton<IAuthService>(_ => AuthService.Instance);
+            services.AddSingleton<IHoldOrderService>(_ => HoldOrderService.Instance);
+            services.AddSingleton<IStickerPrinterService>(_ => StickerPrinterService.Instance);
+            services.AddTransient<MainWindow>();
+            return services.BuildServiceProvider();
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -35,9 +53,10 @@ namespace TheCafePOS_WPF
             {
                 _instanceMutex = new Mutex(true, "Local\\TheCafePOS_WPF_SingleInstance", out bool created);
                 if (!created) { MessageBox.Show("TheCafePOS đang chạy. Vui lòng sử dụng cửa sổ hiện có."); Shutdown(); return; }
-                _ = DataStoreService.Instance;
-                if (!AuthService.Instance.TryRestoreSession() && new LoginWindow().ShowDialog() != true) { Shutdown(); return; }
-                MainWindow = new MainWindow();
+                Services = ConfigureServices();
+                _ = Services.GetRequiredService<IDataStoreService>();
+                if (!Services.GetRequiredService<IAuthService>().TryRestoreSession() && new LoginWindow().ShowDialog() != true) { Shutdown(); return; }
+                MainWindow = Services.GetRequiredService<MainWindow>();
                 ShutdownMode = ShutdownMode.OnMainWindowClose;
                 MainWindow.Show();
             }

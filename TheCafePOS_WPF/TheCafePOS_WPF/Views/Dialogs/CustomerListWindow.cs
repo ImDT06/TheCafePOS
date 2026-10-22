@@ -7,14 +7,16 @@ using TheCafePOS_WPF.Services;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
-// Member list with search, tier / inactivity filters, rename and purchase history.
+// Member list with search, tier / inactivity filters, add / edit / delete and purchase history.
 public sealed class CustomerListWindow : Window
 {
     private readonly DataStoreService _store = DataStoreService.Instance;
     private readonly TextBox _search = new() { Padding = new Thickness(8), FontSize = 15 };
     private readonly ComboBox _filter = new() { Width = 220, Margin = new Thickness(8, 0, 0, 0), FontSize = 14, ItemsSource = new[] { "Tất cả", "Lâu chưa quay lại (30+ ngày)", "Kim cương", "Vàng", "Bạc", "Mới" }, SelectedIndex = 0 };
     private readonly DataGrid _grid = new() { IsReadOnly = true, AutoGenerateColumns = false, SelectionMode = DataGridSelectionMode.Single };
-    private readonly TextBox _name = new() { Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) };
+    private readonly TextBox _phone = new() { Margin = new Thickness(0, 8, 0, 8), MaxLength = 15 };
+    private readonly TextBox _name = new() { Margin = new Thickness(0, 0, 0, 8), MaxLength = 80 };
+    private readonly Button _delete;
     private readonly TextBlock _detail = PosUi.Text("Chọn khách để xem chi tiết.", 14, color: PosUi.Muted);
     private readonly DataGrid _history = new() { IsReadOnly = true, AutoGenerateColumns = false, Height = 260 };
     private readonly TextBlock _summary = PosUi.Text("", 13, color: PosUi.Muted);
@@ -31,18 +33,26 @@ public sealed class CustomerListWindow : Window
         foreach (var (header, path, format) in new[] { ("Đơn", "DailyOrderNumberFormatted", ""), ("Ngày", "CreatedAt", "dd/MM HH:mm"), ("Thực thu", "TotalAmount", "N0"), ("+Điểm", "PointsEarned", ""), ("−Điểm", "PointsRedeemed", "") })
             _history.Columns.Add(new DataGridTextColumn { Header = header, Binding = new Binding(path) { StringFormat = format.Length > 0 ? "{0:" + format + "}" : null } });
 
+        var add = PosUi.Button("+ Thêm khách", (_, _) => { _grid.SelectedItem = null; ShowSelected(); _phone.Focus(); }, minHeight: 48);
+        add.Margin = new Thickness(8, 0, 0, 0);
+        DockPanel.SetDock(add, Dock.Right);
         var top = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
         DockPanel.SetDock(_filter, Dock.Right);
+        top.Children.Add(add);
         top.Children.Add(_filter);
         top.Children.Add(_search);
         TouchInput.SetLabel(_search, "Tìm theo tên hoặc số điện thoại");
-        _search.ToolTip = "Tìm theo tên hoặc số điện thoại";
+        MaterialDesignThemes.Wpf.HintAssist.SetHint(_search, "Tìm theo tên hoặc số điện thoại");
 
-        var save = PosUi.Button("Lưu tên", (_, _) => Save(), "PrimaryButton", 44);
+        MaterialDesignThemes.Wpf.HintAssist.SetHint(_phone, "Số điện thoại");
+        MaterialDesignThemes.Wpf.HintAssist.SetHint(_name, "Tên khách");
+        var save = PosUi.Button("Lưu", (_, _) => Save(), "PrimaryButton", 44);
+        _delete = PosUi.Button("Xóa khách", (_, _) => Delete(), "DangerButton", 44);
+        _delete.Margin = new Thickness(0, 8, 0, 0);
         var side = new Border
         {
             Width = 380, Margin = new Thickness(14, 0, 0, 0), Padding = new Thickness(14), Background = System.Windows.Media.Brushes.White, CornerRadius = new CornerRadius(8),
-            Child = new StackPanel { Children = { PosUi.Text("Chi tiết khách", 17, true), _detail, new Border { Height = 10 }, PosUi.Text("Tên khách"), _name, save, new Border { Height = 12 }, PosUi.Text("Lịch sử mua", 14, true), _history } }
+            Child = new StackPanel { Children = { PosUi.Text("Chi tiết khách", 17, true), _detail, new Border { Height = 4 }, _phone, _name, save, _delete, new Border { Height = 12 }, PosUi.Text("Lịch sử mua", 14, true), _history } }
         };
         DockPanel.SetDock(side, Dock.Right);
         var body = new DockPanel();
@@ -75,22 +85,37 @@ public sealed class CustomerListWindow : Window
         var selected = (_grid.SelectedItem as Customer)?.Phone;
         _grid.ItemsSource = list.OrderByDescending(c => c.TotalSpent).ToList();
         _grid.SelectedItem = _store.FindCustomer(selected ?? "");
-        _summary.Text = $"{_store.Customers.Count} thành viên · {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi · tổng chi {_store.Customers.Sum(c => c.TotalSpent):N0}đ";
+        _summary.Text = $"{_store.Customers.Count} thành viên, {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi, tổng chi {_store.Customers.Sum(c => c.TotalSpent):N0}đ";
     }
 
     private void ShowSelected()
     {
-        if (_grid.SelectedItem is not Customer c) { _detail.Text = "Chọn khách để xem chi tiết."; _name.Clear(); _history.ItemsSource = null; return; }
+        _delete.IsEnabled = _grid.SelectedItem is Customer;
+        if (_grid.SelectedItem is not Customer c) { _detail.Text = "Khách mới: nhập số điện thoại và tên rồi bấm Lưu."; _phone.Clear(); _name.Clear(); _history.ItemsSource = null; return; }
         var orders = _store.CustomerOrders(c.Phone);
-        _detail.Text = $"{c.Phone} · hạng {c.Tier}\n{c.Points:N0} điểm · {c.VisitCount} lần mua · TB {(orders.Count == 0 ? 0 : orders.Average(o => o.TotalAmount)):N0}đ/đơn\nThành viên từ {c.CreatedAt:dd/MM/yyyy}";
+        _detail.Text = $"Hạng {c.Tier}, {c.Points:N0} điểm, {c.VisitCount} lần mua, trung bình {(orders.Count == 0 ? 0 : orders.Average(o => o.TotalAmount)):N0}đ/đơn\nThành viên từ {c.CreatedAt:dd/MM/yyyy}";
+        _phone.Text = c.Phone;
         _name.Text = c.Name;
         _history.ItemsSource = orders;
     }
 
     private void Save()
     {
-        if (_grid.SelectedItem is not Customer c) { Toast.Show(this, "Chọn khách trước.", true); return; }
-        try { _store.UpdateCustomer(c.Phone, _name.Text); Refresh(); Toast.Show(this, "Đã lưu."); }
-        catch (InvalidOperationException ex) { FieldError.Mark(_name, ex.Message); }
+        try
+        {
+            if (_grid.SelectedItem is Customer c) { _store.UpdateCustomer(c.Phone, _name.Text, _phone.Text); Refresh(); Toast.Show(this, "Đã lưu thông tin khách."); return; }
+            var created = _store.RegisterCustomer(_phone.Text, _name.Text);
+            _search.Clear(); Refresh(); _grid.SelectedItem = created; _grid.ScrollIntoView(created);
+            Toast.Show(this, $"Đã thêm {created.Name}.");
+        }
+        catch (InvalidOperationException ex) { FieldError.Mark(ex.Message.Contains("điện thoại") ? _phone : _name, ex.Message); }
+    }
+
+    private void Delete()
+    {
+        if (_grid.SelectedItem is not Customer c) return;
+        if (MessageBox.Show(this, $"Xóa thành viên {c.Name} ({c.Phone})? {c.Points:N0} điểm chưa đổi sẽ mất. Các đơn đã bán vẫn giữ trong báo cáo.", "Xóa khách", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _store.DeleteCustomer(c.Phone); _grid.SelectedItem = null; Refresh(); ShowSelected(); Toast.Show(this, $"Đã xóa {c.Name}."); }
+        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
     }
 }

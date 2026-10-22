@@ -18,7 +18,7 @@ public sealed class PasswordWindow : Window
         var password = Field("Mật khẩu mới (tối thiểu 8 ký tự)"); var confirm = Field("Nhập lại mật khẩu mới");
         var error = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) }; panel.Children.Add(error);
         var button = new Button { Content = "Lưu mật khẩu", Style = (Style)FindResource("PrimaryButton") };
-        error.Foreground = System.Windows.Media.Brushes.Firebrick;
+        error.Foreground = PosUi.Danger;
         var actions = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
         actions.Children.Add(new Button { Content = "Hủy", IsCancel = true, Margin = new Thickness(0, 0, 10, 0) }); actions.Children.Add(button);
         Content = null;

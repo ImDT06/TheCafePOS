@@ -27,7 +27,9 @@ Chọn **Giữ đăng nhập trên máy này (30 ngày)** để mở lại ứng
 
 - Thực đơn có các mục **Combo 20/10**, **Món Mới Phải Thử** và **Ưu đãi riêng bạn**. Món có thể xuất hiện ở mục nổi bật và danh mục chính mà không nhân đôi sản phẩm; các combo ưu đãi hiển thị giá bán và giá gốc gạch ngang.
 - Giỏ hàng dùng icon Material, các thao tác số lượng/xóa/menu **⋯** nằm cùng hàng. Menu **⋯** mở sửa tùy chọn hoặc tách một sản phẩm. Xóa món có **Hoàn tác** trong 6 giây; thao tác này hết hiệu lực khi giữ đơn, thanh toán, gọi đơn khác hoặc xác nhận xóa toàn giỏ.
-- Chọn **Tiền mặt (F4)** để mở hộp thoại nhập tiền khách đưa, chọn nhanh số tiền và xem tiền thối. Hủy hộp thoại giữ nguyên giỏ; xác nhận chỉ tiếp tục khi tiền khách đưa đủ.
+- Chọn **Tiền mặt (F4)** để mở hộp thoại nhập tiền khách đưa, chọn nhanh số tiền và xem tiền thối. Chỉ nhận số nguyên đồng từ 0 đến 999.999.999.999, không dùng dấu phân cách; nút xác nhận chỉ bật khi nhập hợp lệ và đủ tiền. Hủy/Esc giữ nguyên giỏ.
+- Cột giỏ nhắc **Mở ca ngay** trước khi thanh toán. Món và bao bì được kiểm tra trước khi mở hộp tiền mặt/QR và kiểm tra lại lúc lưu đơn; lỗi bao bì ghi rõ tên, số cần và số còn. Lỗi thanh toán hiện ngay trong cột giỏ, giữ nguyên món để chỉnh và thử lại. Các nút thanh toán bị khóa trong lúc đang xử lý.
+- Sau thanh toán, hộp xác nhận hiển thị số đơn, tổng thu và tiền thối, tự đóng sau khoảng **3 giây**; có thể nhấn **Đơn mới / Enter** để đóng sớm.
 - Topping hiển thị tối đa **4 món mỗi trang** (2 × 2), giữ số phần đã chọn khi chuyển trang.
 
 - Tùy chỉnh món dùng bố cục tĩnh: kích cỡ/đường/đá bên trái, topping bên phải có nút chuyển trang. Ghi chú trải hết chiều ngang phía dưới, tự xuống dòng, tối đa 300 ký tự; không có vùng cuộn trong hộp tùy chỉnh. Nút số lượng và xác nhận luôn ở chân hộp thoại.
@@ -107,6 +109,8 @@ Mật khẩu được băm PBKDF2-SHA256 với salt riêng. Năm lần đăng nh
 - Sao lưu bằng cách đóng ứng dụng rồi sao chép `cafe.db`; khôi phục khi ứng dụng đã đóng. Không lưu cơ sở dữ liệu thật vào Git.
 
 ## Kiểm thử
+
+Phạm vi cho môn Kiểm chứng phần mềm tập trung vào **bán hàng/tính tiền, thanh toán, kho bao bì, đăng nhập/phân quyền và quản lý thực đơn**. Xem [kế hoạch và ma trận test cốt lõi](docs/core-testing-plan.md) để đối chiếu yêu cầu, dữ liệu biên, test hiện có và phần cần bổ sung.
 
 ```powershell
 powershell -File scripts/test-regressions.ps1

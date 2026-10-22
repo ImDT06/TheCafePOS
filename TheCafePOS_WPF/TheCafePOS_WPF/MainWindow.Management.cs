@@ -30,7 +30,7 @@ public partial class MainWindow
     private void Management_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.SelectCategory(MainViewModel.AllCategories); RenderCategories(); RenderProducts(); LoadStoreSettings(); }
+        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.ReloadMenu(); LoadStoreSettings(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void Reports_Click(object sender, RoutedEventArgs e)

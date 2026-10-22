@@ -52,7 +52,7 @@ public partial class ManagementWindow : Window
     private void ShowProductImage(string url)
     {
         _productImageUrl = url;
-        ProductImage.Source = MainWindow.LoadProductImage(url);
+        ProductImage.Source = Core.ProductImages.Load(url);
         ProductImageHint.Visibility = ProductImage.Source is null ? Visibility.Visible : Visibility.Collapsed;
     }
     private void PickImage_Click(object sender, RoutedEventArgs e)

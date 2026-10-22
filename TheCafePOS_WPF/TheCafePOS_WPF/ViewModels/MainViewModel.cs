@@ -201,7 +201,51 @@ namespace TheCafePOS_WPF.ViewModels
             Changed();
         }
 
-        public void SelectCategory(string categoryId) => SelectedCategoryId = categoryId;
+        public ObservableCollection<MenuTile> MenuItems { get; } = new();
+
+        /// <summary>Rebuilt only by <see cref="ReloadMenu"/>; selection changes flip <see cref="CategoryOption.IsSelected"/> in place.</summary>
+        public IReadOnlyList<CategoryOption> CategoryList { get; private set; } = Array.Empty<CategoryOption>();
+
+        public string MenuCountText => $"{MenuItems.Count} món";
+        public bool HasNoProducts => MenuItems.Count == 0;
+
+        /// <summary>Bound to the search box; every keystroke refilters the menu.</summary>
+        public string SearchText
+        {
+            get => _searchText;
+            set { if (SetProperty(ref _searchText, value ?? "")) RefreshMenu(); }
+        }
+        private string _searchText = "";
+
+        /// <summary>Reloads categories from the store (after catalog edits) and shows the whole menu.</summary>
+        public void ReloadMenu()
+        {
+            CategoryList = CategoryOptions.Select(c => new CategoryOption(c.Id, c.Name)).ToList();
+            OnPropertyChanged(nameof(CategoryList));
+            SelectCategory(AllCategories);
+        }
+
+        public void SelectCategory(string categoryId)
+        {
+            SelectedCategoryId = categoryId;
+            foreach (var option in CategoryList) option.IsSelected = option.Id == categoryId;
+            RefreshMenu();
+        }
+
+        public void ResetMenuFilter()
+        {
+            _searchText = "";
+            OnPropertyChanged(nameof(SearchText));
+            SelectCategory(AllCategories);
+        }
+
+        public void RefreshMenu()
+        {
+            MenuItems.Clear();
+            foreach (var product in FilterProducts(SearchText)) MenuItems.Add(new MenuTile(product));
+            OnPropertyChanged(nameof(MenuCountText));
+            OnPropertyChanged(nameof(HasNoProducts));
+        }
 
         /// <summary>Sellable products of the selected category matching the keyword; sold-out items stay visible, last.</summary>
         public IReadOnlyList<Product> FilterProducts(string? keyword)
@@ -217,7 +261,15 @@ namespace TheCafePOS_WPF.ViewModels
 
         public Product? FindActiveProduct(string productId) => _store.Products.FirstOrDefault(p => p.Id == productId && p.IsActive);
 
-        public void ToggleSoldOut(Product product) => _store.SetProductSoldOut(product.Id, !product.IsSoldOut);
+        public void ToggleSoldOut(Product product)
+        {
+            try
+            {
+                _store.SetProductSoldOut(product.Id, !product.IsSoldOut);
+                RefreshMenu();
+            }
+            catch (Exception ex) { Raise(new PosMessage(ex.Message, true)); }
+        }
 
         #endregion
 

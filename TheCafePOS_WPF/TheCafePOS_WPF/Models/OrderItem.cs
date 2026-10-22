@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace TheCafePOS_WPF.Models
 {
-    public class OrderItem
+    public class OrderItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string OrderId { get; set; } = string.Empty;
         public string ProductId { get; set; } = string.Empty;
@@ -23,7 +25,20 @@ namespace TheCafePOS_WPF.Models
         public bool HasSugarOption { get; set; } = true;
         public bool HasIceOption { get; set; } = true;
         public string PackagingId { get; set; } = "";
-        public int Quantity { get; set; } = 1;
+        private int _quantity = 1;
+        // Cart rows edit quantity in place, so the row and its line total must refresh without rebuilding the list.
+        public int Quantity
+        {
+            get => _quantity;
+            set
+            {
+                if (_quantity == value) return;
+                _quantity = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Quantity)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TotalPrice)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedTotalPrice)));
+            }
+        }
         public int ReadyQuantity { get; set; }
         public int DeliveredQuantity { get; set; }
         public decimal BasePrice { get; set; }

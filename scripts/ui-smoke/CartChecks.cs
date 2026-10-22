@@ -15,7 +15,8 @@ partial class Preview
     {
         void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
         void Flush() { main.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle); main.UpdateLayout(); }
-        void Click(Button button) { button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush(); }
+        // Cart row buttons are bound to view model commands, which a raised Click event does not run.
+        void Click(Button button) { if (button.Command is { } command) command.Execute(button.CommandParameter); else button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush(); }
         // Run assertions inside modal loops, always closing the dialog even if an assertion fails.
         Exception modalFailure = null;
         void InModal<T>(Action<T> action) where T : Window => main.Dispatcher.BeginInvoke(new Action(() =>

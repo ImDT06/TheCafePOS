@@ -51,6 +51,5 @@ public partial class MainWindow
         if (modal.ShowDialog() != true) return;
         if (split) _vm.SplitItem(item, modal.ResultItem);
         else _vm.ReplaceItem(item, modal.ResultItem);
-        LbCartItems.Items.Refresh(); UpdateCartTotal();
     }
 }

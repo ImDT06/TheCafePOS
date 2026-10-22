@@ -40,9 +40,9 @@ namespace TheCafePOS_WPF
             _auth = auth;
             InitializeComponent();
             DataContext = _vm;
-            LbCartItems.ItemsSource = _vm.CartItems;
-            _vm.CartItems.CollectionChanged += (_, _) => UpdateOrderHeaderInfo();
-            _clock.Tick += (_, _) => UpdateOrderHeaderInfo();
+            _vm.MessageRaised += (_, m) => Toast.Show(this, m.Text, m.IsError, m.Action is { } run ? (m.ActionLabel ?? "", run) : null);
+            // Keeps the "started N minutes ago" text current.
+            _clock.Tick += (_, _) => _vm.Refresh();
             _clock.Start();
             UpdateWallClock();
             _wallClock.Tick += (_, _) => UpdateWallClock();
@@ -52,7 +52,7 @@ namespace TheCafePOS_WPF
 
             Loaded += MainWindow_Loaded;
             PreviewKeyDown += MainWindow_PreviewKeyDown;
-            LoadChannels();
+            LoadStoreSettings();
             Closing += (_, e) =>
             {
                 if (!_vm.HasItems) return;
@@ -64,29 +64,10 @@ namespace TheCafePOS_WPF
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             _vm.LoadNextOrderNumber();
-            UpdateOrderHeaderInfo();
             RenderCategories();
             RenderProducts();
-            UpdateCartTotal();
 
             RefreshSession();
-        }
-
-        private void UpdateOrderHeaderInfo()
-        {
-            // The order "exists" only once the first item is added; until then show guidance instead of a time.
-            if (_vm.CartStartedAt is DateTime started)
-            {
-                int minutes = (int)(DateTime.Now - started).TotalMinutes;
-                TxtCartTitle.Text = $"Đơn #{_vm.CurrentDailyOrderNumber:D2}";
-                TxtCartTime.Text = $"Bắt đầu {started:HH:mm} ({(minutes < 1 ? "vừa xong" : $"{minutes} phút trước")})";
-            }
-            else
-            {
-                TxtCartTitle.Text = "Đơn mới";
-                TxtCartTime.Text = "Chọn món bên trái để bắt đầu";
-            }
-            BtnHeldOrders.Content = IconContent.Of(MaterialDesignThemes.Wpf.PackIconKind.ClipboardClockOutline, $"Đơn giữ: {_vm.HeldOrderCount} (F9)");
         }
 
         #region Category & Product Rendering (POS-01)
@@ -288,283 +269,65 @@ namespace TheCafePOS_WPF
             if (modal.ShowDialog() == true && modal.ResultItem != null)
             {
                 _vm.AddItem(modal.ResultItem);
-                UpdateCartTotal();
             }
         }
 
         #endregion
 
-        #region Cart & Calculations
-
-        private void UpdateCartTotal(bool clearPaymentError = true)
-        {
-            if (clearPaymentError) _vm.SetCheckoutError(null);
-            if (_vm.DropInvalidAdjustments()) Toast.Show(this, "Đã bỏ giảm giá / đổi điểm vì vượt quá tạm tính.", true);
-            decimal total = _vm.PayableTotal;
-            decimal subtotal = _vm.Subtotal;
-            bool appOrder = _vm.IsAppOrder;
-
-            if (PnlEmptyCart != null)
-            {
-                PnlEmptyCart.Visibility = _vm.HasItems ? Visibility.Collapsed : Visibility.Visible;
-            }
-
-            TxtItemCountSummary.Text = $"Tổng cộng ({_vm.TotalCups} món)";
-            BtnHold.IsEnabled = BtnQr.IsEnabled = BtnCash.IsEnabled = _vm.HasItems && !_vm.CheckoutInProgress;
-            LbCartItems.IsEnabled = PnlCheckout.IsEnabled = BtnClearCart.IsEnabled = !_vm.CheckoutInProgress;
-            // Progressive disclosure: payment controls appear only once there is something to pay for.
-            var hasItems = _vm.HasItems ? Visibility.Visible : Visibility.Collapsed;
-            BtnClearCart.Visibility = PnlCheckout.Visibility = PnlPayButtons.Visibility = hasItems;
-            var promos = _vm.Promotions;
-            TxtPromoLine.Text = $"Khuyến mãi ({promos.Names}): −{promos.Amount:N0}đ";
-            TxtChannelLine.Text = $"Giá kênh {_vm.Channel}: +{_vm.ChannelSurcharge:N0}đ (khách trả qua ứng dụng)";
-            TxtChannelLine.Visibility = appOrder ? Visibility.Visible : Visibility.Collapsed;
-            BtnDiscount.Visibility = BtnCustomer.Visibility = appOrder ? Visibility.Collapsed : Visibility.Visible;
-            ServiceTypeRow.IsEnabled = !appOrder;
-            BtnQr.Visibility = appOrder ? Visibility.Collapsed : Visibility.Visible;
-            BtnCash.Content = appOrder ? IconContent.Of(MaterialDesignThemes.Wpf.PackIconKind.Moped, $"Ghi nhận đơn {_vm.Channel} (F4)") : IconContent.Of(MaterialDesignThemes.Wpf.PackIconKind.Cash, "Tiền mặt (F4)");
-            TxtPromoLine.Visibility = promos.Amount > 0 ? Visibility.Visible : Visibility.Collapsed;
-            TxtLoyaltyLine.Text = $"Đổi {_vm.RedeemPoints} điểm −{_vm.RedeemValue:N0}đ";
-            TxtLoyaltyLine.Visibility = _vm.RedeemPoints > 0 ? Visibility.Visible : Visibility.Collapsed;
-            var member = _vm.Member;
-            TxtCustomerLine.Text = member is null ? "" : $"{member.Name}: {member.Points} điểm, hạng {member.Tier}";
-            TxtCustomerLine.Visibility = member is null ? Visibility.Collapsed : Visibility.Visible;
-            // Subtotal is only worth a line when something changes it.
-            TxtSubtotalLine.Visibility = subtotal != total ? Visibility.Visible : Visibility.Collapsed;
-            BtnCustomer.Content = IconContent.Of(MaterialDesignThemes.Wpf.PackIconKind.AccountOutline, member is null ? "Thành viên" : "Đổi khách");
-            TxtSubtotalLine.Text = $"Tạm tính {subtotal:N0}đ";
-            TxtDiscountLine.Text = $"Giảm giá −{_vm.Discount:N0}đ ({_vm.DiscountReason})";
-            TxtDiscountLine.Visibility = _vm.Discount > 0 ? Visibility.Visible : Visibility.Collapsed;
-            BtnDiscount.Content = IconContent.Of(MaterialDesignThemes.Wpf.PackIconKind.TagOutline, _vm.Discount > 0 ? "Sửa giảm giá" : "Giảm giá");
-            BtnDiscount.IsEnabled = _vm.HasItems;
-            UpdateServiceTypeButtons();
-            UpdateCashSuggestions(total);
-            TxtGrandTotal.Text = $"{total:N0}đ";
-            Core.TouchInput.SetDue(TxtCashGiven, total);
-
-            CalculateChange();
-            UpdateCashShortcutButtons();
-            RefreshCheckoutNotice();
-        }
-
-        private void BtnMinusItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is OrderItem item)
-            {
-                if (_vm.DecreaseQuantity(item))
-                {
-                    LbCartItems.Items.Refresh();
-                    UpdateCartTotal();
-                }
-            }
-        }
-
-        private void BtnPlusItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is OrderItem item)
-            {
-                if (!_vm.IncreaseQuantity(item)) { Toast.Show(this, $"Tối đa {MainViewModel.MaxLineQuantity} sản phẩm trên một dòng.", true); return; }
-                LbCartItems.Items.Refresh();
-                UpdateCartTotal();
-            }
-        }
-
-        private void BtnDeleteItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is OrderItem item)
-            {
-                // Remove immediately, offer undo instead of a confirmation dialog.
-                if (_vm.RemoveItem(item) is not { } undo) return;
-                UpdateCartTotal();
-                Toast.Show(this, $"Đã xóa {item.Quantity}× {item.ProductName}", action: ("Hoàn tác", () =>
-                {
-                    undo();
-                    UpdateCartTotal();
-                }));
-            }
-        }
+        #region Cart
 
         private void BtnClearCart_Click(object sender, RoutedEventArgs e)
         {
             if (!_vm.HasItems) return;
 
             if (MessageBox.Show(this, "Xóa toàn bộ món trong giỏ chưa thanh toán?", "Xóa giỏ", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
-            {
-                _vm.ClearCart(); TxtCashGiven.Clear(); UpdateCartTotal();
-            }
-        }
-
-        #endregion
-
-        #region Cash Shortcuts (POS-07)
-
-        private void BtnCashShortcut_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is string tagVal && decimal.TryParse(tagVal, out decimal val))
-            {
-                decimal total = _vm.PayableTotal;
-                decimal cashGiven = (val == 0) ? total : val;
-                TxtCashGiven.Text = cashGiven.ToString("F0");
-                UpdateCashShortcutButtons();
-            }
-        }
-
-        private void TxtCashGiven_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            UpdateCashShortcutButtons();
-            CalculateChange();
-        }
-
-        private void UpdateCashShortcutButtons()
-        {
-            if (GridCashShortcuts == null) return;
-
-            decimal total = _vm.PayableTotal;
-            decimal.TryParse(TxtCashGiven.Text, out decimal cashGiven);
-
-            var normalBg = Brushes.White;
-            var normalFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#183D34"));
-            var normalBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#B8C8BF"));
-
-            var activeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
-            var activeFg = Brushes.White;
-            var activeBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
-
-            foreach (var child in GridCashShortcuts.Children)
-            {
-                if (child is Button btn && btn.Tag is string tagVal && decimal.TryParse(tagVal, out decimal val))
-                {
-                    bool isSelected = false;
-                    if (!string.IsNullOrWhiteSpace(TxtCashGiven.Text))
-                    {
-                        if (val == 0 && total > 0 && cashGiven == total)
-                        {
-                            isSelected = true;
-                        }
-                        else if (val > 0 && cashGiven == val)
-                        {
-                            isSelected = true;
-                        }
-                    }
-
-                    if (isSelected)
-                    {
-                        btn.Background = activeBg;
-                        btn.Foreground = activeFg;
-                        btn.BorderBrush = activeBorder;
-                        btn.FontWeight = FontWeights.Bold;
-                    }
-                    else
-                    {
-                        btn.Background = normalBg;
-                        btn.Foreground = normalFg;
-                        btn.BorderBrush = normalBorder;
-                        btn.FontWeight = FontWeights.Normal;
-                    }
-                }
-            }
-        }
-
-        private void CalculateChange()
-        {
-            decimal total = _vm.PayableTotal;
-            if (decimal.TryParse(TxtCashGiven.Text, out decimal cashGiven))
-            {
-                decimal change = cashGiven - total;
-                if (change >= 0)
-                {
-                    TxtChangeReturned.Text = $"{change:N0}đ";
-                    TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
-                }
-                else
-                {
-                    TxtChangeReturned.Text = $"Thiếu {Math.Abs(change):N0}đ";
-                    TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#B42318"));
-                }
-            }
-            else
-            {
-                TxtChangeReturned.Text = "0đ";
-                TxtChangeReturned.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B"));
-            }
+                _vm.ClearCart();
         }
 
         #endregion
 
         #region Checkout Actions (POS-02, POS-04, POS-06, POS-09)
 
-        private async void BtnPayCash_Click(object sender, RoutedEventArgs e)
+        private void BtnPayCash_Click(object sender, RoutedEventArgs e)
         {
-            if (!BeginCheckout()) return;
+            if (!_vm.BeginCheckout()) return;
             try
             {
-                if (_vm.IsAppOrder) { await ProcessOrderPaymentAsync("Platform"); return; }
+                if (_vm.IsAppOrder) { CompletePayment("Platform"); return; }
                 if (CashPaymentModal.Show(this, _vm.PayableTotal) is not decimal cash) return;
-                TxtCashGiven.Text = cash.ToString("0");
-                await ProcessOrderPaymentAsync("Cash");
+                CompletePayment("Cash", cash);
             }
-            catch (Exception ex) { ShowCheckoutError(ex.Message); }
-            finally { _vm.EndCheckout(); UpdateCartTotal(false); }
+            catch (Exception ex) { _vm.SetCheckoutError(ex.Message); }
+            finally { _vm.EndCheckout(); }
         }
 
-        private async void BtnPayVietQR_Click(object sender, RoutedEventArgs e)
+        private void BtnPayVietQR_Click(object sender, RoutedEventArgs e)
         {
-            if (!BeginCheckout()) return;
+            if (!_vm.BeginCheckout()) return;
             try
             {
                 VietQRService.ValidateSettings();
-                decimal total = _vm.PayableTotal;
-                var qrModal = new VietQRModal(total, _vm.CurrentDailyOrderNumber, _vm.CheckoutId) { Owner = this };
-                if (qrModal.ShowDialog() == true) await ProcessOrderPaymentAsync("VietQR", true);
+                var qrModal = new VietQRModal(_vm.PayableTotal, _vm.CurrentDailyOrderNumber, _vm.CheckoutId) { Owner = this };
+                if (qrModal.ShowDialog() == true) CompletePayment("VietQR", qrApproved: true);
             }
-            catch (Exception ex) { ShowCheckoutError(ex.Message); }
-            finally { _vm.EndCheckout(); UpdateCartTotal(false); }
+            catch (Exception ex) { _vm.SetCheckoutError(ex.Message); }
+            finally { _vm.EndCheckout(); }
         }
 
-        private bool BeginCheckout()
-        {
-            if (_vm.BeginCheckout()) { UpdateCartTotal(); return true; }
-            RefreshCheckoutNotice();
-            return false;
-        }
-
-        private void ShowCheckoutError(string message)
-        {
-            _vm.SetCheckoutError(message);
-            RefreshCheckoutNotice();
-        }
-
-        private void RefreshCheckoutNotice()
-        {
-            TxtCheckoutNotice.Text = _vm.CheckoutNotice;
-            CheckoutNotice.Visibility = string.IsNullOrEmpty(TxtCheckoutNotice.Text) ? Visibility.Collapsed : Visibility.Visible;
-            BtnOpenShiftHint.Visibility = _vm.ShiftOpen ? Visibility.Collapsed : Visibility.Visible;
-        }
-
-        private Task ProcessOrderPaymentAsync(string paymentMethod, bool qrApproved = false)
+        private void CompletePayment(string paymentMethod, decimal cashGiven = 0, bool qrApproved = false)
         {
             Order order;
-            try
-            {
-                decimal cashGiven = 0;
-                if (paymentMethod == "Cash" && !CashAmount.TryParse(TxtCashGiven.Text, out cashGiven))
-                    throw new InvalidOperationException("Vui lòng nhập số tiền khách đưa hợp lệ.");
-                order = _vm.CompleteCheckout(paymentMethod, cashGiven, qrApproved);
-            }
-            catch (Exception ex) { ShowCheckoutError(ex.Message); return Task.CompletedTask; }
+            try { order = _vm.CompleteCheckout(paymentMethod, cashGiven, qrApproved); }
+            catch (Exception ex) { _vm.SetCheckoutError(ex.Message); return; }
 
             try
             {
                 _vm.StartNewOrder();
-                ChannelPicker.SelectedIndex = 0;
-                TxtCashGiven.Clear();
-                UpdateOrderHeaderInfo(); UpdateCartTotal();
                 if (_vm.PrintStickers(order) is { } stickerError) Toast.Show(this, $"Đơn đã lưu, nhưng chưa tạo được dữ liệu tem: {stickerError}", true);
                 OrderCompleteModal.Show(this, order);
                 TxtSearch.Focus();
             }
-            catch (Exception ex) { ShowCheckoutError($"Đơn đã lưu. Không thanh toán lại. {ex.Message}"); }
-            return Task.CompletedTask;
+            catch (Exception ex) { _vm.SetCheckoutError($"Đơn đã lưu. Không thanh toán lại. {ex.Message}"); }
         }
 
         #endregion
@@ -579,36 +342,6 @@ namespace TheCafePOS_WPF
             else if (target is { IsEnabled: true }) { target.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); e.Handled = true; }
         }
 
-        private void ServiceType_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button { Tag: string type }) { _vm.SetServiceType(type); UpdateServiceTypeButtons(); }
-        }
-
-        private void UpdateServiceTypeButtons()
-        {
-            foreach (var b in new[] { BtnTakeAway, BtnDineIn })
-            {
-                bool active = (string)b.Tag == _vm.ServiceType;
-                b.Background = active ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#12634B")) : Brushes.White;
-                b.Foreground = active ? Brushes.White : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#183D34"));
-                b.FontWeight = active ? FontWeights.Bold : FontWeights.Normal;
-            }
-        }
-
-        // Suggest the next notes a customer is likely to hand over (e.g. 47k → 50k, 100k, 200k, 500k).
-        private void UpdateCashSuggestions(decimal total)
-        {
-            var suggestions = MainViewModel.SuggestCashNotes(total);
-            var buttons = GridCashShortcuts.Children.OfType<Button>().Where(b => (string)b.Tag != "0").ToList();
-            for (int i = 0; i < buttons.Count; i++)
-            {
-                buttons[i].Visibility = i < suggestions.Count ? Visibility.Visible : Visibility.Hidden;
-                if (i >= suggestions.Count) continue;
-                buttons[i].Tag = suggestions[i].ToString("0");
-                buttons[i].Content = suggestions[i] >= 1000 ? $"{suggestions[i] / 1000:0}k" : suggestions[i].ToString("N0");
-            }
-        }
-
         private void BtnDiscount_Click(object sender, RoutedEventArgs e)
         {
             if (!_vm.HasItems) return;
@@ -616,7 +349,6 @@ namespace TheCafePOS_WPF
             if (!modal.Show(this, _vm.Subtotal, _vm.Discount, _vm.DiscountReason)) return;
             if (_vm.DiscountNeedsApproval(modal.Amount) && new PinApprovalModal(_vm.DiscountApprovalAction(modal.Amount, modal.Reason)) { Owner = this }.ShowDialog() != true) return;
             _vm.ApplyDiscount(modal.Amount, modal.Reason);
-            UpdateCartTotal();
         }
 
         private void BtnCustomer_Click(object sender, RoutedEventArgs e)
@@ -624,21 +356,13 @@ namespace TheCafePOS_WPF
             var modal = new CustomerModal();
             if (!modal.Show(this, _vm.PayableTotal + _vm.RedeemValue, _vm.CustomerPhone, _vm.RedeemPoints)) return;
             _vm.SetCustomer(modal.Phone, modal.RedeemPoints);
-            UpdateCartTotal();
         }
 
-        private void LoadChannels()
+        private void LoadStoreSettings()
         {
-            ChannelPicker.ItemsSource = _vm.ChannelOptions;
-            ChannelPicker.SelectedIndex = 0;
+            _vm.ReloadSettings();
             Title = _vm.StoreName + " — POS";
             TxtBrand.Text = _vm.StoreName;
-        }
-
-        private void ChannelPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _vm.SetChannel(ChannelPicker.SelectedItem as string);
-            if (IsLoaded) UpdateCartTotal();
         }
 
         private void BtnQueue_Click(object sender, RoutedEventArgs e) => new OrderQueueWindow { Owner = this }.Show();
@@ -648,10 +372,6 @@ namespace TheCafePOS_WPF
             if (!_vm.HasItems) return;
             try { _vm.HoldCurrentOrder(); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Không thể giữ đơn"); return; }
-
-            TxtCashGiven.Clear();
-            UpdateCartTotal();
-            UpdateOrderHeaderInfo();
 
             Toast.Show(this, "Đã tạm giữ đơn thành công!");
         }
@@ -668,11 +388,9 @@ namespace TheCafePOS_WPF
             var modal = new HeldOrdersModal() { Owner = this };
             if (modal.ShowDialog() == true && modal.SelectedHeldOrder != null)
             {
-                TxtCashGiven.Clear();
                 _vm.RecallHeldOrder(modal.SelectedHeldOrder);
-                UpdateCartTotal();
             }
-            UpdateOrderHeaderInfo(); // also refreshes the held-order count after a discard
+            _vm.Refresh(); // the held-order count changes after a recall or discard
         }
 
         private void BtnReprintSticker_Click(object sender, RoutedEventArgs e)

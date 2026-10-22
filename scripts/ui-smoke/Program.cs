@@ -83,7 +83,9 @@ partial class Preview {
   stockPad.Input.Text="2147483648";Check(!stockPad.ApplyButton.IsEnabled,"Stock keypad enforces Int32 range");
   var refundPad=new TheCafePOS_WPF.Core.NumberPad("55001",false,"Số tiền hoàn","đ",-1,55000);
   Check(!refundPad.ApplyButton.IsEnabled,"Refund keypad enforces remaining refundable amount");
-  var cashBox=(TextBox)main.FindName("TxtCashGiven");cashBox.Text="12345";
+  // Keypad fixture: a numeric field in its own offscreen window, styled by the real application resources.
+  var cashBox=new TextBox{Text="12345"};TheCafePOS_WPF.Core.TouchInput.SetNumeric(cashBox,true);TheCafePOS_WPF.Core.TouchInput.SetLabel(cashBox,"Tiền khách đưa");
+  var cashHost=new Window{Owner=main,Content=cashBox,Width=320,Height=120,Left=-10000,Top=-10000,ShowInTaskbar=false,ShowActivated=false};cashHost.Show();
   cashBox.ApplyTemplate();var opener=(Button)cashBox.Template.FindName("NumberPadButton",cashBox);
   Check(opener.Visibility==Visibility.Visible && ((System.Windows.Input.RoutedCommand)opener.Command).CanExecute(null,opener.CommandTarget),"Numeric fields expose explicit keypad command");
   int orderCount=store.CompletedOrders.Count;
@@ -99,6 +101,7 @@ partial class Preview {
   }));
   TheCafePOS_WPF.Core.TouchInput.OpenCommand.Execute(null,cashBox);
   Check(cashBox.Text=="200000" && store.CompletedOrders.Count==orderCount,"Apply updates cash field without creating payment");
+  cashHost.Close();
   TheCafePOS_WPF.Core.Toast.Show(main,"Đã xóa Americano Classic khỏi đơn",false,("Hoàn tác",()=>{}));Flush();
   var toastWindow=Application.Current.Windows.OfType<Window>().Last(w=>w.Content is MaterialDesignThemes.Wpf.Snackbar);
   Render(toastWindow,"Toast-undo",Math.Max(320,toastWindow.ActualWidth),Math.Max(60,toastWindow.ActualHeight));toastWindow.Close();

@@ -11,6 +11,7 @@ using System.Windows.Media.Imaging;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Views.Dialogs;
+using Microsoft.Extensions.DependencyInjection;
 partial class Preview {
  static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject {
   for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var child=VisualTreeHelper.GetChild(root,i);if(child is T t)yield return t;foreach(var d in Descendants<T>(child))yield return d;}
@@ -30,7 +31,9 @@ partial class Preview {
   var store=DataStoreService.Instance;store.OpenShift(500000);
   var coffee=store.Products.Single(p=>p.Name=="Americano Classic");var item=OrderConfigurationService.Create(coffee,"M",100,100,2,Array.Empty<(string,int)>(),"Ít đá",store.Products);
   store.Checkout(new[]{item},"Cash",200000,"preview-order");HoldOrderService.Instance.HoldOrder(new ObservableCollection<OrderItem>{item},110000,"Khách chờ bạn");
-  var windows=new Window[]{new ManagementWindow(),new FinanceWindow(),new PackagingStatusModal(),new ReportWindow(),new HeldOrdersModal(),new BlindDropModal(store.ExpectedCash),new PinApprovalModal("Hoàn tiền đơn #01 · 55.000đ"),new PasswordWindow(),new ProductConfigurationWindow(coffee),new TheCafePOS_WPF.Core.NumberPad("500000",false),new ReprintStickerModal(new PrintedStickerInfo {ProductName="Americano Classic"}),new LoginWindow(),new VietQRModal(110000,1,"preview-order"),new OptionCustomModal(coffee)};
+  // Same container as the app, so every window gets the dependencies it gets in production.
+  var services=TheCafePOS_WPF.App.BuildServices();var dialogs=services.GetRequiredService<TheCafePOS_WPF.Views.IDialogFactory>();
+  var windows=new Window[]{dialogs.Create<ManagementWindow>(null),dialogs.Create<FinanceWindow>(null),dialogs.Create<PackagingStatusModal>(null),dialogs.Create<ReportWindow>(null),dialogs.Create<HeldOrdersModal>(null),dialogs.Create<BlindDropModal>(null,store.ExpectedCash),dialogs.Create<PinApprovalModal>(null,"Hoàn tiền đơn #01 · 55.000đ"),dialogs.Create<PasswordWindow>(null),dialogs.Create<ProductConfigurationWindow>(null,coffee),new TheCafePOS_WPF.Core.NumberPad("500000",false),dialogs.Create<ReprintStickerModal>(null,new PrintedStickerInfo {ProductName="Americano Classic"}),dialogs.Create<LoginWindow>(null),dialogs.Create<VietQRModal>(null,110000m,1,"preview-order"),dialogs.Create<OptionCustomModal>(null,coffee)};
   foreach(var window in windows){
    double width=double.IsNaN(window.Width)?600:window.Width;double height=double.IsNaN(window.Height)?650:window.Height-32;
    string name=window.GetType().Name;Render(window,name,width,height);
@@ -50,8 +53,7 @@ partial class Preview {
   category.IsDropDownOpen=true;category.ApplyTemplate();if(category.Template.FindName("PART_Popup",category)==null)throw new Exception("ComboBox popup missing");category.IsDropDownOpen=false;
   if(Descendants<ScrollViewer>((DependencyObject)management.Content).Count()==0)throw new Exception("Scrolling missing");
     Console.WriteLine("PASS search, selection, dropdown template and scroll hosts");
-  var vm=new TheCafePOS_WPF.ViewModels.MainViewModel(store,store,store,store,store,store,AuthService.Instance,HoldOrderService.Instance,StickerPrinterService.Instance);
-  var main=new TheCafePOS_WPF.MainWindow(vm,store,AuthService.Instance) {WindowState=WindowState.Normal,Left=-10000,Top=-10000,ShowInTaskbar=false};
+  var main=services.GetRequiredService<TheCafePOS_WPF.MainWindow>();main.WindowState=WindowState.Normal;main.Left=-10000;main.Top=-10000;main.ShowInTaskbar=false;
   main.Show();main.Activate();
   void Flush(){System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);main.UpdateLayout();}
   void Check(bool ok,string message){if(!ok)throw new Exception(message);Console.WriteLine("PASS "+message);}

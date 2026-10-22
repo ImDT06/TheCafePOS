@@ -18,25 +18,25 @@ public partial class MainWindow
     private void Finance_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { _shifts.RequireOpenShift(); new FinanceWindow { Owner = this }.ShowDialog(); }
+        try { _shifts.RequireOpenShift(); _dialogs.Create<FinanceWindow>(this).ShowDialog(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void ChangePassword_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
         if (_auth.CurrentUser is null) { MessageBox.Show(this, "Vui lòng đăng nhập."); return; }
-        new PasswordWindow { Owner = this }.ShowDialog();
+        _dialogs.Create<PasswordWindow>(this).ShowDialog();
     }
     private void Management_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.ReloadMenu(); LoadStoreSettings(); }
+        try { _dialogs.Create<ManagementWindow>(this).ShowDialog(); _vm.ReloadMenu(); LoadStoreSettings(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void Reports_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ReportWindow { Owner = this }.ShowDialog(); }
+        try { _dialogs.Create<ReportWindow>(this).ShowDialog(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void SwitchUser_Click(object sender, RoutedEventArgs e)
@@ -46,7 +46,7 @@ public partial class MainWindow
         try { _auth.Logout(); }
         catch (Exception ex) { MessageBox.Show(this, "Không thể xóa phiên đăng nhập: " + ex.Message); return; }
         Hide();
-        if (new LoginWindow().ShowDialog() == true) { RefreshSession(); Show(); Activate(); }
+        if (_dialogs.Create<LoginWindow>(null).ShowDialog() == true) { RefreshSession(); Show(); Activate(); }
         else Close();
     }
     private void OpenShift_Click(object sender, RoutedEventArgs e)

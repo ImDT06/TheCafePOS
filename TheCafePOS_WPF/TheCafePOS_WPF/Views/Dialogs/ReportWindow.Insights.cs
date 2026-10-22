@@ -15,13 +15,12 @@ public partial class ReportWindow
 
     private void RenderInsights(SalesReport report, DateTime from, DateTime to, string? shiftId)
     {
-        var store = DataStoreService.Instance;
         var orders = report.Orders;
         var panel = new StackPanel { Margin = new Thickness(16) };
 
         // Same-length period immediately before, e.g. today vs yesterday, this week vs last week.
         int days = (to.Date - from.Date).Days + 1;
-        var previous = ReportService.Build(store.CompletedOrders, from.AddDays(-days), to.AddDays(-days), null, store.Refunds, store.CashEntries);
+        var previous = ReportService.Build(_orders.CompletedOrders, from.AddDays(-days), to.AddDays(-days), null, _finance.Refunds, _finance.CashEntries);
         var compare = new UniformGrid { Columns = 4, Margin = new Thickness(-6, 0, -6, 16) };
         compare.Children.Add(Metric("Doanh thu thuần", $"{report.NetRevenue:N0}đ", Change(report.NetRevenue, previous.NetRevenue)));
         compare.Children.Add(Metric("Số đơn", $"{orders.Count}", Change(orders.Count, previous.Orders.Count)));
@@ -55,7 +54,7 @@ public partial class ReportWindow
 
         // Active menu items with no or very few sales in the period are candidates to promote or drop.
         var sold = report.Products.ToDictionary(p => p.ProductName, p => p.Quantity);
-        var slow = store.Products.Where(p => p.IsActive && (!p.IsTopping || p.SoldSeparately))
+        var slow = _catalog.Products.Where(p => p.IsActive && (!p.IsTopping || p.SoldSeparately))
             .Select(p => (p.Name, Qty: sold.GetValueOrDefault(p.Name))).OrderBy(p => p.Qty).ThenBy(p => p.Name).Take(8).ToList();
         panel.Children.Add(Title("Món bán chậm nhất trong kỳ (đang bán)"));
         panel.Children.Add(new TextBlock { Text = slow.Count == 0 ? "Chưa có món." : string.Join("   ·   ", slow.Select(s => $"{s.Name}: {s.Qty}")), TextWrapping = TextWrapping.Wrap, Foreground = Muted });

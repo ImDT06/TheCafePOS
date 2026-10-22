@@ -3,15 +3,23 @@ using System.Windows.Controls;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 namespace TheCafePOS_WPF.Views.Dialogs;
 public partial class ManagementWindow : Window
 {
+    private readonly ICatalogService _catalog;
+    private readonly ICustomerService _customers;
+    private readonly IAuthService _auth;
+    private readonly IDialogFactory _dialogs;
     private string? _productId, _categoryId;
     private string _productImageUrl = "";
-    private readonly DataStoreService _store = DataStoreService.Instance;
-    public ManagementWindow()
+    public ManagementWindow(ICatalogService catalog, ICustomerService customers, IAuthService auth, IDialogFactory dialogs)
     {
-        AuthService.Instance.RequireManager();
+        _catalog = catalog;
+        _customers = customers;
+        _auth = auth;
+        _dialogs = dialogs;
+        _auth.RequireManager();
         InitializeComponent(); Refresh();
         var bank = VietQRService.Settings;
         BankCode.Text = bank.BankId; BankAccount.Text = bank.AccountNo; BankOwner.Text = bank.AccountName; LoadPromoAndBackup(); SePayToken.Password = bank.SePayToken;
@@ -19,14 +27,14 @@ public partial class ManagementWindow : Window
     private void Refresh()
     {
         FilterProducts();
-        Categories.ItemsSource = _store.Categories.OrderBy(c => c.DisplayOrder).ToList();
+        Categories.ItemsSource = _catalog.Categories.OrderBy(c => c.DisplayOrder).ToList();
         // Rebinding drops the selection; restore it so a later save keeps the product's category.
         var categoryId = ProductCategory.SelectedValue;
-        ProductCategory.ItemsSource = _store.Categories.ToList();
+        ProductCategory.ItemsSource = _catalog.Categories.ToList();
         ProductCategory.SelectedValue = categoryId;
         var staffName = (Staff.SelectedItem as StaffAccount)?.Username;
-        Staff.ItemsSource = AuthService.Instance.Accounts.ToList();
-        Staff.SelectedItem = AuthService.Instance.Accounts.FirstOrDefault(a => a.Username == staffName);
+        Staff.ItemsSource = _auth.Accounts.ToList();
+        Staff.SelectedItem = _auth.Accounts.FirstOrDefault(a => a.Username == staffName);
         if (Staff.SelectedItem is null && StaffName.IsReadOnly) NewStaff_Click(this, new RoutedEventArgs());
     }
     private bool ConfirmDelete(string message, string title) =>
@@ -35,7 +43,7 @@ public partial class ManagementWindow : Window
     {
         if (Products == null) return;
         string keyword = MenuSearch?.Text.Trim() ?? "";
-        Products.ItemsSource = _store.Products.Where(p => p.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).OrderBy(p => p.Name).ToList();
+        Products.ItemsSource = _catalog.Products.Where(p => p.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).OrderBy(p => p.Name).ToList();
     }
     private void MenuSearch_TextChanged(object sender, TextChangedEventArgs e) => FilterProducts();
     private void Run(Action action)
@@ -89,10 +97,10 @@ public partial class ManagementWindow : Window
         if (string.IsNullOrWhiteSpace(ProductName.Text)) throw FieldError.Mark(ProductName, "Nhập tên món.");
         if (!decimal.TryParse(ProductPrice.Text, out var price) || price < 0) throw FieldError.Mark(ProductPrice, "Giá phải là số không âm.");
         if (ProductCategory.SelectedValue is null) throw FieldError.Mark(ProductCategory, "Chọn danh mục cho món.");
-        var existing = _store.Products.FirstOrDefault(p => p.Id == _productId);
+        var existing = _catalog.Products.FirstOrDefault(p => p.Id == _productId);
         var product = existing is null ? new Product() : System.Text.Json.JsonSerializer.Deserialize<Product>(System.Text.Json.JsonSerializer.Serialize(existing))!;
         product.Name = ProductName.Text.Trim(); product.BasePrice = price; product.CategoryId = ProductCategory.SelectedValue as string ?? ""; product.IsActive = ProductActive.IsChecked == true; product.IsSoldOut = ProductSoldOut.IsChecked == true; product.ImageUrl = _productImageUrl;
-        _store.SaveProduct(product);
+        _catalog.SaveProduct(product);
         NewProduct_Click(sender, e);
     });
     private void CategorySelected(object sender, SelectionChangedEventArgs e)
@@ -102,14 +110,14 @@ public partial class ManagementWindow : Window
     }
     private void ConfigureProduct_Click(object sender, RoutedEventArgs e)
     {
-        if (_store.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi cấu hình."; return; }
-        new ProductConfigurationWindow(product) { Owner = this }.ShowDialog(); Refresh();
+        if (_catalog.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi cấu hình."; return; }
+        _dialogs.Create<ProductConfigurationWindow>(this, product).ShowDialog(); Refresh();
     }
     private void NewCategory_Click(object sender, RoutedEventArgs e) { Categories.SelectedItem = null; _categoryId = null; CategoryName.Clear(); CategoryActive.IsChecked = true; }
     private void SaveCategory_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (string.IsNullOrWhiteSpace(CategoryName.Text)) throw FieldError.Mark(CategoryName, "Nhập tên danh mục.");
-        _store.SaveCategory(new Category { Id = _categoryId ?? Guid.NewGuid().ToString(), Name = CategoryName.Text.Trim(), IsActive = CategoryActive.IsChecked == true, DisplayOrder = _store.Categories.FirstOrDefault(c => c.Id == _categoryId)?.DisplayOrder ?? _store.Categories.Count + 1 });
+        _catalog.SaveCategory(new Category { Id = _categoryId ?? Guid.NewGuid().ToString(), Name = CategoryName.Text.Trim(), IsActive = CategoryActive.IsChecked == true, DisplayOrder = _catalog.Categories.FirstOrDefault(c => c.Id == _categoryId)?.DisplayOrder ?? _catalog.Categories.Count + 1 });
         NewCategory_Click(sender, e);
     });
     private void StaffSelected(object sender, SelectionChangedEventArgs e)
@@ -140,12 +148,12 @@ public partial class ManagementWindow : Window
         if (Staff.SelectedItem is StaffAccount acc)
         {
             if (!string.IsNullOrEmpty(StaffPassword.Password))
-                AuthService.Instance.ResetPassword(acc.Username, StaffPassword.Password);
-            if (acc.Role != "Owner") AuthService.Instance.UpdateAccountRole(acc.Username, role);
+                _auth.ResetPassword(acc.Username, StaffPassword.Password);
+            if (acc.Role != "Owner") _auth.UpdateAccountRole(acc.Username, role);
         }
         else
         {
-            AuthService.Instance.CreateAccount(StaffName.Text, StaffPassword.Password, role);
+            _auth.CreateAccount(StaffName.Text, StaffPassword.Password, role);
         }
         NewStaff_Click(sender, e);
     });
@@ -153,32 +161,32 @@ public partial class ManagementWindow : Window
     {
         if (Staff.SelectedItem is not StaffAccount acc) { Status.Text = "Chọn nhân viên trước."; return; }
         if (ConfirmDelete($"Xóa tài khoản {acc.Username}? Lịch sử đơn và ca vẫn được giữ.", "Xóa tài khoản"))
-            Run(() => { AuthService.Instance.DeleteAccount(acc.Username); NewStaff_Click(sender, e); });
+            Run(() => { _auth.DeleteAccount(acc.Username); NewStaff_Click(sender, e); });
     }
     private void DeleteProduct_Click(object sender, RoutedEventArgs e)
     {
         if (_productId is not string productId) { Status.Text = "Chọn món trước."; return; }
         if (ConfirmDelete($"Xóa vĩnh viễn món {ProductName.Text}? Nếu chỉ tạm ngưng, hãy bỏ chọn \"Đang bán\".", "Xóa món"))
-            Run(() => { _store.DeleteProduct(productId); NewProduct_Click(sender, e); });
+            Run(() => { _catalog.DeleteProduct(productId); NewProduct_Click(sender, e); });
     }
     private void DeleteCategory_Click(object sender, RoutedEventArgs e)
     {
         if (_categoryId is not string categoryId) { Status.Text = "Chọn danh mục trước."; return; }
-        int count = _store.Products.Count(p => p.CategoryId == categoryId);
+        int count = _catalog.Products.Count(p => p.CategoryId == categoryId);
         string message = count == 0 ? $"Xóa danh mục {CategoryName.Text}?" : $"Danh mục {CategoryName.Text} đang có {count} món. Xóa luôn cả {count} món này?\nLịch sử đơn và báo cáo vẫn được giữ. Nếu chỉ muốn tạm ẩn, hãy bỏ chọn \"Đang hiển thị\".";
         if (ConfirmDelete(message, "Xóa danh mục"))
-            Run(() => { _store.DeleteCategory(categoryId, deleteProducts: true); NewCategory_Click(sender, e); });
+            Run(() => { _catalog.DeleteCategory(categoryId, deleteProducts: true); NewCategory_Click(sender, e); });
     }
     private void ResetPassword_Click(object sender, RoutedEventArgs e)
     {
         if (Staff.SelectedItem is not StaffAccount account) { Status.Text = "Chọn nhân viên trước."; return; }
-        new PasswordWindow(account.Username) { Owner = this }.ShowDialog(); Refresh();
+        _dialogs.Create<PasswordWindow>(this, account.Username).ShowDialog(); Refresh();
     }
     private void ToggleStaff_Click(object sender, RoutedEventArgs e)
     {
         if (Staff.SelectedItem is not StaffAccount account) { Status.Text = "Chọn nhân viên trước."; return; }
         if (MessageBox.Show(this, $"{(account.IsActive ? "Khóa" : "Mở khóa")} tài khoản {account.Username}?", "Tài khoản", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-        Run(() => AuthService.Instance.SetAccountActive(account.Username, !account.IsActive));
+        Run(() => _auth.SetAccountActive(account.Username, !account.IsActive));
     }
     private void LoadPromoAndBackup()
     {
@@ -187,17 +195,17 @@ public partial class ManagementWindow : Window
     private void RefreshBackupInfo()
     {
         BackupInfo.Text = BackupService.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
-        MemberInfo.Text = $"{_store.Customers.Count} thành viên, {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
+        MemberInfo.Text = $"{_customers.Customers.Count} thành viên, {_customers.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
-    private void OpenIngredients_Click(object sender, RoutedEventArgs e) { new IngredientWindow { Owner = this }.ShowDialog(); Refresh(); }
+    private void OpenIngredients_Click(object sender, RoutedEventArgs e) { _dialogs.Create<IngredientWindow>(this).ShowDialog(); Refresh(); }
     private void Recipe_Click(object sender, RoutedEventArgs e)
     {
-        if (_store.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi khai báo công thức."; return; }
-        if (new RecipeWindow(product) { Owner = this }.ShowDialog() == true) { Refresh(); Toast.Show(this, "Đã lưu công thức."); }
+        if (_catalog.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi khai báo công thức."; return; }
+        if (_dialogs.Create<RecipeWindow>(this, product).ShowDialog() == true) { Refresh(); Toast.Show(this, "Đã lưu công thức."); }
     }
-    private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (new StoreSettingsWindow { Owner = this }.ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
-    private void OpenPromotions_Click(object sender, RoutedEventArgs e) => new PromotionsWindow { Owner = this }.ShowDialog();
-    private void OpenCustomers_Click(object sender, RoutedEventArgs e) { new CustomerListWindow { Owner = this }.ShowDialog(); RefreshBackupInfo(); }
+    private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (_dialogs.Create<StoreSettingsWindow>(this).ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
+    private void OpenPromotions_Click(object sender, RoutedEventArgs e) => _dialogs.Create<PromotionsWindow>(this).ShowDialog();
+    private void OpenCustomers_Click(object sender, RoutedEventArgs e) { _dialogs.Create<CustomerListWindow>(this).ShowDialog(); RefreshBackupInfo(); }
     private void BackupNow_Click(object sender, RoutedEventArgs e)
     {
         try { BackupService.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }

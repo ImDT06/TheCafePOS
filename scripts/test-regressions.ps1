@@ -9,6 +9,8 @@ dotnet $testAssembly (Join-Path $testDataDirectory 'checkout-flow') checkout-flo
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'cart-viewmodel') cart-viewmodel
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet $testAssembly (Join-Path $testDataDirectory 'dialog-wiring') dialog-wiring
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'menu-options') menu-options
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'report-dashboard') report-dashboard

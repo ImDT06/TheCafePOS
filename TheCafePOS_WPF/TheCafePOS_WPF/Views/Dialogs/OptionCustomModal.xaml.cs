@@ -3,9 +3,11 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 namespace TheCafePOS_WPF.Views.Dialogs;
 public partial class OptionCustomModal : Window
 {
+    private readonly ICatalogService _catalog;
     private sealed class ToppingChoice
     {
         public Product Product { get; init; } = null!;
@@ -25,8 +27,9 @@ public partial class OptionCustomModal : Window
     private string? _sugarChoice, _iceChoice;
     private bool _ready;
     public OrderItem ResultItem { get; private set; } = null!;
-    public OptionCustomModal(Product product, int dailyOrderNumber = 1, OrderItem? existing = null, bool singleUnit = false)
+    public OptionCustomModal(Product product, ICatalogService catalog, int dailyOrderNumber = 1, OrderItem? existing = null, bool singleUnit = false)
     {
+        _catalog = catalog;
         _product = product; _singleUnit = singleUnit; _editing = existing != null;
         InitializeComponent();
         MaxHeight = SystemParameters.WorkArea.Height;
@@ -73,7 +76,7 @@ public partial class OptionCustomModal : Window
             AddChoice(SugarChoices, "sugar", choice, choice == _sugarChoice, () => _sugarChoice = choice);
         foreach (var choice in product.IceChoices ?? new())
             AddChoice(IceChoices, "ice", choice, choice == _iceChoice, () => _iceChoice = choice);
-        foreach (var topping in DataStoreService.Instance.Products.Where(p => product.IsBeverage && p.IsTopping && p.IsActive && product.AllowedToppingIds.Contains(p.Id) && DataStoreService.Instance.Categories.Any(c => c.Id == p.CategoryId && c.IsActive)))
+        foreach (var topping in _catalog.Products.Where(p => product.IsBeverage && p.IsTopping && p.IsActive && product.AllowedToppingIds.Contains(p.Id) && _catalog.Categories.Any(c => c.Id == p.CategoryId && c.IsActive)))
             AddTopping(topping, existing?.SelectedToppings.FirstOrDefault(t => t.ProductId == topping.Id)?.Quantity ?? 0);
         if (_toppings.Count == 0) { ToppingSection.Visibility = Visibility.Collapsed; ToppingColumn.Width = new GridLength(0); }
         bool missingTopping = existing?.SelectedToppings.Any(t => !_toppings.Any(c => c.Product.Id == t.ProductId)) == true;
@@ -157,7 +160,7 @@ public partial class OptionCustomModal : Window
     private void PreviousToppings_Click(object sender, RoutedEventArgs e) { _toppingPage--; ShowToppingPage(); }
     private void NextToppings_Click(object sender, RoutedEventArgs e) { _toppingPage++; ShowToppingPage(); }
     private OrderItem BuildItem() => OrderConfigurationService.Create(_product, _size, _sugar, _ice, _quantity,
-        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)), Note.Text, DataStoreService.Instance.Products, _sugarChoice, _iceChoice);
+        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)), Note.Text, _catalog.Products, _sugarChoice, _iceChoice);
     private void MinusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Max(1, _quantity - 1); UpdateTotal(); }
     private void PlusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Min(999, _quantity + 1); UpdateTotal(); }
     private void UpdateTotal()

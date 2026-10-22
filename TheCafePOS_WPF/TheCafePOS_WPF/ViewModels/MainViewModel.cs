@@ -107,6 +107,7 @@ namespace TheCafePOS_WPF.ViewModels
         public int HeldOrderCount => _holds.HeldOrders.Count;
         public string StoreName => _settings.Settings.DisplayName;
         public Customer? Member => _customers.FindCustomer(CustomerPhone);
+        public Customer? FindCustomer(string phone) => _customers.FindCustomer(phone);
 
         public decimal Subtotal => CartItems.Sum(i => i.TotalPrice);
         public (decimal Amount, string Names) Promotions => IsAppOrder ? (0m, "") : _promotions.PromotionsFor(CartItems, DataStoreService.CafeNow);

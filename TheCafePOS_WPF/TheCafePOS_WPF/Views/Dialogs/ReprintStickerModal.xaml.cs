@@ -1,15 +1,22 @@
 using System.Windows;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class ReprintStickerModal : Window
     {
+        private readonly IOrderService _orders;
+        private readonly IAuthService _auth;
+        private readonly IStickerPrinterService _stickers;
         private readonly PrintedStickerInfo _stickerInfo;
         public string SelectedReason { get; private set; } = "Rách ly / Kẹt máy dập nắp";
 
-        public ReprintStickerModal(PrintedStickerInfo stickerInfo)
+        public ReprintStickerModal(PrintedStickerInfo stickerInfo, IOrderService orders, IAuthService auth, IStickerPrinterService stickers)
         {
+            _orders = orders;
+            _auth = auth;
+            _stickers = stickers;
             InitializeComponent();
             _stickerInfo = stickerInfo;
             TxtStickerDetails.Text = $"{stickerInfo.DailyOrderFormatted} - {stickerInfo.ProductName} ({stickerInfo.IndexFormatted})";
@@ -24,8 +31,8 @@ namespace TheCafePOS_WPF.Views.Dialogs
 
             try
             {
-                StickerPrinterService.Instance.ReprintSticker(_stickerInfo, SelectedReason, AuthService.Instance.CurrentUser?.Username ?? "");
-                DataStoreService.Instance.Save();
+                _stickers.ReprintSticker(_stickerInfo, SelectedReason, _auth.CurrentUser?.Username ?? "");
+                _orders.Save();
             }
             catch (System.Exception ex) { MessageBox.Show(this, ex.Message); return; }
 

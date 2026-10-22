@@ -10,7 +10,7 @@ public partial class MainWindow
     private void RefreshSession()
     {
         var user = _auth.CurrentUser;
-        var shift = _store.CurrentShift;
+        var shift = _shifts.CurrentShift;
         TxtSession.Text = $"{user?.Username} ({user?.Role}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
         BtnManagement.Visibility = BtnReports.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
         _vm.SetCheckoutError(null); // also re-evaluates the shift hint
@@ -18,7 +18,7 @@ public partial class MainWindow
     private void Finance_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { _store.RequireOpenShift(); new FinanceWindow { Owner = this }.ShowDialog(); }
+        try { _shifts.RequireOpenShift(); new FinanceWindow { Owner = this }.ShowDialog(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void ChangePassword_Click(object sender, RoutedEventArgs e)
@@ -52,7 +52,7 @@ public partial class MainWindow
     private void OpenShift_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        if (_store.CurrentShift.Status == "Open") { MessageBox.Show(this, "Ca hiện tại chưa đóng."); return; }
+        if (_shifts.CurrentShift.Status == "Open") { MessageBox.Show(this, "Ca hiện tại chưa đóng."); return; }
         var window = new Window { Owner = this, Title = "Mở ca làm việc", Width = 500, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new Thickness(24) };
         panel.Children.Add(new TextBlock { Text = "Tiền mặt đầu ca (đồng)" });
@@ -66,7 +66,7 @@ public partial class MainWindow
             try
             {
                 if (!decimal.TryParse(input.Text, out var cash)) throw new InvalidOperationException("Nhập số tiền hợp lệ.");
-                _store.OpenShift(cash); window.DialogResult = true; RefreshSession();
+                _shifts.OpenShift(cash); window.DialogResult = true; RefreshSession();
             }
             catch (Exception ex) { MessageBox.Show(window, ex.Message); }
         };

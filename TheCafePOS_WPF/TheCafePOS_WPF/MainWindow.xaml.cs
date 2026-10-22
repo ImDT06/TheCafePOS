@@ -19,7 +19,7 @@ namespace TheCafePOS_WPF
 {
     public partial class MainWindow : Window
     {
-        private readonly IDataStoreService _store;
+        private readonly IShiftService _shifts;
         private readonly IAuthService _auth;
         private readonly MainViewModel _vm;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
@@ -33,10 +33,10 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IDataStoreService store, IAuthService auth)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth)
         {
             _vm = vm;
-            _store = store;
+            _shifts = shifts;
             _auth = auth;
             InitializeComponent();
             DataContext = _vm;
@@ -290,10 +290,10 @@ namespace TheCafePOS_WPF
 
         private void BtnBlindDrop_Click(object sender, RoutedEventArgs e)
         {
-            try { _store.RequireOpenShift(); }
+            try { _shifts.RequireOpenShift(); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message); return; }
             if (_vm.HasItems) { Toast.Show(this, "Hãy giữ hoặc hoàn tất đơn trước khi chốt ca.", true); return; }
-            decimal expectedCash = _store.ExpectedCash;
+            decimal expectedCash = _shifts.ExpectedCash;
             var modal = new BlindDropModal(expectedCash) { Owner = this };
             if (modal.ShowDialog() == true)
             {

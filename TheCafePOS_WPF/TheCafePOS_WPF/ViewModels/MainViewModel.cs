@@ -25,16 +25,27 @@ namespace TheCafePOS_WPF.ViewModels
         public const int MaxLineQuantity = 999;
         private static readonly decimal[] CashNotes = { 10000m, 20000m, 50000m, 100000m, 200000m, 500000m };
 
-        private readonly IDataStoreService _store;
+        private readonly ICatalogService _catalog;
+        private readonly IOrderService _orders;
+        private readonly IShiftService _shifts;
+        private readonly ICustomerService _customers;
+        private readonly IPromotionService _promotions;
+        private readonly IStoreSettingsService _settings;
         private readonly IAuthService _auth;
         private readonly IHoldOrderService _holds;
         private readonly IStickerPrinterService _stickers;
         private IReadOnlyList<string> _channelOptions = Array.Empty<string>();
         private string _channel = StoreSettings.Counter;
 
-        public MainViewModel(IDataStoreService store, IAuthService auth, IHoldOrderService holds, IStickerPrinterService stickers)
+        public MainViewModel(ICatalogService catalog, IOrderService orders, IShiftService shifts, ICustomerService customers,
+            IPromotionService promotions, IStoreSettingsService settings, IAuthService auth, IHoldOrderService holds, IStickerPrinterService stickers)
         {
-            _store = store;
+            _catalog = catalog;
+            _orders = orders;
+            _shifts = shifts;
+            _customers = customers;
+            _promotions = promotions;
+            _settings = settings;
             _auth = auth;
             _holds = holds;
             _stickers = stickers;
@@ -94,14 +105,14 @@ namespace TheCafePOS_WPF.ViewModels
         public bool CanPay => HasItems && !CheckoutInProgress;
         public int TotalCups => CartItems.Sum(i => i.Quantity);
         public int HeldOrderCount => _holds.HeldOrders.Count;
-        public string StoreName => _store.Settings.DisplayName;
-        public Customer? Member => _store.FindCustomer(CustomerPhone);
+        public string StoreName => _settings.Settings.DisplayName;
+        public Customer? Member => _customers.FindCustomer(CustomerPhone);
 
         public decimal Subtotal => CartItems.Sum(i => i.TotalPrice);
-        public (decimal Amount, string Names) Promotions => IsAppOrder ? (0m, "") : _store.PromotionsFor(CartItems, DataStoreService.CafeNow);
+        public (decimal Amount, string Names) Promotions => IsAppOrder ? (0m, "") : _promotions.PromotionsFor(CartItems, DataStoreService.CafeNow);
         public decimal PromoAmount => Promotions.Amount;
         public decimal RedeemValue => RedeemPoints * DataStoreService.PointValue;
-        public decimal ChannelSurcharge => IsAppOrder && _store.Settings.Channels.FirstOrDefault(c => c.Name == Channel) is { } ch
+        public decimal ChannelSurcharge => IsAppOrder && _settings.Settings.Channels.FirstOrDefault(c => c.Name == Channel) is { } ch
             ? Math.Ceiling(Subtotal * ch.MarkupPercent / 100m / 1000m) * 1000m : 0;
         public decimal PayableTotal => Subtotal + ChannelSurcharge - Discount - PromoAmount - RedeemValue;
 
@@ -110,10 +121,10 @@ namespace TheCafePOS_WPF.ViewModels
 
         public IReadOnlyList<(string Id, string Name)> CategoryOptions =>
             new[] { (AllCategories, "Tất cả") }
-                .Concat(_store.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)))
+                .Concat(_catalog.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)))
                 .ToList();
 
-        public bool ShiftOpen => _store.CurrentShift.Status == "Open";
+        public bool ShiftOpen => _shifts.CurrentShift.Status == "Open";
         public bool ShowOpenShiftHint => !ShiftOpen;
 
         /// <summary>Payment error if any, otherwise a hint about the shift state; empty when checkout is possible.</summary>
@@ -121,7 +132,7 @@ namespace TheCafePOS_WPF.ViewModels
         {
             get
             {
-                var shift = _store.CurrentShift;
+                var shift = _shifts.CurrentShift;
                 string? shiftHint = shift.Status != "Open" ? "Chưa mở ca. Bạn có thể chọn món; hãy mở ca trước khi thanh toán."
                     : shift.CashierName != _auth.CurrentUser?.Username ? $"Ca đang thuộc về {shift.CashierName}. Đổi về đúng nhân viên để thanh toán." : null;
                 return CheckoutError ?? shiftHint ?? "";
@@ -196,7 +207,7 @@ namespace TheCafePOS_WPF.ViewModels
 
         public void ReloadSettings()
         {
-            _channelOptions = new[] { StoreSettings.Counter }.Concat(_store.Settings.Channels.Where(c => c.IsActive).Select(c => c.Name)).ToList();
+            _channelOptions = new[] { StoreSettings.Counter }.Concat(_settings.Settings.Channels.Where(c => c.IsActive).Select(c => c.Name)).ToList();
             if (!_channelOptions.Contains(_channel)) _channel = StoreSettings.Counter;
             Changed();
         }
@@ -251,21 +262,21 @@ namespace TheCafePOS_WPF.ViewModels
         public IReadOnlyList<Product> FilterProducts(string? keyword)
         {
             string search = keyword?.Trim().ToLower() ?? "";
-            return _store.Products.Where(p =>
+            return _catalog.Products.Where(p =>
             {
                 bool matchCat = SelectedCategoryId == AllCategories || p.CategoryId == SelectedCategoryId || p.FeaturedCategoryIds.Contains(SelectedCategoryId);
                 bool matchSearch = search.Length == 0 || p.Name.ToLower().Contains(search);
-                return (!p.IsTopping || p.SoldSeparately) && p.IsActive && _store.Categories.Any(c => c.Id == p.CategoryId && c.IsActive) && matchCat && matchSearch;
+                return (!p.IsTopping || p.SoldSeparately) && p.IsActive && _catalog.Categories.Any(c => c.Id == p.CategoryId && c.IsActive) && matchCat && matchSearch;
             }).OrderBy(p => p.IsSoldOut).ToList();
         }
 
-        public Product? FindActiveProduct(string productId) => _store.Products.FirstOrDefault(p => p.Id == productId && p.IsActive);
+        public Product? FindActiveProduct(string productId) => _catalog.Products.FirstOrDefault(p => p.Id == productId && p.IsActive);
 
         public void ToggleSoldOut(Product product)
         {
             try
             {
-                _store.SetProductSoldOut(product.Id, !product.IsSoldOut);
+                _catalog.SetProductSoldOut(product.Id, !product.IsSoldOut);
                 RefreshMenu();
             }
             catch (Exception ex) { Raise(new PosMessage(ex.Message, true)); }
@@ -277,7 +288,7 @@ namespace TheCafePOS_WPF.ViewModels
 
         public void LoadNextOrderNumber()
         {
-            CurrentDailyOrderNumber = _store.GetNextDailyOrderNumber();
+            CurrentDailyOrderNumber = _orders.GetNextDailyOrderNumber();
             Changed();
         }
 
@@ -370,7 +381,7 @@ namespace TheCafePOS_WPF.ViewModels
             Changed();
         }
 
-        public bool DiscountNeedsApproval(decimal amount) => _store.DiscountNeedsApproval(Subtotal, amount);
+        public bool DiscountNeedsApproval(decimal amount) => _settings.DiscountNeedsApproval(Subtotal, amount);
 
         public string DiscountApprovalAction(decimal amount, string reason) => AuthService.DiscountApprovalAction(CheckoutId, amount, reason);
 
@@ -410,7 +421,7 @@ namespace TheCafePOS_WPF.ViewModels
         public bool BeginCheckout()
         {
             if (CheckoutInProgress || !HasItems) return false;
-            try { _store.ValidateCheckoutCart(CartItems, IsAppOrder ? DefaultServiceType : ServiceType); }
+            try { _orders.ValidateCheckoutCart(CartItems, IsAppOrder ? DefaultServiceType : ServiceType); }
             catch (Exception ex) { SetCheckoutError(ex.Message); return false; }
             CheckoutInProgress = true;
             Changed();
@@ -432,7 +443,7 @@ namespace TheCafePOS_WPF.ViewModels
 
         /// <summary>Persists the order. Once this returns the sale is recorded and must not be charged again.</summary>
         public Order CompleteCheckout(string paymentMethod, decimal cashGiven, bool qrApproved = false) =>
-            _store.Checkout(CartItems, paymentMethod, cashGiven, CheckoutId, qrApproved, ServiceType, Discount, DiscountReason, CustomerPhone, RedeemPoints, _channel);
+            _orders.Checkout(CartItems, paymentMethod, cashGiven, CheckoutId, qrApproved, ServiceType, Discount, DiscountReason, CustomerPhone, RedeemPoints, _channel);
 
         /// <summary>Resets the cart and all adjustments for the next customer.</summary>
         public void StartNewOrder()
@@ -449,7 +460,7 @@ namespace TheCafePOS_WPF.ViewModels
             try
             {
                 _stickers.GenerateStickersForOrder(order);
-                _store.Save();
+                _orders.Save();
                 return null;
             }
             catch (Exception ex) { return ex.Message; }

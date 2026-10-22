@@ -9,30 +9,29 @@ namespace TheCafePOS_WPF.Core;
 public static class Toast
 {
     // Optional action (e.g. "Hoàn tác") adds a button and keeps the toast up longer.
-    public static void Show(Window? owner, string message, bool error = false, (string Text, Action Run)? action = null)
+    public static void Show(Window? owner, string text, bool error = false, (string Text, Action Run)? action = null)
     {
         owner ??= Application.Current.MainWindow;
+        var message = new MaterialDesignThemes.Wpf.SnackbarMessage
+        {
+            Content = new DockPanel { Children = { Icon(error), new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 15, VerticalAlignment = VerticalAlignment.Center } } },
+            ActionContent = action?.Text
+        };
+        var snackbar = new MaterialDesignThemes.Wpf.Snackbar
+        {
+            Message = message, IsActive = true, MaxWidth = 460, Margin = new Thickness(0),
+            Background = new SolidColorBrush(error ? Color.FromRgb(0xB4, 0x23, 0x18) : Color.FromRgb(0x12, 0x3D, 0x35)), Foreground = Brushes.White
+        };
+        // Hosted in a borderless window so callers can notify from any screen without adding a host to every XAML.
         var toast = new Window
         {
             WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent,
             ShowInTaskbar = false, ShowActivated = false, Topmost = owner?.Topmost ?? false, SizeToContent = SizeToContent.WidthAndHeight,
-            Owner = owner?.IsLoaded == true ? owner : null,
-            Content = new Border
-            {
-                Background = new SolidColorBrush(error ? Color.FromRgb(0xB9, 0x1C, 0x1C) : Color.FromRgb(0x12, 0x63, 0x4B)),
-                CornerRadius = new CornerRadius(8), Padding = new Thickness(16, 12, 16, 12), MaxWidth = 420,
-                Child = new DockPanel { Children = { new TextBlock { Text = (error ? "⚠  " : "✓  ") + message, Foreground = Brushes.White, FontSize = 15, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center } } }
-            }
+            Owner = owner?.IsLoaded == true ? owner : null, Content = snackbar
         };
-        if (action is { } act && toast.Content is Border { Child: DockPanel row })
-        {
-            var button = new Button { Content = act.Text, Margin = new Thickness(16, 0, 0, 0), Padding = new Thickness(12, 4, 12, 4), MinHeight = 36, FontWeight = FontWeights.Bold };
-            button.Click += (_, _) => { toast.Close(); act.Run(); };
-            DockPanel.SetDock(button, Dock.Right);
-            row.Children.Insert(0, button);
-        }
+        if (action is { } act) message.ActionClick += (_, _) => { toast.Close(); act.Run(); };
         toast.MouseLeftButtonUp += (_, _) => toast.Close();
-        toast.Loaded += (_, _) =>
+        toast.SizeChanged += (_, _) =>
         {
             var area = owner is { IsLoaded: true, WindowState: not WindowState.Maximized } ? new Rect(owner.Left, owner.Top, owner.ActualWidth, owner.ActualHeight) : SystemParameters.WorkArea;
             toast.Left = area.Right - toast.ActualWidth - 24;
@@ -44,12 +43,18 @@ public static class Toast
         toast.Show();
         timer.Start();
     }
+
+    private static MaterialDesignThemes.Wpf.PackIcon Icon(bool error) => new()
+    {
+        Kind = error ? MaterialDesignThemes.Wpf.PackIconKind.AlertCircleOutline : MaterialDesignThemes.Wpf.PackIconKind.CheckCircleOutline,
+        Width = 20, Height = 20, Foreground = Brushes.White, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center
+    };
 }
 
 // Marks an input red with a tooltip until the user edits it again.
 public static class FieldError
 {
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xDC, 0x26, 0x26));
+    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
 
     public static InvalidOperationException Mark(Control field, string message)
     {
@@ -81,7 +86,7 @@ public static class EmptyState
     private static void OnTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ItemsControl list) return;
-        var hint = new VisualBrush(new TextBlock { Text = (string)e.NewValue, Foreground = Brushes.Gray, FontSize = 14, Margin = new Thickness(8) })
+        var hint = new VisualBrush(new TextBlock { Text = (string)e.NewValue, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x66, 0x5F)), FontSize = 14, Margin = new Thickness(8) })
         { Stretch = Stretch.None, AlignmentY = AlignmentY.Center };
         void Update() { if (list.Items.Count == 0) list.Background = hint; else list.ClearValue(Control.BackgroundProperty); }
         ((System.Collections.Specialized.INotifyCollectionChanged)list.Items).CollectionChanged += (_, _) => Update();

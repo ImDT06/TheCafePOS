@@ -187,7 +187,7 @@ public partial class ManagementWindow : Window
     private void RefreshBackupInfo()
     {
         BackupInfo.Text = BackupService.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
-        MemberInfo.Text = $"{_store.Customers.Count} thành viên · {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
+        MemberInfo.Text = $"{_store.Customers.Count} thành viên, {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
     private void OpenIngredients_Click(object sender, RoutedEventArgs e) { new IngredientWindow { Owner = this }.ShowDialog(); Refresh(); }
     private void Recipe_Click(object sender, RoutedEventArgs e)

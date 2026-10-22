@@ -28,7 +28,7 @@ public sealed class StoreSettingsWindow : Window
         EmptyState.SetText(grid, "Chưa có kênh — bấm + Thêm kênh");
         grid.Columns.Add(new DataGridTextColumn { Header = "Tên kênh", Binding = new Binding("Name"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         grid.Columns.Add(new DataGridTextColumn { Header = "Phụ thu giá (%)", Binding = new Binding("MarkupPercent"), Width = 130 });
-        grid.Columns.Add(new DataGridCheckBoxColumn { Header = "Đang dùng", Binding = new Binding("IsActive"), Width = 90 });
+        grid.Columns.Add(new DataGridCheckBoxColumn { Header = "Đang dùng", Binding = new Binding("IsActive"), Width = 90, ElementStyle = (Style)Application.Current.FindResource("MaterialDesignDataGridCheckBoxColumnStyle"), EditingElementStyle = (Style)Application.Current.FindResource("MaterialDesignDataGridCheckBoxColumnEditingStyle") });
         var add = PosUi.Button("+ Thêm kênh", (_, _) => channels.Add(new SalesChannel { Name = "Kênh mới", MarkupPercent = 20 }), minHeight: 40);
         var remove = PosUi.Button("Xóa kênh đang chọn", (_, _) => { if (grid.SelectedItem is SalesChannel c) channels.Remove(c); }, "DangerButton", 40);
         var save = PosUi.Button("Lưu cài đặt", (_, _) =>

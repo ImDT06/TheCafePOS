@@ -8,21 +8,23 @@ public partial class MainWindow
     private void Utilities_Click(object sender, RoutedEventArgs e) => UtilitiesPopup.IsOpen = !UtilitiesPopup.IsOpen;
     private void RefreshSession()
     {
-        var user = AuthService.Instance.CurrentUser;
-        var shift = DataStoreService.Instance.CurrentShift;
+        var user = _auth.CurrentUser;
+        var shift = _store.CurrentShift;
         TxtSession.Text = $"{user?.Username} ({user?.Role}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
-        BtnManagement.Visibility = BtnReports.Visibility = AuthService.Instance.IsManager ? Visibility.Visible : Visibility.Collapsed;
+        BtnManagement.Visibility = BtnReports.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
+        _checkoutError = null;
+        RefreshCheckoutNotice();
     }
     private void Finance_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { DataStoreService.Instance.RequireOpenShift(); new FinanceWindow { Owner = this }.ShowDialog(); }
+        try { _store.RequireOpenShift(); new FinanceWindow { Owner = this }.ShowDialog(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void ChangePassword_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        if (AuthService.Instance.CurrentUser is null) { MessageBox.Show(this, "Vui lòng đăng nhập."); return; }
+        if (_auth.CurrentUser is null) { MessageBox.Show(this, "Vui lòng đăng nhập."); return; }
         new PasswordWindow { Owner = this }.ShowDialog();
     }
     private void Management_Click(object sender, RoutedEventArgs e)
@@ -41,7 +43,7 @@ public partial class MainWindow
     {
         UtilitiesPopup.IsOpen = false;
         if (_cartItems.Count > 0) { MessageBox.Show(this, "Hãy giữ hoặc hoàn tất đơn trước khi đổi nhân viên."); return; }
-        try { AuthService.Instance.Logout(); }
+        try { _auth.Logout(); }
         catch (Exception ex) { MessageBox.Show(this, "Không thể xóa phiên đăng nhập: " + ex.Message); return; }
         Hide();
         if (new LoginWindow().ShowDialog() == true) { RefreshSession(); Show(); Activate(); }
@@ -50,7 +52,7 @@ public partial class MainWindow
     private void OpenShift_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        if (DataStoreService.Instance.CurrentShift.Status == "Open") { MessageBox.Show(this, "Ca hiện tại chưa đóng."); return; }
+        if (_store.CurrentShift.Status == "Open") { MessageBox.Show(this, "Ca hiện tại chưa đóng."); return; }
         var window = new Window { Owner = this, Title = "Mở ca làm việc", Width = 500, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new Thickness(24) };
         panel.Children.Add(new TextBlock { Text = "Tiền mặt đầu ca (đồng)" });
@@ -64,7 +66,7 @@ public partial class MainWindow
             try
             {
                 if (!decimal.TryParse(input.Text, out var cash)) throw new InvalidOperationException("Nhập số tiền hợp lệ.");
-                DataStoreService.Instance.OpenShift(cash); window.DialogResult = true; RefreshSession();
+                _store.OpenShift(cash); window.DialogResult = true; RefreshSession();
             }
             catch (Exception ex) { MessageBox.Show(window, ex.Message); }
         };

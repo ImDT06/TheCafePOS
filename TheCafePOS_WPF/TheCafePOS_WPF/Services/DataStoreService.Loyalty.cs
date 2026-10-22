@@ -32,12 +32,30 @@ public partial class DataStoreService
         return customer;
     }
 
-    public void UpdateCustomer(string phone, string name)
+    // The phone is the member key, so changing it moves the purchase history to the new number as well.
+    public void UpdateCustomer(string phone, string name, string? newPhone = null)
     {
         AuthService.Instance.RequireManager();
         var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Nhập tên khách hàng.");
-        Mutate(() => customer.Name = name.Trim());
+        string target = string.IsNullOrWhiteSpace(newPhone) ? customer.Phone : NormalizePhone(newPhone);
+        if (target != customer.Phone && Customers.Any(c => c.Phone == target)) throw new InvalidOperationException("Số điện thoại mới đã là thành viên khác.");
+        string old = customer.Phone;
+        Mutate(() =>
+        {
+            customer.Name = name.Trim();
+            if (target == old) return;
+            customer.Phone = target;
+            foreach (var order in CompletedOrders.Where(o => o.CustomerPhone == old)) order.CustomerPhone = target;
+        });
+    }
+
+    // Removes the member profile and its points; paid orders keep their phone for reports and refunds still work.
+    public void DeleteCustomer(string phone)
+    {
+        AuthService.Instance.RequireManager();
+        var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
+        Mutate(() => Customers.Remove(customer));
     }
     public List<Order> CustomerOrders(string phone) => CompletedOrders.Where(o => o.CustomerPhone == phone).OrderByDescending(o => o.CreatedAt).ToList();
 

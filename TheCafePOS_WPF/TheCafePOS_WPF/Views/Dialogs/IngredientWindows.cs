@@ -38,7 +38,7 @@ public sealed class IngredientWindow : Window
         AddColumns(_log, ("Lúc", "At", "dd/MM HH:mm", false), ("Nguyên liệu", "IngredientName", "", false), ("Loại", "Type", "", false), ("Thay đổi", "Change", "+0.##;-0.##", false), ("Sau", "After", "0.##", false), ("Lý do", "Reason", "", true));
         // Low stock rows are tinted, like the packaging screen.
         var rowStyle = new Style(typeof(DataGridRow));
-        rowStyle.Triggers.Add(new DataTrigger { Binding = new Binding("IsLow"), Value = true, Setters = { new Setter(BackgroundProperty, new SolidColorBrush(Color.FromRgb(0xFE, 0xF3, 0xC7))) } });
+        rowStyle.Triggers.Add(new DataTrigger { Binding = new Binding("IsLow"), Value = true, Setters = { new Setter(BackgroundProperty, new SolidColorBrush(Color.FromRgb(0xFF, 0xF7, 0xED))) } });
         _grid.RowStyle = rowStyle;
         _grid.SelectionChanged += (_, _) => Select(_grid.SelectedItem as Ingredient);
 
@@ -86,7 +86,7 @@ public sealed class IngredientWindow : Window
         _grid.SelectedItem = _store.Ingredients.FirstOrDefault(i => i.Id == _id);
         _log.ItemsSource = _store.IngredientMovements.AsEnumerable().Reverse().Take(200).ToList();
         int low = _store.Ingredients.Count(i => i.IsLow);
-        _summary.Text = $"{_store.Ingredients.Count} nguyên liệu · {low} sắp hết (tô vàng) · {_store.Products.Count(p => p.SoldOutByStock)} món đang tự hết hàng";
+        _summary.Text = $"{_store.Ingredients.Count} nguyên liệu, {low} sắp hết (tô vàng), {_store.Products.Count(p => p.SoldOutByStock)} món tạm hết do thiếu nguyên liệu";
     }
 
     private void Select(Ingredient? i)

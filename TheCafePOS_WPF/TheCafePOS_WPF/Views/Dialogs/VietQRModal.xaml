@@ -1,4 +1,4 @@
-<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.VietQRModal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Thanh Toán VietQR Động" Height="650" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#F3F5F4">
+<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.VietQRModal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Thanh Toán VietQR Động" Height="650" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{StaticResource PosCanvas}">
   <Grid Margin="20">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
@@ -9,16 +9,16 @@
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <TextBlock Text="Thanh toán VietQR" VerticalAlignment="Center" Style="{StaticResource PageTitle}" TextWrapping="Wrap" />
       </StackPanel>
-      <TextBlock x:Name="TxtOrderNumber" Text="Mã Đơn: #01" FontSize="14" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" />
+      <TextBlock x:Name="TxtOrderNumber" Text="Mã Đơn: #01" FontSize="14" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" />
     </StackPanel>
     <!-- QR Display -->
-    <Border Grid.Row="1" BorderBrush="#12634B" BorderThickness="1.5" CornerRadius="14" Background="White" Padding="15">
+    <Border Grid.Row="1" BorderBrush="{StaticResource PosAccent}" BorderThickness="1.5" CornerRadius="14" Background="White" Padding="15">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-          <Image x:Name="ImgQR" Width="240" Height="240" Stretch="Uniform" Margin="0,0,0,10"><Image.Style><Style TargetType="Image"><Style.Triggers><Trigger Property="Source" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></Image.Style></Image>
-          <TextBlock Text="Số tiền thanh toán:" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" TextWrapping="Wrap" />
-          <TextBlock x:Name="TxtAmount" Text="55.000đ" FontSize="24" FontWeight="Bold" Foreground="#12634B" HorizontalAlignment="Center" TextWrapping="Wrap" />
-          <TextBlock x:Name="TxtPaymentStatus" Text="Chờ xác nhận chuyển khoản" FontSize="13" FontWeight="SemiBold" Foreground="#D97706" HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="350" />
+          <Grid x:Name="QrFrame" Width="240" Height="240" Margin="0,0,0,10"><ProgressBar x:Name="QrLoading" Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Width="40" Height="40"/><Image x:Name="ImgQR" Stretch="Uniform"/></Grid>
+          <TextBlock Text="Số tiền thanh toán:" FontSize="13" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock x:Name="TxtAmount" Text="55.000đ" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PosAccent}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock x:Name="TxtPaymentStatus" Text="Chờ xác nhận chuyển khoản" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PosWarning}" HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="350" />
         </StackPanel>
       </ScrollViewer>
     </Border>

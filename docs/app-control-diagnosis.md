@@ -8,7 +8,7 @@ Evidence is saved locally in `artifacts/app-control-diagnostics`: Code Integrity
 
 - Both Debug and Release compile. That does not establish permission to execute the Debug binary.
 - The inspected SQL document store uses parameters and transactions. Password hashing uses PBKDF2-SHA256 with per-account salt; comparisons use fixed-time comparison. Saved login tokens use Windows DPAPI.
-- QR creation sends the configured bank/account name, account number, amount and order reference to `img.vietqr.io` over HTTPS. This is an external service, not an offline QR generator.
+- QR creation sends the configured bank code, account number, amount and order reference to `qr.sepay.vn` over HTTPS. This is an external service, not an offline QR generator.
 - No `Process.Start` calls were found in the searched application C# files. This limited review is not a full dependency audit, malware scan or security certification, and does not explain Microsoft's reputation decision.
 - No usable signing certificate was found in the certificate stores visible to this session. This may differ from the interactive developer's account or a hardware token.
 

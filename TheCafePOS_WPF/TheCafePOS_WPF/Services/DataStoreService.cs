@@ -45,11 +45,11 @@ namespace TheCafePOS_WPF.Services
             // Categories
             Categories = new List<Category>
             {
-                new Category { Id = "cat-1", Name = "🔥 HỒNG TRÀ & TRÀ ĐEN", DisplayOrder = 1 },
-                new Category { Id = "cat-2", Name = "🧋 TRÀ SỮA ĐẶC BIỆT", DisplayOrder = 2 },
-                new Category { Id = "cat-3", Name = "🍊 TRÀ TRÁI CÂY", DisplayOrder = 3 },
-                new Category { Id = "cat-4", Name = "🧊 MACHIATO & KEM", DisplayOrder = 4 },
-                new Category { Id = "cat-5", Name = "🍡 TOPPING THÊM", DisplayOrder = 5 }
+                new Category { Id = "cat-1", Name = "Hồng trà & trà đen", DisplayOrder = 1 },
+                new Category { Id = "cat-2", Name = "Trà sữa đặc biệt", DisplayOrder = 2 },
+                new Category { Id = "cat-3", Name = "Trà trái cây", DisplayOrder = 3 },
+                new Category { Id = "cat-4", Name = "Machiato & kem", DisplayOrder = 4 },
+                new Category { Id = "cat-5", Name = "Topping thêm", DisplayOrder = 5 }
             };
 
             // Products
@@ -93,17 +93,11 @@ namespace TheCafePOS_WPF.Services
 
         public void DeductPackagingForOrder(Order order)
         {
-            foreach (var item in order.Items.Where(i => i.IsBeverage))
+            foreach (var (id, needed) in PackagingRequired(order.Items))
             {
-                string cupId = string.IsNullOrEmpty(item.PackagingId)
-                    ? item.Size switch { "M" => "pack-1", "L" => "pack-2", "XL" => "pack-xl", _ => throw new InvalidOperationException("Size không hợp lệ.") }
-                    : item.PackagingId;
-                foreach (var id in new[] { cupId, "pack-3", "pack-5" })
-                {
-                    var packaging = PackagingInventory.FirstOrDefault(p => p.Id == id)
-                        ?? throw new InvalidOperationException("Chưa cấu hình bao bì: " + id);
-                    packaging.StockQuantity = checked(packaging.StockQuantity - item.Quantity);
-                }
+                var packaging = PackagingInventory.FirstOrDefault(p => p.Id == id)
+                    ?? throw new InvalidOperationException("Chưa cấu hình bao bì: " + id);
+                packaging.StockQuantity = checked(packaging.StockQuantity - needed);
             }
         }
     }

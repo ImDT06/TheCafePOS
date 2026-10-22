@@ -27,7 +27,7 @@ public partial class MainWindow
         popup.Child = new Border
         {
             Background = System.Windows.Media.Brushes.White, CornerRadius = new CornerRadius(10), Padding = new Thickness(4), Margin = new Thickness(8), Width = 230,
-            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE2, 0xE8, 0xF0)), BorderThickness = new Thickness(1),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xDF, 0xE7, 0xE2)), BorderThickness = new Thickness(1),
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Opacity = 0.18 },
             Child = new StackPanel { Children =
             {
@@ -42,7 +42,7 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: OrderItem item }) return;
         if (split && item.Quantity <= 1) { MessageBox.Show(this, "Dòng cần ít nhất 2 sản phẩm để tách."); return; }
-        var product = DataStoreService.Instance.Products.FirstOrDefault(p => p.Id == item.ProductId && p.IsActive);
+        var product = _store.Products.FirstOrDefault(p => p.Id == item.ProductId && p.IsActive);
         if (product is null) { MessageBox.Show(this, "Món đã ngừng bán. Hãy xóa và chọn món khác."); return; }
         var draft = OrderConfigurationService.Clone(item);
         if (split) draft.Quantity = 1;

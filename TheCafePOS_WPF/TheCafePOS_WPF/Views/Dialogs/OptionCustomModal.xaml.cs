@@ -37,7 +37,7 @@ public partial class OptionCustomModal : Window
         Heading.Text = product.Name;
         ProductPhoto.Source = MainWindow.LoadProductImage(product.ImageUrl);
         PhotoFrame.Visibility = ProductPhoto.Source is null ? Visibility.Collapsed : Visibility.Visible;
-        ContextLabel.Text = singleUnit ? "TÁCH 1 SẢN PHẨM ĐỂ CHỈNH RIÊNG" : _editing ? "CHỈNH SỬA MÓN TRONG GIỎ" : $"THÊM MÓN · ĐƠN #{dailyOrderNumber:D2}";
+        ContextLabel.Text = singleUnit ? "Tách 1 món để chỉnh riêng" : _editing ? "Sửa món trong giỏ" : $"Thêm món vào đơn #{dailyOrderNumber:D2}";
         PriceNotice.Text = _editing ? "Giá khi lưu được tính theo thực đơn hiện tại." : $"Giá từ {product.BasePrice + (!product.IsBeverage ? 0 : product.Sizes.Select(s => s.ExtraPrice).DefaultIfEmpty(0).Min()):N0}đ";
         _quantity = singleUnit ? 1 : Math.Clamp(existing?.Quantity ?? 1, 1, 999);
         _size = product.Sizes.FirstOrDefault(s => s.Name == existing?.Size)?.Name ?? product.Sizes.FirstOrDefault(s => s.Name == product.DefaultSize)?.Name ?? product.Sizes.FirstOrDefault()?.Name ?? "";
@@ -171,8 +171,8 @@ public partial class OptionCustomModal : Window
         foreach (var topping in _toppings)
         {
             topping.Label.Text = topping.Count.ToString(); topping.Minus.IsEnabled = topping.Count > 0; topping.Plus.IsEnabled = topping.Count < 10;
-            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#EFF7F2" : "#FFFFFF"));
-            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#12634B" : "#E2E8F0"));
+            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#E8F2ED" : "#FFFFFF"));
+            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#12634B" : "#DFE7E2"));
         }
         try
         {

@@ -81,7 +81,7 @@ public sealed class ProductConfigurationWindow : Window
         actions.Children.Add(new Button { Content = "Hủy thay đổi", IsCancel = true, Margin = new Thickness(0, 0, 12, 0) }); actions.Children.Add(save);
         // Detach before transferring the form into the shared dialog layout.
         ((ScrollViewer)Content).Content = null;
-        Core.DialogLayout.Apply(this, "Cấu hình món", product.Name + " · Size, tùy chọn và bao bì", root, actions);
+        Core.DialogLayout.Apply(this, "Cấu hình món", product.Name, root, actions);
         save.Click += (_, _) =>
         {
             try

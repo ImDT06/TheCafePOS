@@ -28,10 +28,10 @@ public partial class ReportWindow : Window
         Shifts.ItemsSource = store.Shifts.Where(s => s.EndTime?.Date >= from.Date && s.EndTime?.Date <= to.Date && (string.IsNullOrEmpty(shiftId) || s.Id == shiftId)).ToList();
         Refunds.ItemsSource = report.Refunds; CashEntries.ItemsSource = report.CashEntries;
         RenderInsights(report, from, to, string.IsNullOrEmpty(shiftId) ? null : shiftId);
-        Summary.Text = $"{report.Orders.Count} đơn | Bán hàng: {report.Revenue:N0}đ | Hoàn: {report.Refunded:N0}đ | Thuần: {report.NetRevenue:N0}đ\nBán tiền mặt: {report.Cash:N0}đ · Hoàn tiền mặt: {report.CashRefunded:N0}đ | Bán QR: {report.Transfer:N0}đ · Hoàn QR: {report.TransferRefunded:N0}đ\nThu ngoài bán hàng: {report.CashIn:N0}đ | Chi ngoài bán hàng: {report.CashOut:N0}đ";
+        Summary.Text = $"Tiền mặt: bán {report.Cash:N0}đ, hoàn {report.CashRefunded:N0}đ\nChuyển khoản: bán {report.Transfer:N0}đ, hoàn {report.TransferRefunded:N0}đ\nNgoài bán hàng: thu {report.CashIn:N0}đ, chi {report.CashOut:N0}đ";
         RevenueMetric.Text = $"{report.Revenue:N0}đ";
         NetMetric.Text = $"{report.NetRevenue:N0}đ";
-        NetMetric.Foreground = new System.Windows.Media.SolidColorBrush(report.NetRevenue < 0 ? System.Windows.Media.Color.FromRgb(185, 28, 28) : System.Windows.Media.Color.FromRgb(18, 99, 75));
+        NetMetric.Foreground = new System.Windows.Media.SolidColorBrush(report.NetRevenue < 0 ? System.Windows.Media.Color.FromRgb(0xB4, 0x23, 0x18) : System.Windows.Media.Color.FromRgb(18, 99, 75));
         OrderMetric.Text = report.Orders.Count.ToString("N0");
         AverageMetric.Text = $"{report.AverageOrderValue:N0}đ";
         AppliedRange.Text = $"Đang xem: {from:dd/MM/yyyy} – {to:dd/MM/yyyy} · {ShiftFilter.Text}";

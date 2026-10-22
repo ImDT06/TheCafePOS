@@ -11,6 +11,7 @@ namespace TheCafePOS_WPF.ViewModels
     {
         private readonly IDataStoreService _dataStore;
         private readonly IStickerPrinterService _stickerPrinter;
+        private readonly IHoldOrderService _holds;
 
         private int _currentDailyOrderNumber;
         private string _supabaseStatusText = "Dữ liệu tại máy (SQLite)";
@@ -18,7 +19,7 @@ namespace TheCafePOS_WPF.ViewModels
         private string _cashGivenInput = string.Empty;
 
         public ObservableCollection<OrderItem> CartItems { get; } = new ObservableCollection<OrderItem>();
-        public ObservableCollection<PrintedStickerInfo> RecentStickers => StickerPrinterService.Instance.RecentPrintedStickers;
+        public ObservableCollection<PrintedStickerInfo> RecentStickers => _stickerPrinter.RecentPrintedStickers;
 
         public string SupabaseStatusText
         {
@@ -26,10 +27,10 @@ namespace TheCafePOS_WPF.ViewModels
             set => SetProperty(ref _supabaseStatusText, value);
         }
 
-        public string NextDailyOrderNumberText => $"STT TIẾP THEO: #{_currentDailyOrderNumber:D2}";
+        public string NextDailyOrderNumberText => $"Số thứ tự tiếp theo: #{_currentDailyOrderNumber:D2}";
         public string CartTitleText => $"ĐƠN HÀNG #{_currentDailyOrderNumber:D2}";
         public string CartTimeText => $" ({DateTime.Now:HH:mm})";
-        public string HeldOrdersCountText => $"⏸️ ĐƠN GIỮ ({HoldOrderService.Instance.HeldOrders.Count})";
+        public string HeldOrdersCountText => $"Đơn giữ ({_holds.HeldOrders.Count})";
 
         public decimal GrandTotal => CartItems.Sum(i => i.TotalPrice);
         public string GrandTotalFormatted => $"{GrandTotal:N0}đ";
@@ -62,10 +63,11 @@ namespace TheCafePOS_WPF.ViewModels
 
         public string ChangeReturnedColor => (_cashGiven >= GrandTotal) ? "#27AE60" : "#E74C3C";
 
-        public MainViewModel()
+        public MainViewModel(IDataStoreService dataStore, IStickerPrinterService stickerPrinter, IHoldOrderService holds)
         {
-            _dataStore = DataStoreService.Instance;
-            _stickerPrinter = StickerPrinterService.Instance;
+            _dataStore = dataStore;
+            _stickerPrinter = stickerPrinter;
+            _holds = holds;
 
             _currentDailyOrderNumber = _dataStore.GetNextDailyOrderNumber();
             UpdateHeaderState();
@@ -89,10 +91,10 @@ namespace TheCafePOS_WPF.ViewModels
 
         public void CompleteOrder(string paymentMethod, decimal cashGiven = 0)
         {
-            var order = DataStoreService.Instance.Checkout(CartItems, paymentMethod, cashGiven, Guid.NewGuid().ToString());
+            var order = _dataStore.Checkout(CartItems, paymentMethod, cashGiven, Guid.NewGuid().ToString());
 
             _stickerPrinter.GenerateStickersForOrder(order);
-            DataStoreService.Instance.Save();
+            _dataStore.Save();
 
             CartItems.Clear();
             CashGivenInput = string.Empty;

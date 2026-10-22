@@ -4,6 +4,7 @@ using TheCafePOS_WPF.Services;
 
 if (args.Length < 2) throw new ArgumentException("Usage: <isolated data directory> <create|reload>");
 Environment.SetEnvironmentVariable("THECAFEPOS_DATA_DIR", Path.GetFullPath(args[0]));
+if (args[1] == "checkout-flow") { CheckoutFlowRegression.Run(); return; }
 if (args[1] == "americano") { AmericanoRegression.Run(); return; }
 if (args[1] == "management") { ManagementRegression.Run(); return; }
 if (args[1] == "menu-options") { MenuOptionsRegression.Run(); return; }
@@ -30,6 +31,9 @@ if (args[1] == "reload")
     Check(HoldOrderService.Instance.HeldOrders.Count == 1, "Held order survives process restart");
     var held = HoldOrderService.Instance.RecallOrder(HoldOrderService.Instance.HeldOrders[0].Id);
     Check(held?.Items.Count == 1 && HoldOrderService.Instance.HeldOrders.Count == 0, "Recall restores held cart");
+    HoldOrderService.Instance.HoldOrder(new System.Collections.ObjectModel.ObservableCollection<OrderItem>(held!.Items), held.TotalAmount);
+    Check(HoldOrderService.Instance.DiscardOrder(HoldOrderService.Instance.HeldOrders[0].Id) && HoldOrderService.Instance.HeldOrders.Count == 0, "Discarding a held order removes it");
+    Check(!HoldOrderService.Instance.DiscardOrder("missing"), "Discarding an unknown held order does nothing");
     Check(LocalDatabase.Instance.Read<List<HeldOrderInfo>>("held-orders")!.Count == 0, "Recall removal persisted");
     Check(VietQRService.Settings.AccountNo == "1234567890", "Bank configuration survives restart");
     Check(store.StockMovements.Any(m => m.Type == "Nhập kho" && m.Reason == "Receipt regression"), "Stock history survives restart");

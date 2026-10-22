@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Net.Http;
 using System.Media;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,30 +24,48 @@ namespace TheCafePOS_WPF.Views.Dialogs
             _dailyOrderNumber = dailyOrderNumber;
             _reference = reference;
 
-            TxtOrderNumber.Text = $"Mã Đơn: #{_dailyOrderNumber:D2}" + $"\nNội dung CK: {VietQRService.TransferMemo(reference)}";
+            TxtOrderNumber.Text = $"Mã đơn: #{_dailyOrderNumber:D2}" + $"\nNội dung CK: {VietQRService.TransferMemo(reference)}";
             TxtAmount.Text = $"{_amount:N0}đ";
 
             LoadQRImage();
         }
 
-        private void LoadQRImage()
+        private static readonly HttpClient Http = CreateHttp();
+        private static HttpClient CreateHttp()
+        {
+            var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TheCafePOS/1.0");
+            return http;
+        }
+
+        // Download the bytes ourselves: a BitmapImage pointed at a remote URI fails silently and leaves the QR blank.
+        private async void LoadQRImage()
         {
             try
             {
                 string qrUrl = VietQRService.GenerateQRUrl(_amount, _reference);
+                var bytes = await Http.GetByteArrayAsync(qrUrl);
                 var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(qrUrl, UriKind.Absolute);
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-
+                using (var stream = new MemoryStream(bytes))
+                {
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.StreamSource = stream;
+                    bitmap.EndInit();
+                }
+                bitmap.Freeze();
                 ImgQR.Source = bitmap;
+                QrLoading.Visibility = Visibility.Collapsed;
             }
             catch (Exception ex)
             {
-                TxtPaymentStatus.Text = "Không tải được mã QR: " + ex.Message;
+                _qrError = ex is InvalidOperationException ? ex.Message : "Không tải được mã QR. Kiểm tra kết nối mạng rồi mở lại.";
+                TxtPaymentStatus.Text = _qrError;
+                TxtPaymentStatus.Foreground = PosUi.Danger;
+                QrFrame.Visibility = Visibility.Collapsed;
             }
         }
+        private string? _qrError;
 
         private System.Windows.Threading.DispatcherTimer? _poll;
         private bool _checking;
@@ -53,7 +73,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
         // Every 4s ask SePay whether the transfer arrived; on a match, record a system approval and finish.
         private void StartAutoConfirm()
         {
-            if (!SePayService.Enabled) return;
+            if (!SePayService.Enabled || _qrError is not null) return;
             var since = DateTime.Now.AddMinutes(-2);
             string memo = VietQRService.TransferMemo(_reference);
             TxtPaymentStatus.Text = "Đang chờ khách chuyển khoản… (tự xác nhận qua SePay)";

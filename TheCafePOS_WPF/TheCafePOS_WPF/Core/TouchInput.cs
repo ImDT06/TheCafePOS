@@ -110,7 +110,7 @@ public sealed class NumberPad : Window
             var button=MakeButton(value==due && side.Children.Count==2 ? "Đúng số" : Format(value),()=>SetAmount(value));
             button.ToolTip="Đặt tiền khách đưa bằng "+Format(value);side.Children.Add(button);
         }
-        _error=new TextBlock { Foreground=Brushes.Firebrick,TextWrapping=TextWrapping.Wrap,MinHeight=20,Margin=new Thickness(0,6,0,4) };Grid.SetRow(_error,3);root.Children.Add(_error);
+        _error=new TextBlock { Foreground=TheCafePOS_WPF.Views.Dialogs.PosUi.Danger,TextWrapping=TextWrapping.Wrap,MinHeight=20,Margin=new Thickness(0,6,0,4) };Grid.SetRow(_error,3);root.Children.Add(_error);
         var actions=new UniformGrid { Columns=2 };Grid.SetRow(actions,4);root.Children.Add(actions);
         actions.Children.Add(new Button { Content="Hủy",IsCancel=true,Margin=new Thickness(0,0,8,0) });
         ApplyButton=new Button { Content="Áp dụng",IsDefault=true,Style=(Style)FindResource("PrimaryButton") };actions.Children.Add(ApplyButton);
@@ -146,6 +146,6 @@ public sealed class NumberPad : Window
         AmountPreview.Text=valid ? Format(number) : "—";
         _error.Text=valid || Input.Text.Length==0 ? "" : $"Nhập số nguyên {(_negative ? "" : "không âm, ")}tối đa {Format(_maximum)}.";
         BalancePreview.Text=!valid || _due<0 ? "" : number>=_due ? "Tiền thối: "+Format(number-_due) : "Còn thiếu: "+Format(_due-number);
-        BalancePreview.Foreground=number>=_due ? new SolidColorBrush(Color.FromRgb(18,99,75)) : Brushes.Firebrick;
+        BalancePreview.Foreground=number>=_due ? new SolidColorBrush(Color.FromRgb(18,99,75)) : TheCafePOS_WPF.Views.Dialogs.PosUi.Danger;
     }
 }

@@ -56,7 +56,8 @@ namespace TheCafePOS_WPF.Services
             var settings = Settings;
             Validate(settings);
             string memo = Uri.EscapeDataString(TransferMemo(orderRef));
-            return $"https://img.vietqr.io/image/{settings.BankId}-{settings.AccountNo}-compact2.png?amount={(long)amount}&addInfo={memo}&accountName={Uri.EscapeDataString(settings.AccountName)}";
+            // img.vietqr.io now redirects .png to SVG, which WPF cannot decode; SePay's generator returns a real PNG.
+            return $"https://qr.sepay.vn/img?acc={settings.AccountNo}&bank={Uri.EscapeDataString(settings.BankId)}&amount={(long)amount}&des={memo}&template=compact";
         }
     }
 }

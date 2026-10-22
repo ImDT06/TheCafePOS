@@ -16,7 +16,7 @@ namespace TheCafePOS_WPF.Services
         public string DisplaySummary => $"Đơn giữ {HeldTime:HH:mm:ss} - {Items.Count} món ({TotalAmount:N0}đ)";
     }
 
-    public class HoldOrderService
+    public class HoldOrderService : Interfaces.IHoldOrderService
     {
         private static HoldOrderService? _instance;
         public static HoldOrderService Instance => _instance ??= new HoldOrderService();
@@ -48,6 +48,9 @@ namespace TheCafePOS_WPF.Services
             try { DataStoreService.Instance.SaveWorkspace(HeldOrders, null); }
             catch { HeldOrders.Remove(heldInfo); throw; }
         }
+
+        // Customer left without paying: drop the held cart. Same removal and persistence as recalling it.
+        public bool DiscardOrder(string id) => RecallOrder(id) is not null;
 
         public HeldOrderInfo? RecallOrder(string id)
         {

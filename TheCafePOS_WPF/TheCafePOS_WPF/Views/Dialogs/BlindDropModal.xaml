@@ -1,4 +1,4 @@
-<Window Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.BlindDropModal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Chốt Ca Mù (Blind Drop)" Height="560" Width="520" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#F3F5F4">
+<Window xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes" Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.BlindDropModal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Chốt Ca Mù (Blind Drop)" Height="560" Width="520" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{StaticResource PosCanvas}">
   <Grid Margin="20">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
@@ -9,19 +9,18 @@
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <TextBlock Text="Chốt ca làm việc" VerticalAlignment="Center" Style="{StaticResource PageTitle}" TextWrapping="Wrap" />
       </StackPanel>
-      <TextBlock Text="Nhân viên tự đếm tiền thực tế trong két và nhập vào hệ thống:" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" />
+      <TextBlock Text="Nhân viên tự đếm tiền thực tế trong két và nhập vào hệ thống:" FontSize="13" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" />
     </StackPanel>
-    <Border Grid.Row="1" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="14" Padding="22">
+    <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource PosBorderStrong}" BorderThickness="1" CornerRadius="14" Padding="22">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="Tiền đầu ca:" FontWeight="SemiBold" Foreground="#475569" TextWrapping="Wrap" />
-          <TextBlock x:Name="TxtInitialCash" Text="0đ" FontSize="15" Foreground="#1E293B" FontWeight="Bold" Margin="0,2,0,15" TextWrapping="Wrap" />
-          <TextBlock Text="Nhập tổng tiền mặt đếm được cuối ca (đ):" FontWeight="Bold" Foreground="#12634B" TextWrapping="Wrap" />
-          <TextBox x:Name="TxtActualCashInput" touch:TouchInput.Label="Tiền mặt đếm được cuối ca" touch:TouchInput.Numeric="True" FontSize="20" FontWeight="Bold" Padding="8" Margin="0,5,0,15" PreviewTextInput="TxtActualCashInput_PreviewTextInput" />
-          <Border x:Name="PnlResult" Visibility="Collapsed" Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1" Padding="10" CornerRadius="5">
+          <TextBlock Text="Tiền đầu ca:" FontWeight="SemiBold" Foreground="{StaticResource PosMuted}" TextWrapping="Wrap" />
+          <TextBlock x:Name="TxtInitialCash" Text="0đ" FontSize="15" Foreground="{StaticResource PosInk}" FontWeight="Bold" Margin="0,2,0,15" TextWrapping="Wrap" />
+          <TextBox md:HintAssist.Hint="Tiền mặt đếm được cuối ca (đ)" x:Name="TxtActualCashInput" touch:TouchInput.Label="Tiền mặt đếm được cuối ca" touch:TouchInput.Numeric="True" FontSize="20" FontWeight="Bold" Margin="0,5,0,15" PreviewTextInput="TxtActualCashInput_PreviewTextInput" />
+          <Border x:Name="PnlResult" Visibility="Collapsed" Background="{StaticResource PosWarningSoft}" BorderBrush="{StaticResource PosWarning}" BorderThickness="1" Padding="10" CornerRadius="5">
             <StackPanel>
-              <TextBlock x:Name="TxtExpectedCash" Text="" FontSize="13" FontWeight="SemiBold" Foreground="#92400E" TextWrapping="Wrap" />
-              <TextBlock x:Name="TxtDiscrepancy" Text="Chênh lệch: 0đ" FontSize="15" FontWeight="Bold" Foreground="#DC2626" Margin="0,4,0,0" TextWrapping="Wrap" />
+              <TextBlock x:Name="TxtExpectedCash" Text="" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PosWarningInk}" TextWrapping="Wrap" />
+              <TextBlock x:Name="TxtDiscrepancy" Text="Chênh lệch: 0đ" FontSize="15" FontWeight="Bold" Foreground="{StaticResource PosDanger}" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </StackPanel>

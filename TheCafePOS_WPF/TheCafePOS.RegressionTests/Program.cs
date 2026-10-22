@@ -5,6 +5,7 @@ using TheCafePOS_WPF.Services;
 if (args.Length < 2) throw new ArgumentException("Usage: <isolated data directory> <create|reload>");
 Environment.SetEnvironmentVariable("THECAFEPOS_DATA_DIR", Path.GetFullPath(args[0]));
 if (args[1] == "checkout-flow") { CheckoutFlowRegression.Run(); return; }
+if (args[1] == "cart-viewmodel") { CartViewModelRegression.Run(); return; }
 if (args[1] == "americano") { AmericanoRegression.Run(); return; }
 if (args[1] == "management") { ManagementRegression.Run(); return; }
 if (args[1] == "menu-options") { MenuOptionsRegression.Run(); return; }

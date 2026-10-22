@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.ViewModels;
 using TheCafePOS_WPF.Views.Dialogs;
 namespace TheCafePOS_WPF;
 public partial class MainWindow
@@ -12,7 +13,7 @@ public partial class MainWindow
         var shift = _store.CurrentShift;
         TxtSession.Text = $"{user?.Username} ({user?.Role}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
         BtnManagement.Visibility = BtnReports.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
-        _checkoutError = null;
+        _vm.SetCheckoutError(null);
         RefreshCheckoutNotice();
     }
     private void Finance_Click(object sender, RoutedEventArgs e)
@@ -30,7 +31,7 @@ public partial class MainWindow
     private void Management_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        try { new ManagementWindow { Owner = this }.ShowDialog(); _selectedCategoryId = "ALL"; RenderCategories(); RenderProducts(); LoadChannels(); UpdateCartTotal(); }
+        try { new ManagementWindow { Owner = this }.ShowDialog(); _vm.SelectCategory(MainViewModel.AllCategories); RenderCategories(); RenderProducts(); LoadChannels(); UpdateCartTotal(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message); }
     }
     private void Reports_Click(object sender, RoutedEventArgs e)
@@ -42,7 +43,7 @@ public partial class MainWindow
     private void SwitchUser_Click(object sender, RoutedEventArgs e)
     {
         UtilitiesPopup.IsOpen = false;
-        if (_cartItems.Count > 0) { MessageBox.Show(this, "Hãy giữ hoặc hoàn tất đơn trước khi đổi nhân viên."); return; }
+        if (_vm.HasItems) { MessageBox.Show(this, "Hãy giữ hoặc hoàn tất đơn trước khi đổi nhân viên."); return; }
         try { _auth.Logout(); }
         catch (Exception ex) { MessageBox.Show(this, "Không thể xóa phiên đăng nhập: " + ex.Message); return; }
         Hide();

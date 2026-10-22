@@ -50,7 +50,8 @@ partial class Preview {
   category.IsDropDownOpen=true;category.ApplyTemplate();if(category.Template.FindName("PART_Popup",category)==null)throw new Exception("ComboBox popup missing");category.IsDropDownOpen=false;
   if(Descendants<ScrollViewer>((DependencyObject)management.Content).Count()==0)throw new Exception("Scrolling missing");
     Console.WriteLine("PASS search, selection, dropdown template and scroll hosts");
-  var main=new TheCafePOS_WPF.MainWindow {WindowState=WindowState.Normal,Left=-10000,Top=-10000,ShowInTaskbar=false};
+  var vm=new TheCafePOS_WPF.ViewModels.MainViewModel(DataStoreService.Instance,AuthService.Instance,HoldOrderService.Instance,StickerPrinterService.Instance);
+  var main=new TheCafePOS_WPF.MainWindow(vm,DataStoreService.Instance,AuthService.Instance) {WindowState=WindowState.Normal,Left=-10000,Top=-10000,ShowInTaskbar=false};
   main.Show();main.Activate();
   void Flush(){System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);main.UpdateLayout();}
   void Check(bool ok,string message){if(!ok)throw new Exception(message);Console.WriteLine("PASS "+message);}

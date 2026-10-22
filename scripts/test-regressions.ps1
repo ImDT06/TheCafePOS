@@ -7,6 +7,8 @@ $testAssembly = Join-Path $projectRoot 'TheCafePOS_WPF/TheCafePOS.RegressionTest
 $testDataDirectory = Join-Path $projectRoot ('artifacts/regression-' + [guid]::NewGuid().ToString('N'))
 dotnet $testAssembly (Join-Path $testDataDirectory 'checkout-flow') checkout-flow
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet $testAssembly (Join-Path $testDataDirectory 'cart-viewmodel') cart-viewmodel
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'menu-options') menu-options
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet $testAssembly (Join-Path $testDataDirectory 'report-dashboard') report-dashboard

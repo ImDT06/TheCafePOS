@@ -53,7 +53,7 @@ public partial class DataStoreService
     }
     private void LoadState()
     {
-        var state = LocalDatabase.Instance.Read<StoreState>("store");
+        var state = _db.Read<StoreState>("store");
         if (state is not null) Restore(state);
         if (state is null || state.MenuSchemaVersion < 1)
         {
@@ -115,7 +115,7 @@ public partial class DataStoreService
             });
         }
     }
-    public void Save() => LocalDatabase.Instance.Write("store", Snapshot());
+    public void Save() => _db.Write("store", Snapshot());
     private void Mutate(Action action)
     {
         var before = JsonSerializer.Deserialize<StoreState>(JsonSerializer.Serialize(Snapshot()))!;
@@ -124,19 +124,19 @@ public partial class DataStoreService
     }
     public void OpenShift(decimal initialCash)
     {
-        AuthService.Instance.RequireSignedIn();
+        _auth.RequireSignedIn();
         if (CurrentShift.Status == "Open") throw new InvalidOperationException("Ca hiện tại chưa đóng.");
         if (initialCash < 0) throw new InvalidOperationException("Tiền đầu ca không được âm.");
-        Mutate(() => CurrentShift = new Shift { CashierName = AuthService.Instance.CurrentUser!.Username, InitialCash = initialCash });
+        Mutate(() => CurrentShift = new Shift { CashierName = _auth.CurrentUser!.Username, InitialCash = initialCash });
     }
     public decimal ExpectedCash => CurrentShift.InitialCash + CompletedOrders.Where(o => o.ShiftId == CurrentShift.Id && o.PaymentMethod == "Cash" && o.PaymentStatus == "Completed").Sum(o => o.TotalAmount)
         + CashEntries.Where(e => e.ShiftId == CurrentShift.Id).Sum(e => e.SignedAmount)
         - Refunds.Where(r => r.ShiftId == CurrentShift.Id && r.Method == "Cash").Sum(r => r.Amount);
     public void RequireOpenShift()
     {
-        AuthService.Instance.RequireSignedIn();
-        if (AuthService.Instance.CurrentUser is null || CurrentShift.Status != "Open") throw new InvalidOperationException("Vui lòng mở ca trước khi thanh toán.");
-        if (CurrentShift.CashierName != AuthService.Instance.CurrentUser.Username) throw new InvalidOperationException($"Ca đang thuộc về {CurrentShift.CashierName}. Hãy đăng nhập đúng nhân viên.");
+        _auth.RequireSignedIn();
+        if (_auth.CurrentUser is null || CurrentShift.Status != "Open") throw new InvalidOperationException("Vui lòng mở ca trước khi thanh toán.");
+        if (CurrentShift.CashierName != _auth.CurrentUser.Username) throw new InvalidOperationException($"Ca đang thuộc về {CurrentShift.CashierName}. Hãy đăng nhập đúng nhân viên.");
     }
     public void CloseShift(decimal actualCash)
     {
@@ -164,14 +164,14 @@ public partial class DataStoreService
         decimal promoAmount = promos.Amount, loyaltyAmount = redeemPoints * PointValue;
         if (discount < 0 || discount != decimal.Truncate(discount) || discount + promoAmount + loyaltyAmount >= subtotal) throw new InvalidOperationException("Số tiền giảm phải là số nguyên, không âm và nhỏ hơn tạm tính.");
         if (discount > 0 && string.IsNullOrWhiteSpace(discountReason)) throw new InvalidOperationException("Nhập lý do giảm giá.");
-        if (DiscountNeedsApproval(subtotal, discount)) AuthService.Instance.RequireApproval(AuthService.DiscountApprovalAction(checkoutId, discount, discountReason));
+        if (DiscountNeedsApproval(subtotal, discount)) _auth.RequireApproval(AuthService.DiscountApprovalAction(checkoutId, discount, discountReason));
         decimal surcharge = appChannel is null ? 0 : Math.Ceiling(subtotal * appChannel.MarkupPercent / 100m / 1000m) * 1000m;
         decimal total = subtotal + surcharge - discount - promoAmount - loyaltyAmount;
         if (total <= 0) throw new InvalidOperationException("Tổng tiền phải lớn hơn 0.");
         if (method is not ("Cash" or "VietQR" or "Platform")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
         if (method == "Cash" && !Core.CashAmount.IsValid(cash)) throw new InvalidOperationException("Tiền khách đưa phải là số nguyên không âm, tối đa 999.999.999.999đ.");
         if (method == "Cash" && cash < total) throw new InvalidOperationException($"Tiền khách đưa còn thiếu {total - cash:N0}đ.");
-        if (method == "VietQR" && (!qrApproved || !AuthService.Instance.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
+        if (method == "VietQR" && (!qrApproved || !_auth.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
         if (serviceType is not ("Mang đi" or "Tại chỗ")) throw new InvalidOperationException("Chọn loại đơn hợp lệ.");
         var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promos.Names, CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, Channel = channel, ChannelSurcharge = surcharge, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
         foreach (var item in items) { item.OrderId = order.Id; item.ReadyQuantity = item.DeliveredQuantity = 0; }
@@ -192,7 +192,7 @@ public partial class DataStoreService
     }
     public void SaveProduct(Product product)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(product.Name) || product.BasePrice <= 0 || product.BasePrice != decimal.Truncate(product.BasePrice) || !Categories.Any(c => c.Id == product.CategoryId)) throw new InvalidOperationException("Nhập tên món, giá nguyên dương và danh mục hợp lệ.");
         if (!OrderConfigurationService.Levels.Contains(product.DefaultSugar) || !OrderConfigurationService.Levels.Contains(product.DefaultIce)) throw new InvalidOperationException("Mức đường/đá mặc định không hợp lệ.");
         if ((product.AllowSugar && product.SugarChoices != null && !product.SugarChoices.Contains(product.DefaultSugarChoice)) ||
@@ -205,14 +205,14 @@ public partial class DataStoreService
     }
     public void SaveCategory(Category category)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(category.Name)) throw new InvalidOperationException("Tên danh mục không được trống.");
         Mutate(() => { Categories.RemoveAll(c => c.Id == category.Id); Categories.Add(category); });
     }
 
     public void UpdateStock(string packagingId, string operation, int quantity, string reason)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(reason)) throw new InvalidOperationException("Vui lòng nhập lý do hoặc thông tin phiếu nhập/kiểm kê.");
         var item = PackagingInventory.FirstOrDefault(p => p.Id == packagingId)
             ?? throw new InvalidOperationException("Bao bì không tồn tại.");
@@ -237,7 +237,7 @@ public partial class DataStoreService
         StockMovements.Add(new StockMovement
         {
             PackagingId = item.Id, PackagingName = item.Name, Before = before, After = item.StockQuantity,
-            Type = type, Reason = reason, OrderId = orderId, Operator = AuthService.Instance.CurrentUser?.Username ?? ""
+            Type = type, Reason = reason, OrderId = orderId, Operator = _auth.CurrentUser?.Username ?? ""
         });
     }
 }

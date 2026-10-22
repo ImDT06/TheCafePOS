@@ -1,16 +1,21 @@
 using System.IO;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Services;
 
 // Copies the local database into a Backups folder next to it; keeps the newest copies only.
-public static class BackupService
+public sealed class BackupService : IBackupService
 {
     private const int Keep = 14;
-    public static string Folder => Path.Combine(Path.GetDirectoryName(LocalDatabase.Instance.DatabasePath)!, "Backups");
+    private readonly LocalDatabase _db;
 
-    public static string BackupNow()
+    public BackupService(LocalDatabase db) => _db = db;
+
+    public string Folder => Path.Combine(Path.GetDirectoryName(_db.DatabasePath)!, "Backups");
+
+    public string BackupNow()
     {
-        string source = LocalDatabase.Instance.DatabasePath;
+        string source = _db.DatabasePath;
         if (!File.Exists(source)) throw new InvalidOperationException("Chưa có dữ liệu để sao lưu.");
         Directory.CreateDirectory(Folder);
         string target = Path.Combine(Folder, $"{Path.GetFileNameWithoutExtension(source)}-{DateTime.Now:yyyyMMdd-HHmmss}{Path.GetExtension(source)}");
@@ -22,7 +27,7 @@ public static class BackupService
     }
 
     // At most one automatic backup per day; failures never stop the POS.
-    public static void BackupDailyQuietly()
+    public void BackupDailyQuietly()
     {
         try
         {
@@ -32,6 +37,6 @@ public static class BackupService
         catch (Exception) { }
     }
 
-    public static DateTime? LastBackup =>
+    public DateTime? LastBackup =>
         Directory.Exists(Folder) ? new DirectoryInfo(Folder).GetFiles().Select(f => (DateTime?)f.CreationTime).Max() : null;
 }

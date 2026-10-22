@@ -2,21 +2,26 @@ using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Services;
 
 // Polls SePay's transaction list to confirm a VietQR transfer automatically.
 // Docs: https://docs.sepay.vn (User API → transactions/list). Manual manager approval stays as the fallback.
-public static class SePayService
+public sealed class SePayService : ISePayService
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-    public static bool Enabled => !string.IsNullOrWhiteSpace(VietQRService.Settings.SePayToken);
+    private readonly IVietQRService _bank;
+
+    public SePayService(IVietQRService bank) => _bank = bank;
+
+    public bool Enabled => !string.IsNullOrWhiteSpace(_bank.Settings.SePayToken);
 
     // Returns the SePay transaction id of an incoming transfer matching memo and exact amount, or null.
-    public static async Task<string?> FindTransferAsync(string memo, decimal amount, DateTime since, CancellationToken ct = default)
+    public async Task<string?> FindTransferAsync(string memo, decimal amount, DateTime since, CancellationToken ct = default)
     {
-        var settings = VietQRService.Settings;
+        var settings = _bank.Settings;
         string url = $"https://my.sepay.vn/userapi/transactions/list?account_number={Uri.EscapeDataString(settings.AccountNo)}&limit=50"
             + $"&transaction_date_min={Uri.EscapeDataString(since.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))}";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);

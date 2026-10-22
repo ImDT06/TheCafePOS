@@ -11,18 +11,22 @@ public partial class ManagementWindow : Window
     private readonly ICustomerService _customers;
     private readonly IAuthService _auth;
     private readonly IDialogFactory _dialogs;
+    private readonly IVietQRService _bank;
+    private readonly IBackupService _backup;
     private string? _productId, _categoryId;
     private string _productImageUrl = "";
-    public ManagementWindow(ICatalogService catalog, ICustomerService customers, IAuthService auth, IDialogFactory dialogs)
+    public ManagementWindow(ICatalogService catalog, ICustomerService customers, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup)
     {
         _catalog = catalog;
         _customers = customers;
         _auth = auth;
         _dialogs = dialogs;
+        _bank = bank;
+        _backup = backup;
         _auth.RequireManager();
         InitializeComponent(); Refresh();
-        var bank = VietQRService.Settings;
-        BankCode.Text = bank.BankId; BankAccount.Text = bank.AccountNo; BankOwner.Text = bank.AccountName; LoadPromoAndBackup(); SePayToken.Password = bank.SePayToken;
+        var bankSettings = _bank.Settings;
+        BankCode.Text = bankSettings.BankId; BankAccount.Text = bankSettings.AccountNo; BankOwner.Text = bankSettings.AccountName; LoadPromoAndBackup(); SePayToken.Password = bankSettings.SePayToken;
     }
     private void Refresh()
     {
@@ -194,7 +198,7 @@ public partial class ManagementWindow : Window
     }
     private void RefreshBackupInfo()
     {
-        BackupInfo.Text = BackupService.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
+        BackupInfo.Text = _backup.LastBackup is DateTime last ? $"Lần sao lưu gần nhất: {last:dd/MM/yyyy HH:mm}" : "Chưa có bản sao lưu nào.";
         MemberInfo.Text = $"{_customers.Customers.Count} thành viên, {_customers.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
     private void OpenIngredients_Click(object sender, RoutedEventArgs e) { _dialogs.Create<IngredientWindow>(this).ShowDialog(); Refresh(); }
@@ -208,13 +212,13 @@ public partial class ManagementWindow : Window
     private void OpenCustomers_Click(object sender, RoutedEventArgs e) { _dialogs.Create<CustomerListWindow>(this).ShowDialog(); RefreshBackupInfo(); }
     private void BackupNow_Click(object sender, RoutedEventArgs e)
     {
-        try { BackupService.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }
+        try { _backup.BackupNow(); RefreshBackupInfo(); Toast.Show(this, "Đã sao lưu dữ liệu."); }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
     private void OpenBackups_Click(object sender, RoutedEventArgs e)
     {
-        System.IO.Directory.CreateDirectory(BackupService.Folder);
-        System.Diagnostics.Process.Start("explorer.exe", BackupService.Folder);
+        System.IO.Directory.CreateDirectory(_backup.Folder);
+        System.Diagnostics.Process.Start("explorer.exe", _backup.Folder);
     }
-    private void SaveBank_Click(object sender, RoutedEventArgs e) => Run(() => VietQRService.SaveSettings(new BankSettings { BankId = BankCode.Text.Trim(), AccountNo = BankAccount.Text.Trim(), AccountName = BankOwner.Text.Trim(), SePayToken = SePayToken.Password.Trim() }));
+    private void SaveBank_Click(object sender, RoutedEventArgs e) => Run(() => _bank.SaveSettings(new BankSettings { BankId = BankCode.Text.Trim(), AccountNo = BankAccount.Text.Trim(), AccountName = BankOwner.Text.Trim(), SePayToken = SePayToken.Password.Trim() }));
 }

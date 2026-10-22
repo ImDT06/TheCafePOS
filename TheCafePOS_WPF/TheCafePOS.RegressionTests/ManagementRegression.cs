@@ -15,8 +15,8 @@ internal static class ManagementRegression
             try { action(); } catch (InvalidOperationException) { Console.WriteLine("PASS " + message); return; }
             throw new Exception("Expected rejection: " + message);
         }
-        var store = DataStoreService.Instance;
-        var auth = AuthService.Instance;
+        var store = TestHost.Store;
+        var auth = TestHost.Auth;
         auth.CreateAccount("mgmt-owner", "OwnerPass!2026", "Owner");
         auth.Login("mgmt-owner", "OwnerPass!2026");
 

@@ -21,8 +21,8 @@ void Reject(Action action, string message)
     throw new Exception("Expected rejection: " + message);
 }
 
-var store = DataStoreService.Instance;
-var auth = AuthService.Instance;
+var store = TestHost.Store;
+var auth = TestHost.Auth;
 if (args[1] == "reload")
 {
     Check(!auth.NeedsSetup, "Accounts survive process restart");
@@ -30,14 +30,14 @@ if (args[1] == "reload")
     Check(store.CompletedOrders.Count == 3, "Completed orders survive process restart");
     Check(store.Shifts.Count == 2 && store.CurrentShift.Status == "Closed", "Shift history survives process restart");
     Check(store.Products.Any(p => p.Name == "Regression drink"), "Menu survives process restart");
-    Check(HoldOrderService.Instance.HeldOrders.Count == 1, "Held order survives process restart");
-    var held = HoldOrderService.Instance.RecallOrder(HoldOrderService.Instance.HeldOrders[0].Id);
-    Check(held?.Items.Count == 1 && HoldOrderService.Instance.HeldOrders.Count == 0, "Recall restores held cart");
-    HoldOrderService.Instance.HoldOrder(new System.Collections.ObjectModel.ObservableCollection<OrderItem>(held!.Items), held.TotalAmount);
-    Check(HoldOrderService.Instance.DiscardOrder(HoldOrderService.Instance.HeldOrders[0].Id) && HoldOrderService.Instance.HeldOrders.Count == 0, "Discarding a held order removes it");
-    Check(!HoldOrderService.Instance.DiscardOrder("missing"), "Discarding an unknown held order does nothing");
-    Check(LocalDatabase.Instance.Read<List<HeldOrderInfo>>("held-orders")!.Count == 0, "Recall removal persisted");
-    Check(VietQRService.Settings.AccountNo == "1234567890", "Bank configuration survives restart");
+    Check(TestHost.Holds.HeldOrders.Count == 1, "Held order survives process restart");
+    var held = TestHost.Holds.RecallOrder(TestHost.Holds.HeldOrders[0].Id);
+    Check(held?.Items.Count == 1 && TestHost.Holds.HeldOrders.Count == 0, "Recall restores held cart");
+    TestHost.Holds.HoldOrder(new System.Collections.ObjectModel.ObservableCollection<OrderItem>(held!.Items), held.TotalAmount);
+    Check(TestHost.Holds.DiscardOrder(TestHost.Holds.HeldOrders[0].Id) && TestHost.Holds.HeldOrders.Count == 0, "Discarding a held order removes it");
+    Check(!TestHost.Holds.DiscardOrder("missing"), "Discarding an unknown held order does nothing");
+    Check(TestHost.Database.Read<List<HeldOrderInfo>>("held-orders")!.Count == 0, "Recall removal persisted");
+    Check(TestHost.Bank.Settings.AccountNo == "1234567890", "Bank configuration survives restart");
     Check(store.StockMovements.Any(m => m.Type == "Nhập kho" && m.Reason == "Receipt regression"), "Stock history survives restart");
     Check(store.PackagingInventory.Single(p => p.Id == "pack-5").StockQuantity == 22, "Counted and adjusted stock survives restart");
     Console.WriteLine($"Completed {checks} restart checks.");
@@ -88,7 +88,7 @@ Check(order.Items[0].Quantity == 2, "Completed order is independent of cart edit
 cart[0].Quantity = 999; cart[0].Size = "XL";
 Reject(() => store.Checkout(cart, "Cash", 9999999999, "stock-failure"), "Reject insufficient packaging");
 Check(store.CompletedOrders.Count == 1 && store.PackagingInventory.Single(p => p.Id == "pack-1").StockQuantity == stockBefore - 2, "Failed checkout rolls back stock and orders");
-Check(LocalDatabase.Instance.Read<StoreState>("store")!.Orders.Count == 1, "Failed checkout leaves persisted state unchanged");
+Check(TestHost.Database.Read<StoreState>("store")!.Orders.Count == 1, "Failed checkout leaves persisted state unchanged");
 Check(store.StockMovements.All(m => m.OrderId != "stock-failure"), "Failed sale leaves no stock movement");
 cart[0].Quantity = 1; cart[0].Size = "M";
 auth.Approve("owner", "OwnerPass!2026", AuthService.PaymentApprovalAction("qr-order", 25000));
@@ -107,8 +107,8 @@ Check(store.PackagingInventory.Single(p => p.Id == "pack-xl").StockQuantity == x
 Check(store.ExpectedCash == 45000, "New shift totals only its own cash orders");
 var secondShiftId = store.CurrentShift.Id;
 store.CloseShift(45000);
-HoldOrderService.Instance.HoldOrder(cart, 25000, "restart test");
-VietQRService.SaveSettings(new BankSettings { BankId = "MB", AccountNo = "1234567890", AccountName = "TEST ACCOUNT" });
+TestHost.Holds.HoldOrder(cart, 25000, "restart test");
+TestHost.Bank.SaveSettings(new BankSettings { BankId = "MB", AccountNo = "1234567890", AccountName = "TEST ACCOUNT" });
 var report = ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today);
 Check(report.Orders.Count == 3 && report.Revenue == 100000 && report.Cash == 75000 && report.Transfer == 25000, "Report payment totals reconcile");
 Check(report.Products.Single().Quantity == 4, "Product report sums quantities");
@@ -116,7 +116,7 @@ Check(ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today,
 Check(ReportService.Build(store.CompletedOrders, DateTime.Today.AddDays(-1), DateTime.Today.AddDays(-1)).Revenue == 0, "Report date filter");
 Reject(() => ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today.AddDays(-1)), "Reject reversed date range");
 Check(ReportService.ToCsv(report).Contains("cash-order"), "CSV includes persisted order reference");
-var saved = LocalDatabase.Instance.Read<StoreState>("store")!;
+var saved = TestHost.Database.Read<StoreState>("store")!;
 Check(saved.Orders.Count == 3 && saved.Shifts.Count == 2 && saved.CurrentShift.Status == "Closed", "SQLite snapshot contains all completed transactions");
 int initialStraws = store.PackagingInventory.Single(p => p.Id == "pack-5").StockQuantity;
 int initialMovements = store.StockMovements.Count;
@@ -139,7 +139,7 @@ store.UpdateStock("pack-5", "Kiểm kê", 20, "Physical count");
 store.UpdateStock("pack-5", "Điều chỉnh", -3, "Damaged stock");
 store.UpdateStock("pack-5", "Điều chỉnh", 5, "Correction");
 Check(store.PackagingInventory.Single(p => p.Id == "pack-5").StockQuantity == 22 && store.StockMovements.Last().Change == 5, "Positive and negative adjustments apply correctly");
-var inventorySnapshot = LocalDatabase.Instance.Read<StoreState>("store")!;
+var inventorySnapshot = TestHost.Database.Read<StoreState>("store")!;
 Check(inventorySnapshot.StockMovements.Count == initialMovements + 5 && inventorySnapshot.Packaging.Single(p => p.Id == "pack-5").StockQuantity == 22, "Stock and audit saved together");
 Check(System.Text.Json.JsonSerializer.Deserialize<StoreState>("{}")!.StockMovements.Count == 0, "Older snapshots default to empty stock history");
 Check(store.Products.Where(p => p.CategoryId == "cat-5").All(p => p.IsTopping && !p.SoldSeparately), "Seed topping migration separates extras from drinks");
@@ -160,14 +160,14 @@ var standalone = OrderConfigurationService.Create(extraProduct, "", 100, 100, 3,
 var stockSnapshot = store.PackagingInventory.ToDictionary(p => p.Id, p => p.StockQuantity);
 store.DeductPackagingForOrder(new Order { Items = new() { standalone } });
 Check(!standalone.IsBeverage && store.PackagingInventory.All(p => p.StockQuantity == stockSnapshot[p.Id]), "Standalone toppings consume no drink packaging");
-var heldCount = HoldOrderService.Instance.HeldOrders.Count;
-HoldOrderService.Instance.HoldOrder(new ObservableCollection<OrderItem> { configured }, configured.TotalPrice);
-var customHeld = HoldOrderService.Instance.HeldOrders.First();
+var heldCount = TestHost.Holds.HeldOrders.Count;
+TestHost.Holds.HoldOrder(new ObservableCollection<OrderItem> { configured }, configured.TotalPrice);
+var customHeld = TestHost.Holds.HeldOrders.First();
 Check(customHeld.Items.Single().Note == configured.Note && customHeld.Items.Single().SelectedToppings.Single().Quantity == 2 && customHeld.Items.Single().PackagingId == "pack-2", "Held order preserves all customization fields");
-HoldOrderService.Instance.RecallOrder(customHeld.Id);
-Check(HoldOrderService.Instance.HeldOrders.Count == heldCount, "Custom held test leaves original held orders intact");
+TestHost.Holds.RecallOrder(customHeld.Id);
+Check(TestHost.Holds.HeldOrders.Count == heldCount, "Custom held test leaves original held orders intact");
 var thirdCup = OrderConfigurationService.Clone(configured); thirdCup.Quantity = 1;
-var labels = StickerPrinterService.Instance.GenerateStickersForOrder(new Order { Items = new() { configured, thirdCup, standalone } });
+var labels = TestHost.Stickers.GenerateStickersForOrder(new Order { Items = new() { configured, thirdCup, standalone } });
 Check(labels.Count == 3 && labels.Select(s => s.Index).SequenceEqual(new[] { 1, 2, 3 }) && labels.All(s => s.Total == 3), "Labels numbered across entire drink order excluding standalone toppings");
 Console.WriteLine($"Completed {checks} regression checks.");
 

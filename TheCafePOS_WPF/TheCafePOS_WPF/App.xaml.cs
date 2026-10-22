@@ -22,8 +22,12 @@ namespace TheCafePOS_WPF
         public static IServiceProvider BuildServices()
         {
             var services = new ServiceCollection();
-            // Các service vẫn giữ .Instance trong giai đoạn chuyển tiếp, nên container trỏ về đúng các instance đó.
-            services.AddSingleton<IDataStoreService>(_ => DataStoreService.Instance);
+            services.AddSingleton(_ => new LocalDatabase());
+            // Auth reads the current shift only when an account change needs it, which breaks the auth <-> store cycle.
+            services.AddSingleton(sp => new AuthService(sp.GetRequiredService<LocalDatabase>(), () => sp.GetRequiredService<IShiftService>().CurrentShift));
+            services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<AuthService>());
+            services.AddSingleton<DataStoreService>();
+            services.AddSingleton<IDataStoreService>(sp => sp.GetRequiredService<DataStoreService>());
             // Each focused view resolves to the same store, so all of them see one consistent snapshot.
             services.AddSingleton<ICatalogService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IInventoryService>(sp => sp.GetRequiredService<IDataStoreService>());
@@ -33,9 +37,13 @@ namespace TheCafePOS_WPF
             services.AddSingleton<IPromotionService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IStoreSettingsService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IOrderService>(sp => sp.GetRequiredService<IDataStoreService>());
-            services.AddSingleton<IAuthService>(_ => AuthService.Instance);
-            services.AddSingleton<IHoldOrderService>(_ => HoldOrderService.Instance);
-            services.AddSingleton<IStickerPrinterService>(_ => StickerPrinterService.Instance);
+            services.AddSingleton<HoldOrderService>();
+            services.AddSingleton<IHoldOrderService>(sp => sp.GetRequiredService<HoldOrderService>());
+            services.AddSingleton<StickerPrinterService>();
+            services.AddSingleton<IStickerPrinterService>(sp => sp.GetRequiredService<StickerPrinterService>());
+            services.AddSingleton<IVietQRService, VietQRService>();
+            services.AddSingleton<ISePayService, SePayService>();
+            services.AddSingleton<IBackupService, BackupService>();
             services.AddSingleton<Views.IDialogFactory, Views.DialogFactory>();
             services.AddTransient<ViewModels.MainViewModel>();
             services.AddTransient<MainWindow>();
@@ -45,7 +53,6 @@ namespace TheCafePOS_WPF
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            System.Threading.Tasks.Task.Run(BackupService.BackupDailyQuietly);
             // Esc closes any dialog; the main POS window is never closed by keyboard.
             EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewKeyDownEvent, new System.Windows.Input.KeyEventHandler((s, k) =>
             {
@@ -66,6 +73,7 @@ namespace TheCafePOS_WPF
                 _instanceMutex = new Mutex(true, "Local\\TheCafePOS_WPF_SingleInstance", out bool created);
                 if (!created) { MessageBox.Show("TheCafePOS đang chạy. Vui lòng sử dụng cửa sổ hiện có."); Shutdown(); return; }
                 Services = BuildServices();
+                System.Threading.Tasks.Task.Run(Services.GetRequiredService<IBackupService>().BackupDailyQuietly);
                 _ = Services.GetRequiredService<IDataStoreService>();
                 if (!Services.GetRequiredService<IAuthService>().TryRestoreSession() && Services.GetRequiredService<Views.IDialogFactory>().Create<LoginWindow>(null).ShowDialog() != true) { Shutdown(); return; }
                 MainWindow = Services.GetRequiredService<MainWindow>();

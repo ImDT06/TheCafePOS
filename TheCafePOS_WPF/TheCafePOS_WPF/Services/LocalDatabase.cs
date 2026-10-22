@@ -8,8 +8,6 @@ namespace TheCafePOS_WPF.Services;
 // together so a failed write cannot leave a partially completed sale.
 public sealed class LocalDatabase
 {
-    static LocalDatabase() { }
-    public static LocalDatabase Instance { get; } = new();
     public string DatabasePath { get; }
     public LocalDatabase(string? path = null)
     {

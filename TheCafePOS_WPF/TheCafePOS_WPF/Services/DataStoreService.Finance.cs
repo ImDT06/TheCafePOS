@@ -26,8 +26,8 @@ public partial class DataStoreService
         if (amount > order.RefundableAmount) throw new InvalidOperationException("Số tiền vượt phần còn được hoàn của đơn.");
         if (order.PaymentMethod == "Cash" && amount > ExpectedCash) throw new InvalidOperationException("Tiền dự kiến trong ngăn kéo không đủ. Ghi nhận bổ sung tiền trước khi hoàn.");
         if (order.PaymentMethod == "VietQR" && string.IsNullOrWhiteSpace(reference)) throw new InvalidOperationException("Nhập mã giao dịch chuyển khoản hoàn tiền đã thực hiện.");
-        var approver = AuthService.Instance.RequireApproval(RefundAction(id, orderId, amount, reason, reference));
-        var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, Reason = reason.Trim(), Reference = reference.Trim(), Operator = AuthService.Instance.CurrentUser!.Username, Approver = approver };
+        var approver = _auth.RequireApproval(RefundAction(id, orderId, amount, reason, reference));
+        var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, Reason = reason.Trim(), Reference = reference.Trim(), Operator = _auth.CurrentUser!.Username, Approver = approver };
         Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); RevokeLoyalty(order, amount); });
         return entry;
     }
@@ -56,7 +56,7 @@ public partial class DataStoreService
                 if (Ingredients.FirstOrDefault(i => i.Id == move.IngredientId) is { } ing)
                 {
                     ing.Stock -= move.Change;
-                    IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = "Hủy đơn", Change = -move.Change, After = ing.Stock, Reason = tag, Operator = AuthService.Instance.CurrentUser?.Username ?? "" });
+                    IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = "Hủy đơn", Change = -move.Change, After = ing.Stock, Reason = tag, Operator = _auth.CurrentUser?.Username ?? "" });
                 }
             order.FulfillmentStatus = "Dừng phục vụ";
             // Payment stays "Completed": the full refund entry already nets the revenue to zero in reports.
@@ -77,8 +77,8 @@ public partial class DataStoreService
         ValidateMoney(amount, reason);
         if (type is not ("In" or "Out")) throw new InvalidOperationException("Loại thu/chi không hợp lệ.");
         if (type == "Out" && amount > ExpectedCash) throw new InvalidOperationException("Số tiền chi vượt tiền dự kiến trong ngăn kéo.");
-        var approver = AuthService.Instance.RequireApproval(CashAction(id, type, amount, reason));
-        var entry = new CashEntry { Id = id, ShiftId = CurrentShift.Id, Type = type, Amount = amount, Reason = reason.Trim(), Operator = AuthService.Instance.CurrentUser!.Username, Approver = approver };
+        var approver = _auth.RequireApproval(CashAction(id, type, amount, reason));
+        var entry = new CashEntry { Id = id, ShiftId = CurrentShift.Id, Type = type, Amount = amount, Reason = reason.Trim(), Operator = _auth.CurrentUser!.Username, Approver = approver };
         Mutate(() => CashEntries.Add(entry));
         return entry;
     }

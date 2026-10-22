@@ -24,7 +24,7 @@ public partial class DataStoreService
     }
     public Customer RegisterCustomer(string phone, string name)
     {
-        AuthService.Instance.RequireSignedIn();
+        _auth.RequireSignedIn();
         var p = NormalizePhone(phone);
         if (Customers.Any(c => c.Phone == p)) throw new InvalidOperationException("Số điện thoại đã là thành viên.");
         var customer = new Customer { Phone = p, Name = string.IsNullOrWhiteSpace(name) ? "Khách " + p[^4..] : name.Trim() };
@@ -35,7 +35,7 @@ public partial class DataStoreService
     // The phone is the member key, so changing it moves the purchase history to the new number as well.
     public void UpdateCustomer(string phone, string name, string? newPhone = null)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Nhập tên khách hàng.");
         string target = string.IsNullOrWhiteSpace(newPhone) ? customer.Phone : NormalizePhone(newPhone);
@@ -53,17 +53,17 @@ public partial class DataStoreService
     // Removes the member profile and its points; paid orders keep their phone for reports and refunds still work.
     public void DeleteCustomer(string phone)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
         Mutate(() => Customers.Remove(customer));
     }
     public List<Order> CustomerOrders(string phone) => CompletedOrders.Where(o => o.CustomerPhone == phone).OrderByDescending(o => o.CreatedAt).ToList();
 
     public bool DiscountNeedsApproval(decimal subtotal, decimal discount) =>
-        discount > 0 && !AuthService.Instance.IsManager && discount > Math.Floor(subtotal * Settings.CashierDiscountLimitPercent / 100m);
+        discount > 0 && !_auth.IsManager && discount > Math.Floor(subtotal * Settings.CashierDiscountLimitPercent / 100m);
     public void SaveSettings(StoreSettings settings)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (settings.CashierDiscountLimitPercent is < 0 or > 100) throw new InvalidOperationException("Hạn mức giảm giá phải từ 0 đến 100%.");
         if (settings.Channels.Any(c => string.IsNullOrWhiteSpace(c.Name) || c.Name == StoreSettings.Counter || c.MarkupPercent is < 0 or > 100)) throw new InvalidOperationException("Kênh bán cần tên hợp lệ và phụ thu từ 0 đến 100%.");
         if (settings.Channels.GroupBy(c => c.Name.Trim(), StringComparer.CurrentCultureIgnoreCase).Any(g => g.Count() > 1)) throw new InvalidOperationException("Tên kênh bán bị trùng.");
@@ -72,7 +72,7 @@ public partial class DataStoreService
 
     public void DeletePromotion(string id)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         Mutate(() => Promotions.RemoveAll(p => p.Id == id));
     }
 
@@ -127,7 +127,7 @@ public partial class DataStoreService
 
     public void SavePromotion(Promotion promo)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(promo.Name)) throw new InvalidOperationException("Nhập tên chương trình.");
         if (promo.Type == "Giờ vàng" && promo.Percent is <= 0 or >= 100) throw new InvalidOperationException("Mức giảm phải từ 1 đến 99%.");
         if (promo.Type == "Mua X tặng Y" && (promo.BuyQuantity < 1 || promo.FreeQuantity < 1)) throw new InvalidOperationException("Số lượng mua và tặng phải từ 1 trở lên.");

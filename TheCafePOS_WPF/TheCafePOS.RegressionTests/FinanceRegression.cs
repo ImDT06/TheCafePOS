@@ -11,7 +11,7 @@ internal static class FinanceRegression
             try { action(); } catch (InvalidOperationException) { checks++; Console.WriteLine("PASS " + label); return; }
             throw new Exception("Expected rejection: " + label);
         }
-        var store = DataStoreService.Instance; var auth = AuthService.Instance;
+        var store = TestHost.Store; var auth = TestHost.Auth;
         auth.Login("owner", "OwnerPass!2026");
         if (reload)
         {

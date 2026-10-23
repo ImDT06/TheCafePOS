@@ -306,7 +306,7 @@ public sealed class StockReportWindow : Window
         FormUi.Style(this);
         IngredientWindow.AddColumns(_low, ("Loại", "Kind", "", false), ("Mặt hàng", "Name", "", true), ("Tồn hiện tại", "StockLabel", "", false), ("Ngưỡng cảnh báo", "Threshold", "0.##", false));
         var rowStyle = new Style(typeof(DataGridRow));
-        rowStyle.Triggers.Add(new DataTrigger { Binding = new System.Windows.Data.Binding("IsOut"), Value = true, Setters = { new Setter(BackgroundProperty, new SolidColorBrush(Color.FromRgb(0xFD, 0xEC, 0xEA))) } });
+        rowStyle.Triggers.Add(new DataTrigger { Binding = new System.Windows.Data.Binding("IsOut"), Value = true, Setters = { new Setter(BackgroundProperty, Palette.DangerSoft) } });
         _low.RowStyle = rowStyle;
         IngredientWindow.AddColumns(_loss, ("Loại", "Kind", "", false), ("Mặt hàng", "Name", "", true), ("Số lượng mất", "QuantityLabel", "", false), ("Số lần", "Events", "", false), ("Giá trị (đồng)", "Value", "N0", false));
         var view = PosUi.Button("Xem", (_, _) => RefreshLoss(), "PrimaryButton", 40);

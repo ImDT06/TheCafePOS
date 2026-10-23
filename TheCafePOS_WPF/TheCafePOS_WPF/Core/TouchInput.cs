@@ -146,6 +146,6 @@ public sealed class NumberPad : Window
         AmountPreview.Text=valid ? Format(number) : "—";
         _error.Text=valid || Input.Text.Length==0 ? "" : $"Nhập số nguyên {(_negative ? "" : "không âm, ")}tối đa {Format(_maximum)}.";
         BalancePreview.Text=!valid || _due<0 ? "" : number>=_due ? "Tiền thối: "+Format(number-_due) : "Còn thiếu: "+Format(_due-number);
-        BalancePreview.Foreground=number>=_due ? new SolidColorBrush(Color.FromRgb(18,99,75)) : TheCafePOS_WPF.Views.Dialogs.PosUi.Danger;
+        BalancePreview.Foreground=number>=_due ? Palette.Accent : Palette.Danger;
     }
 }

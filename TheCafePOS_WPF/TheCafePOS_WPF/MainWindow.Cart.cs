@@ -28,7 +28,7 @@ public partial class MainWindow
         popup.Child = new Border
         {
             Background = System.Windows.Media.Brushes.White, CornerRadius = new CornerRadius(10), Padding = new Thickness(4), Margin = new Thickness(8), Width = 230,
-            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE2, 0xE8, 0xF0)), BorderThickness = new Thickness(1),
+            BorderBrush = Core.Palette.Border, BorderThickness = new Thickness(1),
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Opacity = 0.18 },
             Child = new StackPanel { Children =
             {

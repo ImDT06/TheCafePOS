@@ -1,8 +1,9 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
  <ResourceDictionary.MergedDictionaries>
-  <md:CustomColorTheme BaseTheme="Light" PrimaryColor="#4F46E5" SecondaryColor="#B45309"/>
-  <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
+  <!-- Palette first so the Material theme takes its colours from it. -->
   <ResourceDictionary Source="/TheCafePOS_WPF;component/Themes/Palette.xaml"/>
+  <md:CustomColorTheme BaseTheme="Light" PrimaryColor="{StaticResource PosAccentColor}" SecondaryColor="{StaticResource PosWarningColor}"/>
+  <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
  </ResourceDictionary.MergedDictionaries>
  <!-- Material Design 3 controls; this file only adds touch sizing (48px targets) and the shop palette. -->
  <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
@@ -27,8 +28,8 @@
   </ControlTemplate></Setter.Value></Setter>
   <Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/>
  </Style>
- <DropShadowEffect x:Key="TileShadow" Color="#1E293B" BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.10"/>
- <DropShadowEffect x:Key="TileShadowRaised" Color="#1E293B" BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.18"/>
+ <DropShadowEffect x:Key="TileShadow" Color="{StaticResource PosInkColor}" BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.10"/>
+ <DropShadowEffect x:Key="TileShadowRaised" Color="{StaticResource PosInkColor}" BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.18"/>
  <!-- Menu item tile on the sales screen: raised white card that lifts and outlines on hover. -->
  <Style x:Key="ProductTile" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
   <Setter Property="Margin" Value="6"/><Setter Property="Padding" Value="0"/><Setter Property="Background" Value="{StaticResource PosSurface}"/><Setter Property="BorderBrush" Value="{StaticResource PosBorder}"/>

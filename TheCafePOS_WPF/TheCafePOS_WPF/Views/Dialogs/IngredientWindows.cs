@@ -46,7 +46,7 @@ public sealed class IngredientWindow : Window
         AddColumns(_log, ("Lúc", "At", "dd/MM HH:mm", false), ("Nguyên liệu", "IngredientName", "", false), ("Loại", "Type", "", false), ("Thay đổi", "Change", "+0.##;-0.##", false), ("Sau", "After", "0.##", false), ("Lý do", "Reason", "", true));
         // Low stock rows are tinted, like the packaging screen.
         var rowStyle = new Style(typeof(DataGridRow));
-        rowStyle.Triggers.Add(new DataTrigger { Binding = new Binding("IsLow"), Value = true, Setters = { new Setter(BackgroundProperty, new SolidColorBrush(Color.FromRgb(0xFF, 0xF7, 0xED))) } });
+        rowStyle.Triggers.Add(new DataTrigger { Binding = new Binding("IsLow"), Value = true, Setters = { new Setter(BackgroundProperty, Palette.WarningSoft) } });
         _grid.RowStyle = rowStyle;
         _grid.SelectionChanged += (_, _) => Select(_grid.SelectedItem as Ingredient);
 

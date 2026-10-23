@@ -13,9 +13,9 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 // Small code-only dialogs; they share the POS window style and keep touch-sized targets.
 internal static class PosUi
 {
-    public static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0x4F, 0x46, 0xE5));
-    public static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B));
-    public static readonly Brush Danger = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
+    public static Brush Accent => Palette.Accent;
+    public static Brush Muted => Palette.Muted;
+    public static Brush Danger => Palette.Danger;
 
     public static Window Dialog(Window owner, string title, double width)
     {
@@ -245,7 +245,7 @@ public static class OrderCompleteModal
         if (order.PaymentMethod == "Mixed") Row("Chuyển khoản", $"{order.TransferAmount:N0}đ");
         if (order.PaymentMethod is "Cash" or "Mixed") { Row("Khách đưa", $"{order.CashGiven:N0}đ"); Row("Tiền thối", $"{order.ChangeReturned:N0}đ", true); }
         if (member is not null)
-            panel.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0xEE, 0xF2, 0xFF)), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0),
+            panel.Children.Add(new Border { Background = Palette.AccentSoft, CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0),
                 Child = PosUi.Text($"{member.Name}: +{order.PointsEarned} điểm, hiện có {member.Points} điểm (hạng {member.Tier})", 14, true, PosUi.Accent) });
         panel.Children.Add(new Border { Height = 16 });
         if (printReceipt is not null)

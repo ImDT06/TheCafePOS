@@ -174,8 +174,8 @@ public partial class OptionCustomModal : Window
         foreach (var topping in _toppings)
         {
             topping.Label.Text = topping.Count.ToString(); topping.Minus.IsEnabled = topping.Count > 0; topping.Plus.IsEnabled = topping.Count < 10;
-            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#E8F2ED" : "#FFFFFF"));
-            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#12634B" : "#DFE7E2"));
+            topping.Surface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#EEF2FF" : "#FFFFFF"));
+            topping.Surface.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(topping.Count > 0 ? "#4F46E5" : "#E2E8F0"));
         }
         try
         {

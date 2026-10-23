@@ -10,8 +10,8 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 // "Phân tích" tab: peak hours, comparison with the previous period, mix and discount breakdown.
 public partial class ReportWindow
 {
-    private static readonly Brush Bar = new SolidColorBrush(Color.FromRgb(0x12, 0x63, 0x4B));
-    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x52, 0x66, 0x5F));
+    private static readonly Brush Bar = new SolidColorBrush(Color.FromRgb(0x4F, 0x46, 0xE5));
+    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B));
 
     private void RenderInsights(SalesReport report, DateTime from, DateTime to, string? shiftId)
     {

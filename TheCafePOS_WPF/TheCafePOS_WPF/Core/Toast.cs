@@ -20,7 +20,7 @@ public static class Toast
         var snackbar = new MaterialDesignThemes.Wpf.Snackbar
         {
             Message = message, IsActive = true, MaxWidth = 460, Margin = new Thickness(0),
-            Background = new SolidColorBrush(error ? Color.FromRgb(0xB4, 0x23, 0x18) : Color.FromRgb(0x12, 0x3D, 0x35)), Foreground = Brushes.White
+            Background = new SolidColorBrush(error ? Color.FromRgb(0xB4, 0x23, 0x18) : Color.FromRgb(0x31, 0x2E, 0x81)), Foreground = Brushes.White
         };
         // Hosted in a borderless window so callers can notify from any screen without adding a host to every XAML.
         var toast = new Window
@@ -86,7 +86,7 @@ public static class EmptyState
     private static void OnTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ItemsControl list) return;
-        var hint = new VisualBrush(new TextBlock { Text = (string)e.NewValue, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x66, 0x5F)), FontSize = 14, Margin = new Thickness(8) })
+        var hint = new VisualBrush(new TextBlock { Text = (string)e.NewValue, Foreground = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B)), FontSize = 14, Margin = new Thickness(8) })
         { Stretch = Stretch.None, AlignmentY = AlignmentY.Center };
         void Update() { if (list.Items.Count == 0) list.Background = hint; else list.ClearValue(Control.BackgroundProperty); }
         ((System.Collections.Specialized.INotifyCollectionChanged)list.Items).CollectionChanged += (_, _) => Update();

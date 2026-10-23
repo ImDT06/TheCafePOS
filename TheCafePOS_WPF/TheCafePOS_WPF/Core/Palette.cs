@@ -17,6 +17,7 @@ public static class Palette
     public static Brush Muted => Brush("PosMuted");
     public static Brush Surface => Brush("PosSurface");
     public static Brush Border => Brush("PosBorder");
+    public static Brush Money => Brush("PosMoney");
     public static Brush Danger => Brush("PosDanger");
     public static Brush DangerSoft => Brush("PosDangerSoft");
     public static Brush WarningSoft => Brush("PosWarningSoft");

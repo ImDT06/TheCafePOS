@@ -10,7 +10,7 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 // "Phân tích" tab: peak hours, comparison with the previous period, mix and discount breakdown.
 public partial class ReportWindow
 {
-    private static Brush Bar => TheCafePOS_WPF.Core.Palette.Accent;
+    private static Brush Bar => TheCafePOS_WPF.Core.Palette.Money;
     private static Brush Muted => TheCafePOS_WPF.Core.Palette.Muted;
 
     private void RenderInsights(SalesReport report, DateTime from, DateTime to, string? shiftId)

@@ -12,6 +12,9 @@
  <Color x:Key="PosSurfaceColor">#FFFFFF</Color>
  <Color x:Key="PosBorderColor">#E7DED4</Color>
  <Color x:Key="PosBorderStrongColor">#CDBFB1</Color>
+ <!-- Money (amounts to collect, change, revenue) is green everywhere, independent of the brand colour. -->
+ <Color x:Key="PosMoneyColor">#15803D</Color>
+ <Color x:Key="PosMoneySoftColor">#ECFDF3</Color>
  <Color x:Key="PosDangerColor">#B42318</Color>
  <Color x:Key="PosDangerSoftColor">#FFF1F0</Color>
  <Color x:Key="PosDangerBorderColor">#F2C7C2</Color>
@@ -31,6 +34,8 @@
  <SolidColorBrush x:Key="PosSurface" Color="{StaticResource PosSurfaceColor}"/>
  <SolidColorBrush x:Key="PosBorder" Color="{StaticResource PosBorderColor}"/>
  <SolidColorBrush x:Key="PosBorderStrong" Color="{StaticResource PosBorderStrongColor}"/>
+ <SolidColorBrush x:Key="PosMoney" Color="{StaticResource PosMoneyColor}"/>
+ <SolidColorBrush x:Key="PosMoneySoft" Color="{StaticResource PosMoneySoftColor}"/>
  <SolidColorBrush x:Key="PosDanger" Color="{StaticResource PosDangerColor}"/>
  <SolidColorBrush x:Key="PosDangerSoft" Color="{StaticResource PosDangerSoftColor}"/>
  <SolidColorBrush x:Key="PosDangerBorder" Color="{StaticResource PosDangerBorderColor}"/>

@@ -14,6 +14,7 @@ namespace TheCafePOS_WPF.Views.Dialogs;
 internal static class PosUi
 {
     public static Brush Accent => Palette.Accent;
+    public static Brush Money => Palette.Money;
     public static Brush Muted => Palette.Muted;
     public static Brush Danger => Palette.Danger;
 
@@ -48,12 +49,12 @@ public sealed class DiscountModal
         MaterialDesignThemes.Wpf.HintAssist.SetHint(amount, "Số tiền giảm (đồng)");
         var reason = new ComboBox { IsEditable = true, Text = currentReason, FontSize = 16, Margin = new Thickness(0, 4, 0, 4), ItemsSource = new[] { "Khách quen", "Khuyến mãi khai trương", "Bù món lỗi / chờ lâu", "Nhân viên", "Voucher" } };
         MaterialDesignThemes.Wpf.HintAssist.SetHint(reason, "Lý do giảm giá");
-        var preview = PosUi.Text("", 15, true, PosUi.Accent);
+        var preview = PosUi.Text("", 15, true, PosUi.Money);
         void Update()
         {
             decimal.TryParse(amount.Text, out var a);
             preview.Text = a > 0 && a < subtotal ? $"Còn phải thu: {subtotal - a:N0}đ" : a >= subtotal ? "Số tiền giảm phải nhỏ hơn tạm tính" : "";
-            preview.Foreground = a >= subtotal ? PosUi.Danger : PosUi.Accent;
+            preview.Foreground = a >= subtotal ? PosUi.Danger : PosUi.Money;
         }
         amount.TextChanged += (_, _) => Update();
         var percents = new UniformGrid { Columns = 4, Margin = new Thickness(-4, 0, -4, 8) };
@@ -165,7 +166,7 @@ public static class CashPaymentModal
         TouchInput.SetLabel(amount, "Tiền khách đưa");
         TouchInput.SetDue(amount, total);
         System.Windows.Automation.AutomationProperties.SetName(amount, "Tiền khách đưa, số nguyên đồng");
-        var change = PosUi.Text("", 22, true, PosUi.Accent);
+        var change = PosUi.Text("", 22, true, PosUi.Money);
         var error = PosUi.Text("", 13, color: PosUi.Danger);
         error.Visibility = Visibility.Collapsed;
         Button? pay = null, split = null;
@@ -176,7 +177,7 @@ public static class CashPaymentModal
             error.Text = ok ? "" : "Nhập số tiền nguyên từ 0 đến 999.999.999.999đ, không dùng dấu phân cách.";
             error.Visibility = ok ? Visibility.Collapsed : Visibility.Visible;
             change.Text = !ok ? "Tiền thối: —" : a >= total ? $"Tiền thối: {a - total:N0}đ" : $"Còn thiếu {total - a:N0}đ";
-            change.Foreground = ok && a < total ? PosUi.Danger : PosUi.Accent;
+            change.Foreground = ok && a < total ? PosUi.Danger : PosUi.Money;
             if (pay != null) pay.IsEnabled = ok && a >= total;
             if (split != null)
             {
@@ -206,7 +207,7 @@ public static class CashPaymentModal
         var back = PosUi.Button("Quay lại", (_, _) => w.DialogResult = false, minHeight: 56);
         back.IsCancel = true;
         var actions = new UniformGrid { Columns = 2, Margin = new Thickness(-4, 12, -4, 0), Children = { back, pay } };
-        w.Content = new StackPanel { Margin = new Thickness(20), Children = { PosUi.Text("Cần thu", 14, color: PosUi.Muted), PosUi.Text($"{total:N0}đ", 34, true, PosUi.Accent), new Border { Height = 10 }, PosUi.Text("Tiền khách đưa"), amount, quick, error, change, split, actions } };
+        w.Content = new StackPanel { Margin = new Thickness(20), Children = { PosUi.Text("Cần thu", 14, color: PosUi.Muted), PosUi.Text($"{total:N0}đ", 34, true, PosUi.Money), new Border { Height = 10 }, PosUi.Text("Tiền khách đưa"), amount, quick, error, change, split, actions } };
         w.Loaded += (_, _) => { amount.Text = total.ToString("0"); amount.Focus(); amount.SelectAll(); Update(); };
         return w.ShowDialog() == true ? result : null;
     }
@@ -231,7 +232,7 @@ public static class OrderCompleteModal
         void Row(string label, string value, bool strong = false)
         {
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
-            var v = PosUi.Text(value, strong ? 22 : 15, strong, strong ? PosUi.Accent : null); DockPanel.SetDock(v, Dock.Right);
+            var v = PosUi.Text(value, strong ? 22 : 15, strong, strong ? PosUi.Money : null); DockPanel.SetDock(v, Dock.Right);
             row.Children.Add(v); row.Children.Add(PosUi.Text(label, 15, color: PosUi.Muted));
             panel.Children.Add(row);
         }

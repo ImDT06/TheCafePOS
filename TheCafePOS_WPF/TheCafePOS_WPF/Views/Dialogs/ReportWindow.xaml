@@ -3,7 +3,7 @@
  Language="vi-VN" Title="Báo cáo kinh doanh" Width="1180" Height="780" MinWidth="900" MinHeight="620" WindowStartupLocation="CenterOwner" Background="{StaticResource PosCanvas}">
  <Window.Resources>
  <Style x:Key="Metric" TargetType="Border"><Setter Property="Background" Value="White"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="16"/><Setter Property="Margin" Value="0,0,10,12"/></Style>
- <Style x:Key="MetricValue" TargetType="TextBlock"><Setter Property="FontSize" Value="26"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource PosAccent}"/><Setter Property="Margin" Value="0,6,0,0"/></Style>
+ <Style x:Key="MetricValue" TargetType="TextBlock"><Setter Property="FontSize" Value="26"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource PosMoney}"/><Setter Property="Margin" Value="0,6,0,0"/></Style>
 </Window.Resources>
 <DockPanel Margin="18">
   <StackPanel DockPanel.Dock="Top">
@@ -21,7 +21,7 @@
 <UniformGrid Columns="2">
  <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Doanh thu bán hàng"/><TextBlock x:Name="RevenueMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
  <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Doanh thu thuần (sau hoàn)"/><TextBlock x:Name="NetMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
- <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Đơn đã thanh toán"/><TextBlock x:Name="OrderMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
+ <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Đơn đã thanh toán"/><TextBlock x:Name="OrderMetric" Style="{StaticResource MetricValue}" Foreground="{StaticResource PosInk}"/></StackPanel></Border>
  <Border Style="{StaticResource Metric}"><StackPanel><TextBlock Text="Trung bình mỗi đơn (trước hoàn)"/><TextBlock x:Name="AverageMetric" Style="{StaticResource MetricValue}"/></StackPanel></Border>
 </UniformGrid>
 <TextBlock x:Name="EmptyReport" Text="Chưa có giao dịch trong khoảng ngày và ca đã chọn." Visibility="Collapsed" Foreground="{StaticResource PosMuted}" Margin="0,4,0,12"/>
@@ -31,7 +31,7 @@
 <ItemsControl x:Name="DailyChart"><ItemsControl.ItemTemplate><DataTemplate>
  <Border BorderBrush="{StaticResource PosBorder}" BorderThickness="0,0,0,1" Padding="0,10"><StackPanel>
   <DockPanel><TextBlock Text="{Binding Label}" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" HorizontalAlignment="Right"/></DockPanel>
-  <WrapPanel Margin="0,4,0,0"><TextBlock Text="{Binding SalesLabel}" Foreground="{StaticResource PosAccent}" Margin="0,0,16,0"/><TextBlock Text="{Binding RefundLabel}" Foreground="{StaticResource PosWarningInk}"/></WrapPanel><ProgressBar Value="{Binding SalesPercent, Mode=OneWay}" Maximum="100" Height="12" Foreground="{StaticResource PosAccent}" Background="{StaticResource PosSubtle}" BorderThickness="0" Margin="0,8,0,4" ToolTip="{Binding SalesLabel}" AutomationProperties.Name="{Binding SalesLabel}"/>
+  <WrapPanel Margin="0,4,0,0"><TextBlock Text="{Binding SalesLabel}" Foreground="{StaticResource PosMoney}" Margin="0,0,16,0"/><TextBlock Text="{Binding RefundLabel}" Foreground="{StaticResource PosWarningInk}"/></WrapPanel><ProgressBar Value="{Binding SalesPercent, Mode=OneWay}" Maximum="100" Height="12" Foreground="{StaticResource PosMoney}" Background="{StaticResource PosSubtle}" BorderThickness="0" Margin="0,8,0,4" ToolTip="{Binding SalesLabel}" AutomationProperties.Name="{Binding SalesLabel}"/>
   <ProgressBar Value="{Binding RefundPercent, Mode=OneWay}" Maximum="100" Height="8" Foreground="{StaticResource PosWarning}" Background="{StaticResource PosWarningSoft}" BorderThickness="0" ToolTip="{Binding RefundLabel}" AutomationProperties.Name="{Binding RefundLabel}"/>
  </StackPanel></Border>
 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>

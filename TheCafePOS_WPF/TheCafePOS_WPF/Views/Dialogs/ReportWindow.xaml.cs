@@ -42,7 +42,7 @@ public partial class ReportWindow : Window
         Summary.Text = $"Tiền mặt: bán {report.Cash:N0}đ, hoàn {report.CashRefunded:N0}đ\nChuyển khoản: bán {report.Transfer:N0}đ, hoàn {report.TransferRefunded:N0}đ\nNgoài bán hàng: thu {report.CashIn:N0}đ, chi {report.CashOut:N0}đ";
         RevenueMetric.Text = $"{report.Revenue:N0}đ";
         NetMetric.Text = $"{report.NetRevenue:N0}đ";
-        NetMetric.Foreground = report.NetRevenue < 0 ? Core.Palette.Danger : Core.Palette.Accent;
+        NetMetric.Foreground = report.NetRevenue < 0 ? Core.Palette.Danger : Core.Palette.Money;
         OrderMetric.Text = report.Orders.Count.ToString("N0");
         AverageMetric.Text = $"{report.AverageOrderValue:N0}đ";
         AppliedRange.Text = $"Đang xem: {from:dd/MM/yyyy} – {to:dd/MM/yyyy} · {ShiftFilter.Text}";

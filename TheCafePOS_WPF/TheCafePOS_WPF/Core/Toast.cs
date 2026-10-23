@@ -15,7 +15,8 @@ public static class Toast
         var message = new MaterialDesignThemes.Wpf.SnackbarMessage
         {
             Content = new DockPanel { Children = { Icon(error), new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 15, VerticalAlignment = VerticalAlignment.Center } } },
-            ActionContent = action?.Text
+            // The Material default paints the action in the secondary (orange) colour, unreadable on the dark toast.
+            ActionContent = action is { } a ? new TextBlock { Text = a.Text, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = Palette.AccentSoft, TextDecorations = TextDecorations.Underline } : null
         };
         var snackbar = new MaterialDesignThemes.Wpf.Snackbar
         {

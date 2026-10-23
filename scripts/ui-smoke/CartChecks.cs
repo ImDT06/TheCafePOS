@@ -85,7 +85,7 @@ partial class Preview
         Check(!Descendants<Button>(more.Child).Last().IsEnabled, "Split is disabled for a single unit"); more.IsOpen = false;
 
         Button Undo() => Application.Current.Windows.Cast<Window>().Where(w => w.IsVisible)
-            .SelectMany(w => Descendants<Button>(w)).Single(b => Equals(b.Content, "Hoàn tác"));
+            .SelectMany(w => Descendants<Button>(w)).Single(b => b.Content is TextBlock { Text: "Hoàn tác" });
         Click(RowButton(PackIconKind.TrashCanOutline));
         Check(cart.Items.Count == 1, "Delete removes a cart row immediately"); Click(Undo());
         Check(cart.Items.Count == 2 && ReferenceEquals(cart.Items[0], added), "Undo restores the removed row at its original position");

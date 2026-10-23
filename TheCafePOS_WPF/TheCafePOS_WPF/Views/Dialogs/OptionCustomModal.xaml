@@ -32,7 +32,7 @@
   </Style>
   <!-- Whole card is the +1 target; the separate minus only appears once the topping is chosen. -->
   <Style x:Key="ToppingCard" TargetType="Button">
-   <Setter Property="MinHeight" Value="56"/><Setter Property="Cursor" Value="Hand"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="MinHeight" Value="52"/><Setter Property="Cursor" Value="Hand"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
     <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6"><ContentPresenter/></Border>
     <ControlTemplate.Triggers>
@@ -56,18 +56,19 @@
  </Window.Resources>
  <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Border Background="White" BorderBrush="{StaticResource PosBorder}" BorderThickness="0,0,0,1" Padding="18,12">
+  <Border Background="White" BorderBrush="{StaticResource PosBorder}" BorderThickness="0,0,0,1" Padding="16,8">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <DockPanel><Border x:Name="PhotoFrame" DockPanel.Dock="Left" Width="96" Height="96" CornerRadius="10" Background="{StaticResource PosSubtle}" Margin="0,0,16,0" Visibility="Collapsed"><Image x:Name="ProductPhoto" Stretch="Uniform" Margin="4"/></Border><StackPanel VerticalAlignment="Center"><TextBlock x:Name="ContextLabel" Foreground="{StaticResource PosMuted}" FontSize="11"/>
+    <DockPanel><Border x:Name="PhotoFrame" DockPanel.Dock="Left" Width="60" Height="60" CornerRadius="10" Background="{StaticResource PosSubtle}" Margin="0,0,16,0" Visibility="Collapsed"><Image x:Name="ProductPhoto" Stretch="Uniform" Margin="4"/></Border><StackPanel VerticalAlignment="Center"><TextBlock x:Name="ContextLabel" Foreground="{StaticResource PosMuted}" FontSize="11"/>
      <TextBlock x:Name="Heading" FontSize="22" FontWeight="Bold" Foreground="{StaticResource PosInk}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,3,0,0"/>
      <TextBlock x:Name="ChangeNotice" Foreground="{StaticResource PosWarning}" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,3,0,0"/>
     </StackPanel></DockPanel>
     <TextBlock x:Name="PriceNotice" Grid.Column="1" MaxWidth="220" TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0"/>
    </Grid>
   </Border>
-  <Grid Grid.Row="1" Margin="18,12">
+  <!-- Left: drink options, then notes filling the space under them. Right: toppings use the full height. -->
+  <Grid Grid.Row="1" Margin="16,10">
    <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition x:Name="ToppingColumn" Width="*"/></Grid.ColumnDefinitions>
-   <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
    <StackPanel x:Name="DrinkOptions" Margin="0,0,14,0">
     <Grid Margin="0,0,0,10">
      <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -85,13 +86,13 @@
      <UniformGrid x:Name="IceChoices" Grid.Column="1" Rows="1"/>
     </Grid>
    </StackPanel>
-   <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
-    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <StackPanel Grid.Row="1" Margin="0,14,14,0">
+    <TextBlock Text="Ghi chú" Style="{StaticResource Section}"/>
     <!-- Common requests are one tap; the free-text box stays for anything else. -->
-    <WrapPanel x:Name="QuickNotes" VerticalAlignment="Center"/>
-    <TextBox Grid.Column="1" Margin="6,0,0,6" md:HintAssist.Hint="Ghi chú khác (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" MaxLength="300" TextWrapping="NoWrap" AcceptsReturn="False" VerticalContentAlignment="Center" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: ghi tên khách lên ly"/>
-   </Grid>
-   <Grid x:Name="ToppingSection" Grid.Column="1">
+    <WrapPanel x:Name="QuickNotes"/>
+    <TextBox Margin="0,0,6,0" md:HintAssist.Hint="Ghi chú khác (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" MaxLength="300" TextWrapping="NoWrap" AcceptsReturn="False" VerticalContentAlignment="Center" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: ghi tên khách lên ly"/>
+   </StackPanel>
+   <Grid x:Name="ToppingSection" Grid.Column="1" Grid.RowSpan="3">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <DockPanel Margin="0,0,0,6"><TextBlock Text="Topping" Style="{StaticResource Section}"/><TextBlock x:Name="ToppingSummary" FontSize="12" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Right" Text="Số phần / ly"/></DockPanel>
     <ScrollViewer x:Name="ToppingScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PanningMode="VerticalOnly">
@@ -99,7 +100,7 @@
     </ScrollViewer>
    </Grid>
   </Grid>
-  <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource PosBorder}" BorderThickness="0,1,0,0" Padding="18,12">
+  <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource PosBorder}" BorderThickness="0,1,0,0" Padding="16,8">
    <StackPanel>
     <TextBlock x:Name="Error" Foreground="{StaticResource PosDanger}" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,6"/>
     <!-- Finishing actions sit together on the right: quantity is the last choice before confirming. Cancel stays apart on the left. -->

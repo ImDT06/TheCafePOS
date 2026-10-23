@@ -19,7 +19,7 @@
       <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource PosInk}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="42" Margin="12,10,12,0"/>
       <Grid Grid.Row="2" Margin="12,6,10,10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <StackPanel VerticalAlignment="Center">
-        <TextBlock Text="{Binding FormattedPrice}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PosAccent}"/>
+        <TextBlock Text="{Binding FormattedPrice}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PosMoney}"/>
         <TextBlock x:Name="Meta" Text="{Binding MetaText}" FontSize="12" Foreground="{StaticResource PosMuted}" Visibility="{Binding HasMeta, Converter={StaticResource BoolToVisibility}}"/>
         <TextBlock Text="Hết hàng" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource PosDanger}" Visibility="{Binding IsSoldOut, Converter={StaticResource BoolToVisibility}}"/>
        </StackPanel>
@@ -95,7 +95,7 @@
        <ListBox.ItemTemplate><DataTemplate><Border Background="{StaticResource PosSubtle}" BorderBrush="{StaticResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="8,6">
        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <Button Tag="{Binding}" Click="EditCartItem_Click" Background="Transparent" BorderThickness="0" Padding="2" MinHeight="0" HorizontalContentAlignment="Stretch" Cursor="Hand" ToolTip="Bấm để sửa món" AutomationProperties.Name="{Binding ProductName, StringFormat='Sửa {0}'}">
-         <StackPanel><TextBlock Text="{Binding ProductName}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/><TextBlock Text="{Binding OptionsSummary}" FontSize="12" Foreground="{StaticResource PosMuted}" TextWrapping="Wrap" Margin="0,2"/><TextBlock Text="{Binding FormattedTotalPrice}" Foreground="{StaticResource PosAccent}" FontWeight="Bold" FontSize="13"/></StackPanel>
+         <StackPanel><TextBlock Text="{Binding ProductName}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/><TextBlock Text="{Binding OptionsSummary}" FontSize="12" Foreground="{StaticResource PosMuted}" TextWrapping="Wrap" Margin="0,2"/><TextBlock Text="{Binding FormattedTotalPrice}" Foreground="{StaticResource PosMoney}" FontWeight="Bold" FontSize="13"/></StackPanel>
         </Button>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
          <Button Width="40" Height="40" MinWidth="40" MinHeight="40" Padding="0" Command="{Binding DataContext.DecreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" ToolTip="Giảm số lượng" AutomationProperties.Name="{Binding ProductName, StringFormat='Giảm {0}'}"><md:PackIcon Kind="Minus" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>

@@ -11,7 +11,7 @@
   </Style>
   <DataTemplate x:Key="MenuTileTemplate" DataType="{x:Type vm:MenuTile}">
    <Button x:Name="Tile" Style="{StaticResource ProductTile}" Click="ProductTile_Click" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding AutomationName}">
-    <Button.ContextMenu><ContextMenu><MenuItem Header="{Binding SoldOutMenuText}" Click="ToggleSoldOut_Click"/></ContextMenu></Button.ContextMenu>
+    <Button.ContextMenu><ContextMenu><MenuItem Header="Tùy chỉnh trước khi thêm" Click="CustomizeTile_Click"/><MenuItem Header="{Binding SoldOutMenuText}" Click="ToggleSoldOut_Click"/></ContextMenu></Button.ContextMenu>
     <!-- The Border is the sizing host; ProductScroller_SizeChanged updates TileWidth. -->
     <Border x:Name="Card" Width="{Binding TileWidth, RelativeSource={RelativeSource AncestorType=Window}}" Height="226">
      <Grid><Grid.RowDefinitions><RowDefinition x:Name="PhotoRow" Height="122"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -23,7 +23,11 @@
         <TextBlock x:Name="Meta" Text="{Binding MetaText}" FontSize="12" Foreground="{StaticResource PosMuted}" Visibility="{Binding HasMeta, Converter={StaticResource BoolToVisibility}}"/>
         <TextBlock Text="Hết hàng" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource PosDanger}" Visibility="{Binding IsSoldOut, Converter={StaticResource BoolToVisibility}}"/>
        </StackPanel>
-       <Border x:Name="AddBadge" Grid.Column="1" Width="34" Height="34" CornerRadius="17" Background="{StaticResource PosAccent}" VerticalAlignment="Bottom"><md:PackIcon Kind="Plus" Width="20" Height="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+       <!-- Tapping the card adds the default drink; this button opens the options first. -->
+       <Button x:Name="AddBadge" Grid.Column="1" Width="40" Height="40" VerticalAlignment="Bottom" Cursor="Hand" Background="{StaticResource PosAccentSoft}" Click="CustomizeTile_Click" ToolTip="Tùy chỉnh trước khi thêm" AutomationProperties.Name="Tùy chỉnh trước khi thêm">
+        <Button.Template><ControlTemplate TargetType="Button"><Border x:Name="Round" CornerRadius="20" Background="{TemplateBinding Background}" BorderBrush="{StaticResource PosBorderStrong}" BorderThickness="1"><md:PackIcon Kind="TuneVariant" Width="20" Height="20" Foreground="{StaticResource PosAccent}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+         <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Round" Property="BorderBrush" Value="{StaticResource PosAccent}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Button.Template>
+       </Button>
       </Grid>
      </Grid>
     </Border>

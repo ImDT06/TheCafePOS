@@ -323,6 +323,55 @@ public sealed class PosFeatureTests : IDisposable
         Assert.Equal(55000, vm.PayableTotal);
     }
 
+    [Fact]
+    public void Quick_add_uses_defaults_and_stacks_on_the_same_default_line()
+    {
+        var vm = new MainViewModel(Store, Store, Store, Store, Store, Store, Auth, TestHost.Holds, TestHost.Stickers, Store);
+        var first = vm.QuickAdd(_product);
+        Assert.Same(first, vm.QuickAdd(_product));
+        Assert.Single(vm.CartItems);
+        Assert.Equal(2, first.Quantity);
+        Assert.Equal(_product.DefaultSize, first.Size);
+
+        // A customised line (note, toppings, other options) is never merged into.
+        first.Note = "Đá để riêng";
+        var second = vm.QuickAdd(_product);
+        Assert.NotSame(first, second);
+        Assert.Equal(2, vm.CartItems.Count);
+        Assert.Equal(100000 + 50000, vm.Subtotal);
+    }
+
+    [Fact]
+    public void Quick_add_refuses_products_that_cannot_be_sold()
+    {
+        var vm = new MainViewModel(Store, Store, Store, Store, Store, Store, Auth, TestHost.Holds, TestHost.Stickers, Store);
+        _product.IsActive = false;
+        Store.SaveProduct(_product);
+        Assert.Throws<InvalidOperationException>(() => vm.QuickAdd(_product));
+        Assert.Empty(vm.CartItems);
+    }
+
+    [Theory]
+    [InlineData("", "", "")]
+    [InlineData("Đá để riêng", "Đá để riêng", "")]
+    [InlineData("Không ống hút, ghi tên An", "Không ống hút", "ghi tên An")]
+    [InlineData("Pha đậm, Đá để riêng", "Đá để riêng|Pha đậm", "")]
+    public void Quick_notes_round_trip_through_the_saved_note(string note, string chips, string freeText)
+    {
+        var (picked, rest) = TheCafePOS_WPF.Views.Dialogs.OptionCustomModal.SplitNote(note);
+        Assert.Equal(chips.Split('|', StringSplitOptions.RemoveEmptyEntries).OrderBy(c => c), picked.OrderBy(c => c));
+        Assert.Equal(freeText, rest);
+        // Saving again lists chips in their on-screen order, then the free text.
+        string saved = TheCafePOS_WPF.Views.Dialogs.OptionCustomModal.JoinNote(picked, rest);
+        Assert.Equal(TheCafePOS_WPF.Views.Dialogs.OptionCustomModal.SplitNote(saved), (picked, rest), new NoteComparer());
+    }
+
+    private sealed class NoteComparer : IEqualityComparer<(HashSet<string> Picked, string FreeText)>
+    {
+        public bool Equals((HashSet<string> Picked, string FreeText) a, (HashSet<string> Picked, string FreeText) b) => a.Picked.SetEquals(b.Picked) && a.FreeText == b.FreeText;
+        public int GetHashCode((HashSet<string> Picked, string FreeText) obj) => obj.FreeText.GetHashCode();
+    }
+
     #endregion
 
     #region Receipt

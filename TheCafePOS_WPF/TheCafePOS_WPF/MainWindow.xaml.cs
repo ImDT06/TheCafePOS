@@ -124,8 +124,27 @@ namespace TheCafePOS_WPF
         private void ProductTile_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement { DataContext: MenuTile tile }) return;
-            if (tile.IsSoldOut) Toast.Show(this, $"{tile.Name} đang hết hàng. Chuột phải để báo có hàng lại.", true);
-            else OpenProductOptionModal(tile.Product);
+            if (tile.IsSoldOut) { Toast.Show(this, $"{tile.Name} đang hết hàng. Chuột phải để báo có hàng lại.", true); return; }
+            OrderItem line;
+            try { line = _vm.QuickAdd(tile.Product); }
+            catch (InvalidOperationException) { OpenProductOptionModal(tile.Product); return; }
+            Toast.Show(this, $"Đã thêm {tile.Name} · {line.Quantity} {(line.IsBeverage ? "ly" : "phần")}", false, ("Tùy chỉnh", () => CustomizeLine(line)));
+        }
+
+        // The options button sits inside the tile; mark the click handled so the tile does not also quick-add.
+        private void CustomizeTile_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is not FrameworkElement { DataContext: MenuTile tile }) return;
+            if (tile.IsSoldOut) { Toast.Show(this, $"{tile.Name} đang hết hàng.", true); return; }
+            OpenProductOptionModal(tile.Product);
+        }
+
+        // From the "added" toast: a merged line customises only the cup just added.
+        private void CustomizeLine(OrderItem line)
+        {
+            if (!_vm.CartItems.Contains(line) || !_vm.CanEditCart) return;
+            EditCartItem(new Button { Tag = line }, split: line.Quantity > 1);
         }
 
         private void ToggleSoldOut_Click(object sender, RoutedEventArgs e)

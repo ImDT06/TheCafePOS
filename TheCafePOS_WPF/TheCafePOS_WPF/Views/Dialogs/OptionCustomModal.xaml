@@ -30,6 +30,28 @@
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
+  <!-- Whole card is the +1 target; the separate minus only appears once the topping is chosen. -->
+  <Style x:Key="ToppingCard" TargetType="Button">
+   <Setter Property="MinHeight" Value="56"/><Setter Property="Cursor" Value="Hand"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+    <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6"><ContentPresenter/></Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource PosAccent}"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource PosInk}"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="NoteChip" TargetType="ToggleButton">
+   <Setter Property="MinHeight" Value="40"/><Setter Property="Margin" Value="0,0,6,6"/><Setter Property="Padding" Value="12,4"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="{StaticResource PosInk}"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+    <Border x:Name="Surface" Background="White" BorderBrush="{StaticResource PosBorderStrong}" BorderThickness="1" CornerRadius="20" Padding="{TemplateBinding Padding}"><ContentPresenter VerticalAlignment="Center"/></Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Surface" Property="Background" Value="{StaticResource PosAccent}"/><Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource PosAccent}"/><Setter Property="Foreground" Value="White"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource PosInk}"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="Section" TargetType="TextBlock"><Setter Property="FontSize" Value="14"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{StaticResource PosInk}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
  </Window.Resources>
  <Grid>
@@ -64,34 +86,35 @@
     </Grid>
    </StackPanel>
    <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="80"/></Grid.RowDefinitions>
-    <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Ghi chú (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" Grid.Row="1" MaxLength="300" TextWrapping="Wrap" AcceptsReturn="False" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: để topping riêng"/>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <!-- Common requests are one tap; the free-text box stays for anything else. -->
+    <WrapPanel x:Name="QuickNotes" VerticalAlignment="Center"/>
+    <TextBox Grid.Column="1" Margin="6,0,0,6" md:HintAssist.Hint="Ghi chú khác (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" MaxLength="300" TextWrapping="NoWrap" AcceptsReturn="False" VerticalContentAlignment="Center" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: ghi tên khách lên ly"/>
    </Grid>
    <Grid x:Name="ToppingSection" Grid.Column="1">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <DockPanel Margin="0,0,0,6"><TextBlock Text="Topping" Style="{StaticResource Section}"/><TextBlock x:Name="ToppingSummary" FontSize="12" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Right" Text="Số phần / ly"/></DockPanel>
-    <UniformGrid x:Name="ToppingRows" Grid.Row="1" Columns="2" Rows="3" SizeChanged="ToppingArea_SizeChanged"/>
-    <Grid x:Name="ToppingPager" Grid.Row="2" Margin="0,6,0,0" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-     <Button x:Name="PreviousToppings" Content="‹ Trước" Style="{StaticResource Action}" Click="PreviousToppings_Click"/>
-     <TextBlock x:Name="ToppingPageText" Grid.Column="1" VerticalAlignment="Center" Margin="12,0"/>
-     <Button x:Name="NextToppings" Grid.Column="2" Content="Tiếp ›" Style="{StaticResource Action}" Click="NextToppings_Click"/>
-    </Grid>
+    <ScrollViewer x:Name="ToppingScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PanningMode="VerticalOnly">
+     <UniformGrid x:Name="ToppingRows" Columns="2" VerticalAlignment="Top"/>
+    </ScrollViewer>
    </Grid>
   </Grid>
   <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource PosBorder}" BorderThickness="0,1,0,0" Padding="18,12">
    <StackPanel>
     <TextBlock x:Name="Error" Foreground="{StaticResource PosDanger}" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,6"/>
-    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="12"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
-     <StackPanel><TextBlock x:Name="QuantityLabel" Text="Số ly" Foreground="{StaticResource PosMuted}" FontSize="12" Margin="0,0,0,4"/>
-      <StackPanel Orientation="Horizontal"><Button x:Name="MinusQuantity" Content="−" FontSize="22" Style="{StaticResource Action}" Click="MinusQuantity_Click" ToolTip="Giảm số lượng"/>
+    <!-- Finishing actions sit together on the right: quantity is the last choice before confirming. Cancel stays apart on the left. -->
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+     <StackPanel VerticalAlignment="Center"><Button Content="Hủy (Esc)" MinWidth="96" Style="{StaticResource Action}" IsCancel="True"/>
+      <TextBlock x:Name="KeyHint" Text="Phím 1–9: số ly · Enter: thêm" Foreground="{StaticResource PosMuted}" FontSize="11" Margin="0,4,0,0"/></StackPanel>
+     <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,18,0"><TextBlock x:Name="Breakdown" Foreground="{StaticResource PosMuted}" FontSize="12" HorizontalAlignment="Right"/><TextBlock x:Name="Total" FontSize="26" FontWeight="Bold" Foreground="{StaticResource PosMoney}" HorizontalAlignment="Right"/></StackPanel>
+     <StackPanel Grid.Column="3" Margin="0,0,10,0" VerticalAlignment="Center"><TextBlock x:Name="QuantityLabel" Text="Số ly" Foreground="{StaticResource PosMuted}" FontSize="12" Margin="0,0,0,4"/>
+      <StackPanel Orientation="Horizontal"><Button x:Name="MinusQuantity" Content="−" FontSize="22" Style="{StaticResource Action}" Click="MinusQuantity_Click" ToolTip="Giảm số lượng (phím −)"/>
        <TextBlock x:Name="QuantityText" MinWidth="44" TextAlignment="Center" VerticalAlignment="Center" FontSize="20" FontWeight="Bold"/>
-       <Button x:Name="PlusQuantity" Content="+" FontSize="22" Style="{StaticResource Action}" Click="PlusQuantity_Click" ToolTip="Tăng số lượng"/>
+       <Button x:Name="PlusQuantity" Content="+" FontSize="22" Style="{StaticResource Action}" Click="PlusQuantity_Click" ToolTip="Tăng số lượng (phím +)"/>
       </StackPanel>
       <TextBlock x:Name="QuantityHint" Foreground="{StaticResource PosMuted}" FontSize="11" Margin="0,3,0,0"/>
      </StackPanel>
-     <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,18,0"><TextBlock x:Name="Breakdown" Foreground="{StaticResource PosMuted}" FontSize="12" HorizontalAlignment="Right"/><TextBlock x:Name="Total" FontSize="26" FontWeight="Bold" Foreground="{StaticResource PosMoney}" HorizontalAlignment="Right"/></StackPanel>
-     <Button Grid.Column="2" Content="Hủy" Width="70" VerticalAlignment="Center" Style="{StaticResource Action}" IsCancel="True"/>
-     <Button x:Name="ConfirmButton" Grid.Column="4" VerticalAlignment="Center" Style="{StaticResource Action}" Background="{StaticResource PosAccent}" Foreground="White" BorderBrush="{StaticResource PosAccent}" FontWeight="Bold" FontSize="15" MinHeight="54" Click="Confirm_Click"/>
+     <Button x:Name="ConfirmButton" Grid.Column="4" IsDefault="True" VerticalAlignment="Center" Style="{StaticResource Action}" Background="{StaticResource PosAccent}" Foreground="White" BorderBrush="{StaticResource PosAccent}" FontWeight="Bold" FontSize="15" MinHeight="54" Click="Confirm_Click"/>
     </Grid>
    </StackPanel>
   </Border>

@@ -13,16 +13,18 @@ public partial class OptionCustomModal : Window
         public Product Product { get; init; } = null!;
         public int Count { get; set; }
         public TextBlock Label { get; init; } = null!;
+        public Button Card { get; init; } = null!;
         public Button Minus { get; init; } = null!;
-        public Button Plus { get; init; } = null!;
-        public Border Surface { get; init; } = null!;
+        public Grid Surface { get; init; } = null!;
     }
+    // Requests cashiers type most often; picked ones are joined in front of the free-text note.
+    public static readonly string[] QuickNoteOptions = { "Đá để riêng", "Topping để riêng", "Không ống hút", "Pha đậm" };
+    private readonly List<System.Windows.Controls.Primitives.ToggleButton> _quickNotes = new();
     private readonly Product _product;
     private readonly bool _singleUnit;
     private readonly bool _editing;
     private readonly List<ToppingChoice> _toppings = new();
     private int _quantity, _sugar, _ice;
-    private int _toppingPage, _toppingsPerPage = 4;
     private string _size = "";
     private string? _sugarChoice, _iceChoice;
     private bool _ready;
@@ -52,7 +54,14 @@ public partial class OptionCustomModal : Window
         _iceChoice = product.IceChoices is { Count: > 0 }
             ? OrderConfigurationService.ResolveChoice(product.IceChoices, existing?.IceChoice, product.DefaultIceChoice)
             : null;
-        Note.Text = existing?.Note ?? "";
+        var (picked, rest) = SplitNote(existing?.Note ?? "");
+        foreach (var option in QuickNoteOptions)
+        {
+            var chip = new System.Windows.Controls.Primitives.ToggleButton { Content = option, IsChecked = picked.Contains(option), Style = (Style)FindResource("NoteChip") };
+            _quickNotes.Add(chip);
+            QuickNotes.Children.Add(chip);
+        }
+        Note.Text = rest;
         DrinkOptions.Visibility = !product.IsBeverage ? Visibility.Collapsed : Visibility.Visible;
         SugarPanel.Visibility = product.AllowSugar ? Visibility.Visible : Visibility.Collapsed;
         IcePanel.Visibility = product.AllowIce ? Visibility.Visible : Visibility.Collapsed;
@@ -89,8 +98,40 @@ public partial class OptionCustomModal : Window
             ChangeNotice.Text = "Tùy chọn món đã thay đổi. Vui lòng kiểm tra size, đường, đá và topping trước khi lưu.";
             ChangeNotice.Visibility = Visibility.Visible;
         }
-        _ready = true; UpdateTotal(); ShowToppingPage();
-        Loaded += (_, _) => ResizeToppingPage();
+        foreach (var topping in _toppings) ToppingRows.Children.Add(topping.Surface);
+        KeyHint.Visibility = singleUnit ? Visibility.Collapsed : Visibility.Visible;
+        PreviewKeyDown += QuantityKeys;
+        _ready = true; UpdateTotal();
+    }
+
+    /// <summary>Splits a saved note into the quick-note chips it contains and the remaining free text.</summary>
+    public static (HashSet<string> Picked, string FreeText) SplitNote(string note)
+    {
+        var parts = note.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var picked = parts.Where(p => QuickNoteOptions.Contains(p)).ToHashSet();
+        return (picked, string.Join(", ", parts.Where(p => !picked.Contains(p))));
+    }
+
+    /// <summary>Chips first, in their on-screen order, then the free text.</summary>
+    public static string JoinNote(IEnumerable<string> picked, string rest) =>
+        string.Join(", ", QuickNoteOptions.Where(picked.Contains).Append(rest.Trim()).Where(p => p.Length > 0));
+
+    // 1–9 set the quantity, +/− adjust it; ignored while typing a note.
+    private void QuantityKeys(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (_singleUnit || System.Windows.Input.Keyboard.FocusedElement is TextBox) return;
+        int digit = e.Key switch
+        {
+            >= System.Windows.Input.Key.D1 and <= System.Windows.Input.Key.D9 => e.Key - System.Windows.Input.Key.D0,
+            >= System.Windows.Input.Key.NumPad1 and <= System.Windows.Input.Key.NumPad9 => e.Key - System.Windows.Input.Key.NumPad0,
+            _ => 0
+        };
+        if (digit > 0) _quantity = digit;
+        else if (e.Key is System.Windows.Input.Key.Add or System.Windows.Input.Key.OemPlus) _quantity = Math.Min(999, _quantity + 1);
+        else if (e.Key is System.Windows.Input.Key.Subtract or System.Windows.Input.Key.OemMinus) _quantity = Math.Max(1, _quantity - 1);
+        else return;
+        e.Handled = true;
+        UpdateTotal();
     }
     private void Note_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -109,58 +150,31 @@ public partial class OptionCustomModal : Window
         button.Checked += (_, _) => { select(); if (_ready) UpdateTotal(); };
         panel.Children.Add(button);
     }
+    // All toppings in one scrolling grid: tapping a card adds a portion, the minus only shows once chosen.
     private void AddTopping(Product product, int count)
     {
-        var surface = new Border { VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 0, 6, 6) };
-        var content = new StackPanel(); surface.Child = content;
         var header = new DockPanel();
         var photo = Core.ProductImages.Load(product.ImageUrl);
-        if (photo != null) header.Children.Add(new Image { Source = photo, Width = 34, Height = 34, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 6, 0) });
-        var labels = new StackPanel(); header.Children.Add(labels); content.Children.Add(header);
-        labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, ToolTip = product.Name, Foreground = Brushes.DarkSlateGray });
-        labels.Children.Add(new TextBlock { Text = $"+{product.BasePrice:N0}đ / phần", FontSize = 11, Foreground = Brushes.SlateGray, Margin = new Thickness(0, 0, 0, 2) });
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var minus = new Button { Content = "−", Style = (Style)FindResource("Action"), ToolTip = "Bớt " + product.Name };
-        var label = new TextBlock { Width = 40, FontSize = 16, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var plus = new Button { Content = "+", Style = (Style)FindResource("Action"), ToolTip = "Thêm " + product.Name };
-        controls.Children.Add(minus); controls.Children.Add(label); controls.Children.Add(plus); content.Children.Add(controls);
-        var choice = new ToppingChoice { Product = product, Count = Math.Clamp(count, 0, 10), Label = label, Minus = minus, Plus = plus, Surface = surface };
+        if (photo != null) { var image = new Image { Source = photo, Width = 30, Height = 30, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 8, 0) }; DockPanel.SetDock(image, Dock.Left); header.Children.Add(image); }
+        var label = new TextBlock { FontSize = 15, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 40, 0) };
+        DockPanel.SetDock(label, Dock.Right); header.Children.Add(label);
+        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        labels.Children.Add(new TextBlock { Text = product.Name, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = product.Name });
+        labels.Children.Add(new TextBlock { Text = $"+{product.BasePrice:N0}đ", FontSize = 11, Foreground = Core.Palette.Muted });
+        header.Children.Add(labels);
+        var card = new Button { Content = header, Style = (Style)FindResource("ToppingCard"), ToolTip = "Thêm 1 phần " + product.Name };
+        var minus = new Button { Content = "−", FontSize = 18, Style = (Style)FindResource("Action"), MinWidth = 40, MinHeight = 40, Padding = new Thickness(0), Margin = new Thickness(0, 0, 8, 0), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Bớt " + product.Name };
+        var surface = new Grid { Margin = new Thickness(0, 0, 6, 6), Children = { card, minus } };
+        var choice = new ToppingChoice { Product = product, Count = Math.Clamp(count, 0, 10), Label = label, Card = card, Minus = minus, Surface = surface };
+        card.Click += (_, _) => { choice.Count = Math.Min(10, choice.Count + 1); UpdateTotal(); };
         minus.Click += (_, _) => { choice.Count = Math.Max(0, choice.Count - 1); UpdateTotal(); };
-        plus.Click += (_, _) => { choice.Count = Math.Min(10, choice.Count + 1); UpdateTotal(); };
+        System.Windows.Automation.AutomationProperties.SetName(card, "Thêm " + product.Name);
         System.Windows.Automation.AutomationProperties.SetName(minus, "Bớt " + product.Name);
-        System.Windows.Automation.AutomationProperties.SetName(plus, "Thêm " + product.Name);
         _toppings.Add(choice);
     }
-    private void ToppingArea_SizeChanged(object sender, SizeChangedEventArgs e) { if (_ready) ResizeToppingPage(); }
-    private void ResizeToppingPage()
-    {
-        if (ToppingSection.ActualHeight <= 0 || _toppings.Count == 0) return;
-        // Fixed 2×2 page: four toppings are easy to scan and each tile keeps a touch-sized − / + pair.
-        int rows = 2, capacity = 4;
-        if (_toppingsPerPage != capacity)
-        {
-            int firstVisible = _toppingPage * _toppingsPerPage;
-            _toppingsPerPage = capacity; _toppingPage = firstVisible / capacity;
-        }
-        ToppingRows.Rows = rows;
-        ShowToppingPage();
-    }
-    private void ShowToppingPage()
-    {
-        int pages = Math.Max(1, (_toppings.Count + _toppingsPerPage - 1) / _toppingsPerPage);
-        _toppingPage = Math.Clamp(_toppingPage, 0, pages - 1);
-        ToppingRows.Children.Clear();
-        foreach (var topping in _toppings.Skip(_toppingPage * _toppingsPerPage).Take(_toppingsPerPage))
-            ToppingRows.Children.Add(topping.Surface);
-        ToppingPager.Visibility = pages > 1 ? Visibility.Visible : Visibility.Collapsed;
-        ToppingPageText.Text = $"{_toppingPage + 1} / {pages}";
-        PreviousToppings.IsEnabled = _toppingPage > 0;
-        NextToppings.IsEnabled = _toppingPage + 1 < pages;
-    }
-    private void PreviousToppings_Click(object sender, RoutedEventArgs e) { _toppingPage--; ShowToppingPage(); }
-    private void NextToppings_Click(object sender, RoutedEventArgs e) { _toppingPage++; ShowToppingPage(); }
     private OrderItem BuildItem() => OrderConfigurationService.Create(_product, _size, _sugar, _ice, _quantity,
-        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)), Note.Text, _catalog.Products, _sugarChoice, _iceChoice);
+        _toppings.Where(t => t.Count > 0).Select(t => (t.Product.Id, t.Count)),
+        JoinNote(_quickNotes.Where(c => c.IsChecked == true).Select(c => (string)c.Content), Note.Text), _catalog.Products, _sugarChoice, _iceChoice);
     private void MinusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Max(1, _quantity - 1); UpdateTotal(); }
     private void PlusQuantity_Click(object sender, RoutedEventArgs e) { if (!_singleUnit) _quantity = Math.Min(999, _quantity + 1); UpdateTotal(); }
     private void UpdateTotal()
@@ -173,9 +187,11 @@ public partial class OptionCustomModal : Window
         ToppingSummary.Text = portions > 0 ? $"Đã chọn {portions} phần / ly" : "Số phần / ly";
         foreach (var topping in _toppings)
         {
-            topping.Label.Text = topping.Count.ToString(); topping.Minus.IsEnabled = topping.Count > 0; topping.Plus.IsEnabled = topping.Count < 10;
-            topping.Surface.Background = topping.Count > 0 ? Core.Palette.AccentSoft : Core.Palette.Surface;
-            topping.Surface.BorderBrush = topping.Count > 0 ? Core.Palette.Accent : Core.Palette.Border;
+            topping.Label.Text = topping.Count > 0 ? $"×{topping.Count}" : "";
+            topping.Minus.Visibility = topping.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            topping.Card.IsEnabled = topping.Count < 10;
+            topping.Card.Background = topping.Count > 0 ? Core.Palette.AccentSoft : Core.Palette.Surface;
+            topping.Card.BorderBrush = topping.Count > 0 ? Core.Palette.Accent : Core.Palette.Border;
         }
         try
         {

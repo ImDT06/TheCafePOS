@@ -311,6 +311,23 @@ namespace TheCafePOS_WPF.ViewModels
 
         public void AddItem(OrderItem item) => CartItems.Add(item);
 
+        /// <summary>
+        /// One tap on the menu: adds one unit with the product's default options. Tapping the same product again
+        /// adds to that default line instead of starting a new one, so "3 ly" is three taps.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The defaults do not form a valid item; open the options dialog instead.</exception>
+        public OrderItem QuickAdd(Product product)
+        {
+            string size = product.Sizes.FirstOrDefault(s => s.Name == product.DefaultSize)?.Name ?? product.Sizes.FirstOrDefault()?.Name ?? "";
+            var item = OrderConfigurationService.Create(product, size, product.DefaultSugar, product.DefaultIce, 1, Array.Empty<(string, int)>(), "", _catalog.Products);
+            var same = CartItems.FirstOrDefault(i => i.ProductId == item.ProductId && i.Size == item.Size && i.UnitPrice == item.UnitPrice
+                && i.SugarPercent == item.SugarPercent && i.IcePercent == item.IcePercent && i.SugarChoice == item.SugarChoice && i.IceChoice == item.IceChoice
+                && i.SelectedToppings.Count == 0 && string.IsNullOrWhiteSpace(i.Note));
+            if (same is not null && same.Quantity < MaxLineQuantity) { IncreaseQuantity(same); return same; }
+            AddItem(item);
+            return item;
+        }
+
         /// <returns>false when the line is already at <see cref="MaxLineQuantity"/>; the cashier is told why.</returns>
         public bool IncreaseQuantity(OrderItem item)
         {

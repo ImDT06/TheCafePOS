@@ -28,12 +28,21 @@ namespace TheCafePOS_WPF.Models
         public int PointsRevoked { get; set; }
         public string Channel { get; set; } = "Tại quầy";
         public decimal ChannelSurcharge { get; set; }
+        public string VoucherCode { get; set; } = string.Empty;
+        public decimal VoucherAmount { get; set; }
+        // VAT on the amount after every reduction; when VatIncluded the tax is already inside TotalAmount.
+        public int VatPercent { get; set; }
+        public bool VatIncluded { get; set; } = true;
+        public decimal VatAmount { get; set; }
         public bool IsCancelled { get; set; }
         public decimal LoyaltyAmount => PointsRedeemed * 1000m;
         public decimal RefundedAmount { get; set; }
         public decimal RefundableAmount => TotalAmount - RefundedAmount;
         public string RefundStatus => RefundedAmount == 0 ? "Chưa hoàn" : RefundedAmount == TotalAmount ? "Đã hoàn toàn bộ" : "Đã hoàn một phần";
-        public string PaymentMethod { get; set; } = "Cash"; // Cash | VietQR
+        public string PaymentMethod { get; set; } = "Cash"; // Cash | VietQR | Mixed | Platform
+        // Mixed only: the part paid by bank transfer; the rest went into the drawer.
+        public decimal TransferAmount { get; set; }
+        public decimal CashPortion => PaymentMethod switch { "Cash" => TotalAmount, "Mixed" => TotalAmount - TransferAmount, _ => 0 };
         public string PaymentStatus { get; set; } = "Completed"; // Pending | Completed | Cancelled
         public decimal CashGiven { get; set; }
         public decimal ChangeReturned { get; set; }

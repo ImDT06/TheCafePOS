@@ -35,7 +35,7 @@ public static class ReportService
         if (from.Date > to.Date) throw new InvalidOperationException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
         var orders = source.Where(o => o.PaymentStatus == "Completed" && o.CreatedAt.Date >= from.Date && o.CreatedAt.Date <= to.Date && (shiftId is null || o.ShiftId == shiftId)).OrderByDescending(o => o.CreatedAt).ToList();
         var products = orders.SelectMany(o => o.Items).GroupBy(i => new { i.ProductId, i.ProductName }).Select(g => new ProductSales(g.Key.ProductName, g.Sum(i => i.Quantity), g.Sum(i => i.TotalPrice))).OrderByDescending(p => p.Revenue).ToList();
-        return new(orders, products, orders.Sum(o => o.TotalAmount), orders.Where(o => o.PaymentMethod == "Cash").Sum(o => o.TotalAmount), orders.Where(o => o.PaymentMethod == "VietQR").Sum(o => o.TotalAmount))
+        return new(orders, products, orders.Sum(o => o.TotalAmount), orders.Sum(o => o.CashPortion), orders.Sum(o => o.PaymentMethod == "VietQR" ? o.TotalAmount : o.TransferAmount))
         {
             Refunds = (refunds ?? Array.Empty<RefundEntry>()).Where(r => r.CreatedAt.Date >= from.Date && r.CreatedAt.Date <= to.Date && (shiftId is null || r.ShiftId == shiftId)).OrderByDescending(r => r.CreatedAt).ToList(),
             CashEntries = (cashEntries ?? Array.Empty<CashEntry>()).Where(r => r.CreatedAt.Date >= from.Date && r.CreatedAt.Date <= to.Date && (shiftId is null || r.ShiftId == shiftId)).OrderByDescending(r => r.CreatedAt).ToList()

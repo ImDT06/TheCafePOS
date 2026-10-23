@@ -32,9 +32,14 @@ public partial class FinanceWindow : Window
         if (RefundAmount == null) return;
         RefundConfirmed.IsChecked = false; RefundReason.Clear(); RefundReference.Clear();
         if (Orders.SelectedItem is not Order order) { OrderDetails.Text = "Chọn đơn cần hoàn tiền."; RefundAmount.Clear(); return; }
-        OrderDetails.Text = $"Đơn #{order.DailyOrderNumber:D2} · {order.CreatedAt:dd/MM/yyyy HH:mm}\n{order.PaymentMethod} · Đã hoàn: {order.RefundedAmount:N0}đ\n" + string.Join("\n", order.Items.Select(i => $"{i.Quantity} × {i.ProductName} — {i.TotalPrice:N0}đ"));
+        OrderDetails.Text = $"Đơn #{order.DailyOrderNumber:D2} · {order.CreatedAt:dd/MM/yyyy HH:mm}\n{ReceiptService.PaymentLabel(order)}{(order.PaymentMethod == "Mixed" ? $" (tiền mặt {order.CashPortion:N0}đ, CK {order.TransferAmount:N0}đ)" : "")} · Đã hoàn: {order.RefundedAmount:N0}đ\n" + string.Join("\n", order.Items.Select(i => $"{i.Quantity} × {i.ProductName} — {i.TotalPrice:N0}đ"));
         Core.TouchInput.SetMaximum(RefundAmount, order.RefundableAmount);
         RefundAmount.Text = order.RefundableAmount.ToString("0");
+    }
+    private void PrintReceipt_Click(object sender, RoutedEventArgs e)
+    {
+        if (Orders.SelectedItem is not Order order) { MessageBox.Show(this, "Chọn đơn cần in hóa đơn."); return; }
+        _dialogs.Create<ReceiptWindow>(this, order, true).ShowDialog();
     }
     private void CancelOrder_Click(object sender, RoutedEventArgs e)
     {

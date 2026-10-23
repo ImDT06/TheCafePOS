@@ -38,6 +38,8 @@ namespace TheCafePOS_WPF
             services.AddSingleton<IPromotionService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IStoreSettingsService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<IOrderService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IVoucherService>(sp => sp.GetRequiredService<IDataStoreService>());
+            services.AddSingleton<IPurchasingService>(sp => sp.GetRequiredService<IDataStoreService>());
             services.AddSingleton<HoldOrderService>();
             services.AddSingleton<IHoldOrderService>(sp => sp.GetRequiredService<HoldOrderService>());
             services.AddSingleton<StickerPrinterService>();

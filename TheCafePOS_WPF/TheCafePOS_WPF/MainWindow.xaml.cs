@@ -26,6 +26,7 @@ namespace TheCafePOS_WPF
         private readonly IDialogFactory _dialogs;
         private readonly IVietQRService _bank;
         private readonly IBackupService _backup;
+        private readonly IPurchasingService _purchasing;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
         private readonly System.Windows.Threading.DispatcherTimer _wallClock = new() { Interval = TimeSpan.FromSeconds(1) };
         private static readonly System.Globalization.CultureInfo Vietnamese = new("vi-VN");
@@ -37,8 +38,9 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup, IPurchasingService purchasing)
         {
+            _purchasing = purchasing;
             _backup = backup;
             _vm = vm;
             _dialogs = dialogs;
@@ -74,6 +76,8 @@ namespace TheCafePOS_WPF
             _vm.ReloadMenu();
 
             RefreshSession();
+            if (_auth.IsManager && _purchasing.LowStockItems() is { Count: > 0 } low)
+                Toast.Show(this, $"{low.Count} mặt hàng chạm ngưỡng tồn kho: {string.Join(", ", low.Take(3).Select(i => i.Name))}{(low.Count > 3 ? "…" : "")}", true);
         }
 
         #region Menu (POS-01)
@@ -181,8 +185,12 @@ namespace TheCafePOS_WPF
             try
             {
                 if (_vm.IsAppOrder) { CompletePayment("Platform"); return; }
-                if (CashPaymentModal.Show(this, _vm.PayableTotal) is not decimal cash) return;
-                CompletePayment("Cash", cash);
+                if (CashPaymentModal.Show(this, _vm.PayableTotal) is not { } payment) return;
+                if (payment.Transfer == 0) { CompletePayment("Cash", payment.Cash); return; }
+                // Mixed payment: the cash is in hand, now confirm the transfer for the rest.
+                _bank.ValidateSettings();
+                var qrModal = _dialogs.Create<VietQRModal>(this, payment.Transfer, _vm.CurrentDailyOrderNumber, _vm.CheckoutId);
+                if (qrModal.ShowDialog() == true) CompletePayment("Mixed", payment.Cash, qrApproved: true, transferAmount: payment.Transfer);
             }
             catch (Exception ex) { _vm.SetCheckoutError(ex.Message); }
             finally { _vm.EndCheckout(); }
@@ -201,17 +209,21 @@ namespace TheCafePOS_WPF
             finally { _vm.EndCheckout(); }
         }
 
-        private void CompletePayment(string paymentMethod, decimal cashGiven = 0, bool qrApproved = false)
+        private void CompletePayment(string paymentMethod, decimal cashGiven = 0, bool qrApproved = false, decimal transferAmount = 0)
         {
             Order order;
-            try { order = _vm.CompleteCheckout(paymentMethod, cashGiven, qrApproved); }
+            var lowBefore = _purchasing.LowStockItems().Select(i => (i.Kind, i.Name)).ToHashSet();
+            try { order = _vm.CompleteCheckout(paymentMethod, cashGiven, qrApproved, transferAmount); }
             catch (Exception ex) { _vm.SetCheckoutError(ex.Message); return; }
 
             try
             {
                 _vm.StartNewOrder();
                 if (_vm.PrintStickers(order) is { } stickerError) Toast.Show(this, $"Đơn đã lưu, nhưng chưa tạo được dữ liệu tem: {stickerError}", true);
-                OrderCompleteModal.Show(this, order, _vm.FindCustomer(order.CustomerPhone));
+                OrderCompleteModal.Show(this, order, _vm.FindCustomer(order.CustomerPhone), () => _dialogs.Create<ReceiptWindow>(this, order, false).ShowDialog());
+                // Only items this sale pushed under their threshold, so the cashier is not nagged on every order.
+                var newlyLow = _purchasing.LowStockItems().Where(i => !lowBefore.Contains((i.Kind, i.Name))).ToList();
+                if (newlyLow.Count > 0) Toast.Show(this, $"Sắp hết hàng: {string.Join(", ", newlyLow.Select(i => $"{i.Name} ({i.StockLabel})"))}", true);
                 TxtSearch.Focus();
             }
             catch (Exception ex) { _vm.SetCheckoutError($"Đơn đã lưu. Không thanh toán lại. {ex.Message}"); }
@@ -236,6 +248,24 @@ namespace TheCafePOS_WPF
             if (!modal.Show(this, _vm.Subtotal, _vm.Discount, _vm.DiscountReason)) return;
             if (_vm.DiscountNeedsApproval(modal.Amount) && _dialogs.Create<PinApprovalModal>(this, _vm.DiscountApprovalAction(modal.Amount, modal.Reason)).ShowDialog() != true) return;
             _vm.ApplyDiscount(modal.Amount, modal.Reason);
+        }
+
+        private void BtnVoucher_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.HasItems) return;
+            VoucherModal.Show(this, _vm.VoucherCode, _vm.ApplyVoucher);
+        }
+
+        private void BtnSplitBill_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm.CartItems.Count < 2) { Toast.Show(this, "Cần ít nhất 2 dòng món để tách hóa đơn. Dùng \"Tách 1 sản phẩm\" để tách dòng nhiều ly.", true); return; }
+            if (SplitBillModal.Show(this, _vm.CartItems.ToList()) is not { } moving) return;
+            try
+            {
+                if (_vm.SplitBill(moving) is { } error) { Toast.Show(this, error, true); return; }
+            }
+            catch (Exception ex) { Toast.Show(this, "Không thể tách hóa đơn: " + ex.Message, true); return; }
+            Toast.Show(this, $"Đã tách {moving.Count} món sang đơn giữ (F9 để gọi lại).");
         }
 
         private void BtnCustomer_Click(object sender, RoutedEventArgs e)

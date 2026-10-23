@@ -86,6 +86,31 @@ namespace TheCafePOS_WPF.Services.Interfaces
         void DeletePromotion(string id);
     }
 
+    /// <summary>Codes entered at checkout for a discount, with validity dates and usage limits.</summary>
+    public interface IVoucherService
+    {
+        List<Voucher> Vouchers { get; }
+
+        Voucher? FindVoucher(string code);
+        decimal EvaluateVoucher(string code, decimal subtotal, decimal promotionAmount, DateTime at);
+        void SaveVoucher(Voucher voucher);
+        void DeleteVoucher(string id);
+    }
+
+    /// <summary>Suppliers, purchase receipts, waste and stock alerts.</summary>
+    public interface IPurchasingService
+    {
+        List<Supplier> Suppliers { get; }
+        List<PurchaseReceipt> PurchaseReceipts { get; }
+
+        void SaveSupplier(Supplier supplier);
+        void DeleteSupplier(string id);
+        PurchaseReceipt CreatePurchaseReceipt(string id, string supplierId, List<PurchaseLine> lines, string note, bool paidFromDrawer);
+        void RecordIngredientWaste(string id, decimal quantity, string reason);
+        List<LowStockItem> LowStockItems();
+        List<ShrinkageRow> ShrinkageReport(DateTime from, DateTime to);
+    }
+
     /// <summary>Shop profile, sales channels and cashier limits.</summary>
     public interface IStoreSettingsService
     {
@@ -104,7 +129,7 @@ namespace TheCafePOS_WPF.Services.Interfaces
 
         int GetNextDailyOrderNumber();
         void ValidateCheckoutCart(IEnumerable<OrderItem> cart, string serviceType);
-        Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0, string channel = StoreSettings.Counter);
+        Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0, string channel = StoreSettings.Counter, string voucherCode = "", decimal transferAmount = 0);
         void UpdateFulfillment(string orderId, string action, string? lineId = null, string reason = "");
         void SaveDraft(DraftOrder? draft);
         void SaveWorkspace(IEnumerable<HeldOrderInfo> held, DraftOrder? draft);

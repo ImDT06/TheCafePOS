@@ -16,10 +16,10 @@
  <StackPanel DockPanel.Dock="Top"><TextBlock Text="Cập nhật tồn kho" Style="{StaticResource SectionTitle}"/><TextBlock x:Name="PermissionNote" Text="Chọn bao bì cần cập nhật." Style="{StaticResource Hint}"/></StackPanel>
  <DockPanel x:Name="Editor"><Button DockPanel.Dock="Bottom" Content="Lưu thay đổi kho" Style="{StaticResource PrimaryButton}" Click="SaveStock_Click" Margin="0,16,0,0"/>
  <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
- <ComboBox md:HintAssist.Hint="Loại thao tác" x:Name="Operation" SelectedIndex="0" SelectionChanged="PreviewChanged" Margin="0,6,0,14"><ComboBoxItem Content="Nhập kho"/><ComboBoxItem Content="Kiểm kê"/><ComboBoxItem Content="Điều chỉnh"/></ComboBox>
+ <ComboBox md:HintAssist.Hint="Loại thao tác" x:Name="Operation" SelectedIndex="0" SelectionChanged="PreviewChanged" Margin="0,6,0,14"><ComboBoxItem Content="Nhập kho"/><ComboBoxItem Content="Kiểm kê"/><ComboBoxItem Content="Điều chỉnh"/><ComboBoxItem Content="Hao hụt"/></ComboBox>
  <TextBox md:HintAssist.Hint="Số lượng" x:Name="Quantity" touch:TouchInput.Label="Số lượng bao bì" touch:TouchInput.Unit="đơn vị" touch:TouchInput.Maximum="2147483647" touch:TouchInput.AllowNegative="True" touch:TouchInput.Numeric="True" TextChanged="PreviewChanged" Margin="0,6,0,12" FontSize="22"/>
  <Border Background="{StaticResource PosSubtle}" Padding="12" CornerRadius="8"><TextBlock x:Name="Preview" TextWrapping="Wrap" FontWeight="SemiBold"/></Border>
- <TextBlock Text="Nhập kho: số nhập thêm. Kiểm kê: tổng đếm thực tế. Điều chỉnh: số tăng hoặc giảm." Style="{StaticResource Hint}"/>
+ <TextBlock Text="Nhập kho: số nhập thêm. Kiểm kê: tổng đếm thực tế. Điều chỉnh: số tăng hoặc giảm. Hao hụt: số hỏng/mất (trừ khỏi tồn)." Style="{StaticResource Hint}"/>
  <TextBox md:HintAssist.Hint="Lý do / nhà cung cấp / số phiếu" x:Name="Reason" MinHeight="80" TextWrapping="Wrap" MaxLength="300" Margin="0,6,0,0"/>
  </StackPanel></ScrollViewer></DockPanel>
  </DockPanel></Border></Grid></TabItem>

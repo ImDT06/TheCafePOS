@@ -17,6 +17,7 @@ public sealed class IngredientWindow : Window
     private readonly ICatalogService _catalog;
     private readonly IInventoryService _inventory;
     private readonly IAuthService _auth;
+    private readonly IPurchasingService _purchasing;
     private readonly DataGrid _grid = new() { IsReadOnly = true, AutoGenerateColumns = false, SelectionMode = DataGridSelectionMode.Single };
     private readonly DataGrid _log = new() { IsReadOnly = true, AutoGenerateColumns = false, Height = 200 };
     private readonly TextBox _name = Box(), _unit = Box(), _warn = Box(true), _qty = Box(true), _reason = Box();
@@ -30,8 +31,9 @@ public sealed class IngredientWindow : Window
         return b;
     }
 
-    public IngredientWindow(ICatalogService catalog, IInventoryService inventory, IAuthService auth)
+    public IngredientWindow(ICatalogService catalog, IInventoryService inventory, IAuthService auth, IPurchasingService purchasing)
     {
+        _purchasing = purchasing;
         _catalog = catalog;
         _inventory = inventory;
         _auth = auth;
@@ -52,6 +54,7 @@ public sealed class IngredientWindow : Window
         var save = PosUi.Button("Lưu nguyên liệu", (_, _) => Save(), "PrimaryButton", 44);
         var receive = PosUi.Button("Nhập kho (+)", (_, _) => Adjust("Nhập kho"), "PrimaryButton", 44);
         var count = PosUi.Button("Kiểm kê (= tồn thực tế)", (_, _) => Adjust("Kiểm kê"), minHeight: 44);
+        var waste = PosUi.Button("Hao hụt (−)", (_, _) => Waste(), "DangerButton", 44);
         var delete = PosUi.Button("Xóa nguyên liệu", (_, _) => Delete(), "DangerButton", 40);
         var form = new StackPanel
         {
@@ -61,6 +64,8 @@ public sealed class IngredientWindow : Window
                 new Border { Height = 1, Background = Brushes.Gainsboro, Margin = new Thickness(0, 14, 0, 10) },
                 PosUi.Text("Cập nhật tồn", 15, true), PosUi.Text("Số lượng"), _qty, PosUi.Text("Lý do / nhà cung cấp"), _reason,
                 new UniformGrid { Columns = 2, Margin = new Thickness(-4, 0, -4, 0), Children = { receive, count } },
+                new UniformGrid { Columns = 1, Margin = new Thickness(-4, 0, -4, 0), Children = { waste } },
+                PosUi.Text("Hao hụt: số lượng hỏng/đổ/hết hạn bị bỏ đi, cần ghi lý do.", 12, color: PosUi.Muted),
                 new Border { Height = 16 }, delete
             }
         };
@@ -124,6 +129,18 @@ public sealed class IngredientWindow : Window
             if (!decimal.TryParse(_qty.Text, out var qty)) throw FieldError.Mark(_qty, "Nhập số lượng.");
             _inventory.AdjustIngredient(_id, type, qty, _reason.Text);
             Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(this, type == "Nhập kho" ? "Đã nhập kho." : "Đã cập nhật tồn kiểm kê.");
+        }
+        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+    }
+
+    private void Waste()
+    {
+        try
+        {
+            if (_id is null) throw new InvalidOperationException("Chọn nguyên liệu trước.");
+            if (!decimal.TryParse(_qty.Text, out var qty)) throw FieldError.Mark(_qty, "Nhập số lượng hao hụt.");
+            _purchasing.RecordIngredientWaste(_id, qty, _reason.Text);
+            Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(this, "Đã ghi nhận hao hụt.");
         }
         catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
     }

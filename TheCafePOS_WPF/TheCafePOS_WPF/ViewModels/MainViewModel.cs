@@ -34,12 +34,15 @@ namespace TheCafePOS_WPF.ViewModels
         private readonly IAuthService _auth;
         private readonly IHoldOrderService _holds;
         private readonly IStickerPrinterService _stickers;
+        private readonly IVoucherService _vouchers;
         private IReadOnlyList<string> _channelOptions = Array.Empty<string>();
         private string _channel = StoreSettings.Counter;
 
         public MainViewModel(ICatalogService catalog, IOrderService orders, IShiftService shifts, ICustomerService customers,
-            IPromotionService promotions, IStoreSettingsService settings, IAuthService auth, IHoldOrderService holds, IStickerPrinterService stickers)
+            IPromotionService promotions, IStoreSettingsService settings, IAuthService auth, IHoldOrderService holds, IStickerPrinterService stickers,
+            IVoucherService vouchers)
         {
+            _vouchers = vouchers;
             _catalog = catalog;
             _orders = orders;
             _shifts = shifts;
@@ -85,6 +88,7 @@ namespace TheCafePOS_WPF.ViewModels
         public string DiscountReason { get; private set; } = "";
         public string CustomerPhone { get; private set; } = "";
         public int RedeemPoints { get; private set; }
+        public string VoucherCode { get; private set; } = "";
 
         /// <summary>Bound two-way to the channel picker; see <see cref="SetChannel"/>.</summary>
         public string Channel
@@ -115,7 +119,13 @@ namespace TheCafePOS_WPF.ViewModels
         public decimal RedeemValue => RedeemPoints * DataStoreService.PointValue;
         public decimal ChannelSurcharge => IsAppOrder && _settings.Settings.Channels.FirstOrDefault(c => c.Name == Channel) is { } ch
             ? Math.Ceiling(Subtotal * ch.MarkupPercent / 100m / 1000m) * 1000m : 0;
-        public decimal PayableTotal => Subtotal + ChannelSurcharge - Discount - PromoAmount - RedeemValue;
+        public decimal VoucherAmount => VoucherCode.Length == 0 ? 0 : TryEvaluateVoucher(VoucherCode, out var amount, out _) ? amount : 0;
+        /// <summary>Amount after every reduction, before VAT is added on top.</summary>
+        public decimal NetTotal => Subtotal + ChannelSurcharge - Discount - PromoAmount - RedeemValue - VoucherAmount;
+        public int VatPercent => _settings.Settings.VatPercent;
+        public bool VatIncluded => _settings.Settings.PricesIncludeVat;
+        public decimal VatAmount => DataStoreService.VatFor(NetTotal, VatPercent, VatIncluded);
+        public decimal PayableTotal => VatIncluded ? NetTotal : NetTotal + VatAmount;
 
         /// <summary>Same instance until <see cref="ReloadSettings"/>, so a bound picker keeps its selection.</summary>
         public IReadOnlyList<string> ChannelOptions => _channelOptions;
@@ -162,6 +172,7 @@ namespace TheCafePOS_WPF.ViewModels
         public string CashButtonText => IsAppOrder ? $"Ghi nhận đơn {Channel} (F4)" : "Tiền mặt (F4)";
         public string CustomerButtonText => Member is null ? "Thành viên" : "Đổi khách";
         public string DiscountButtonText => Discount > 0 ? "Sửa giảm giá" : "Giảm giá";
+        public string VoucherButtonText => VoucherCode.Length > 0 ? "Đổi voucher" : "Voucher";
 
         public string CustomerLine => Member is { } m ? $"{m.Name}: {m.Points} điểm, hạng {m.Tier}" : "";
         public bool ShowCustomerLine => Member is not null;
@@ -182,6 +193,10 @@ namespace TheCafePOS_WPF.ViewModels
         public bool ShowLoyaltyLine => RedeemPoints > 0;
         public string DiscountLine => $"Giảm giá −{Discount:N0}đ ({DiscountReason})";
         public bool ShowDiscountLine => Discount > 0;
+        public string VoucherLine => $"Voucher {VoucherCode}: −{VoucherAmount:N0}đ";
+        public bool ShowVoucherLine => VoucherCode.Length > 0;
+        public string VatLine => VatIncluded ? $"Đã gồm VAT {VatPercent}%: {VatAmount:N0}đ" : $"Thuế VAT {VatPercent}%: +{VatAmount:N0}đ";
+        public bool ShowVatLine => VatPercent > 0 && HasItems;
 
         #endregion
 
@@ -193,6 +208,7 @@ namespace TheCafePOS_WPF.ViewModels
         private void Changed(bool clearCheckoutError = true)
         {
             if (clearCheckoutError) CheckoutError = null;
+            if (DropInvalidVoucher() is { } reason) Raise(new PosMessage($"Đã bỏ voucher {reason}", true));
             if (DropInvalidAdjustments()) Raise(new PosMessage("Đã bỏ giảm giá / đổi điểm vì vượt quá tạm tính.", true));
             OnPropertyChanged(string.Empty);
         }
@@ -377,7 +393,7 @@ namespace TheCafePOS_WPF.ViewModels
             if (IsAppOrder)
             {
                 ServiceType = DefaultServiceType;
-                Discount = 0; DiscountReason = ""; CustomerPhone = ""; RedeemPoints = 0;
+                Discount = 0; DiscountReason = ""; CustomerPhone = ""; RedeemPoints = 0; VoucherCode = "";
             }
             Changed();
         }
@@ -392,6 +408,37 @@ namespace TheCafePOS_WPF.ViewModels
             Changed();
         }
 
+        private bool TryEvaluateVoucher(string code, out decimal amount, out string error)
+        {
+            try { amount = _vouchers.EvaluateVoucher(code, Subtotal, PromoAmount, DataStoreService.CafeNow); error = ""; return true; }
+            catch (InvalidOperationException ex) { amount = 0; error = ex.Message; return false; }
+        }
+
+        /// <summary>Applies a voucher code; an empty code removes it.</summary>
+        /// <returns>null when applied or removed, otherwise why the code was refused.</returns>
+        public string? ApplyVoucher(string code)
+        {
+            string normalized = DataStoreService.NormalizeVoucherCode(code);
+            if (normalized.Length == 0) { VoucherCode = ""; Changed(); return null; }
+            if (IsAppOrder) return "Đơn từ app giao hàng không áp dụng voucher của quán.";
+            if (!TryEvaluateVoucher(normalized, out var amount, out var error)) return error;
+            if (Subtotal + ChannelSurcharge - Discount - PromoAmount - RedeemValue - amount <= 0) return "Voucher làm tổng tiền về 0. Hãy bỏ bớt giảm giá khác.";
+            VoucherCode = normalized;
+            Changed();
+            return null;
+        }
+
+        /// <returns>Why the voucher was dropped (the cart no longer qualifies), or null when it still applies.</returns>
+        private string? DropInvalidVoucher()
+        {
+            if (VoucherCode.Length == 0) return null;
+            string code = VoucherCode;
+            if (!HasItems) { VoucherCode = ""; return null; }
+            if (TryEvaluateVoucher(code, out _, out var error)) return null;
+            VoucherCode = "";
+            return $"{code}: {error}";
+        }
+
         public void SetCustomer(string phone, int redeemPoints)
         {
             CustomerPhone = phone; RedeemPoints = redeemPoints;
@@ -404,9 +451,9 @@ namespace TheCafePOS_WPF.ViewModels
         /// <returns>true when adjustments on a non-empty cart were dropped, so the cashier should be told.</returns>
         public bool DropInvalidAdjustments()
         {
-            if (HasItems && PayableTotal > 0) return false;
-            bool notify = HasItems && (Discount > 0 || RedeemPoints > 0);
-            Discount = 0; DiscountReason = ""; RedeemPoints = 0;
+            if (HasItems && NetTotal > 0) return false;
+            bool notify = HasItems && (Discount > 0 || RedeemPoints > 0 || VoucherCode.Length > 0);
+            Discount = 0; DiscountReason = ""; RedeemPoints = 0; VoucherCode = "";
             return notify;
         }
 
@@ -443,13 +490,13 @@ namespace TheCafePOS_WPF.ViewModels
         }
 
         /// <summary>Persists the order. Once this returns the sale is recorded and must not be charged again.</summary>
-        public Order CompleteCheckout(string paymentMethod, decimal cashGiven, bool qrApproved = false) =>
-            _orders.Checkout(CartItems, paymentMethod, cashGiven, CheckoutId, qrApproved, ServiceType, Discount, DiscountReason, CustomerPhone, RedeemPoints, _channel);
+        public Order CompleteCheckout(string paymentMethod, decimal cashGiven, bool qrApproved = false, decimal transferAmount = 0) =>
+            _orders.Checkout(CartItems, paymentMethod, cashGiven, CheckoutId, qrApproved, ServiceType, Discount, DiscountReason, CustomerPhone, RedeemPoints, _channel, VoucherCode, transferAmount);
 
         /// <summary>Resets the cart and all adjustments for the next customer.</summary>
         public void StartNewOrder()
         {
-            Discount = 0; DiscountReason = ""; ServiceType = DefaultServiceType; CustomerPhone = ""; RedeemPoints = 0;
+            Discount = 0; DiscountReason = ""; ServiceType = DefaultServiceType; CustomerPhone = ""; RedeemPoints = 0; VoucherCode = "";
             _channel = StoreSettings.Counter;
             ClearCart();
             LoadNextOrderNumber();
@@ -476,6 +523,21 @@ namespace TheCafePOS_WPF.ViewModels
             if (!HasItems) return;
             _holds.HoldOrder(CartItems, Subtotal, note, ServiceType);
             ClearCart();
+        }
+
+        /// <summary>
+        /// Splits the bill: the chosen lines move to a new held order so this customer pays only for the rest.
+        /// </summary>
+        /// <returns>null on success, otherwise why the split is not possible.</returns>
+        public string? SplitBill(IReadOnlyCollection<OrderItem> linesToMove)
+        {
+            if (CheckoutInProgress) return "Đang thanh toán, không thể tách hóa đơn.";
+            var moving = linesToMove.Where(CartItems.Contains).Distinct().ToList();
+            if (moving.Count == 0) return "Chọn ít nhất một món để tách sang hóa đơn mới.";
+            if (moving.Count == CartItems.Count) return "Phải giữ lại ít nhất một món trên hóa đơn hiện tại.";
+            _holds.HoldOrder(new ObservableCollection<OrderItem>(moving), moving.Sum(i => i.TotalPrice), $"Tách từ đơn #{CurrentDailyOrderNumber:D2}", ServiceType);
+            foreach (var item in moving) CartItems.Remove(item);
+            return null;
         }
 
         public void RecallHeldOrder(HeldOrderInfo held)

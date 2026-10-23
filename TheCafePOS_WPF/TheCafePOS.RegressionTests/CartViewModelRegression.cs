@@ -18,7 +18,7 @@ internal static class CartViewModelRegression
         store.SetProductSoldOut(soldOut.Id, true);
         OrderItem Make(int quantity) => OrderConfigurationService.Create(product, "M", 100, 100, quantity, Array.Empty<(string, int)>(), "", store.Products);
 
-        var vm = new MainViewModel(store, store, store, store, store, store, auth, TestHost.Holds, TestHost.Stickers);
+        var vm = new MainViewModel(store, store, store, store, store, store, auth, TestHost.Holds, TestHost.Stickers, store);
         var messages = new List<PosMessage>();
         var changed = new List<string?>();
         vm.MessageRaised += (_, m) => messages.Add(m);

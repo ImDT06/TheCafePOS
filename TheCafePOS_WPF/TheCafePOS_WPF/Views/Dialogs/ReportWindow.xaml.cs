@@ -93,7 +93,7 @@ public partial class ReportWindow : Window
             var report = RefreshReport();
             var dialog = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"bao-cao-{From.SelectedDate:yyyyMMdd}-{To.SelectedDate:yyyyMMdd}.xlsx" };
             if (dialog.ShowDialog(this) != true) return;
-            string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Platform" => "Nền tảng", _ => m };
+            string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Platform" => "Nền tảng", "Mixed" => "Kết hợp", _ => m };
             XlsxWriter.Write(dialog.FileName, new (string, IReadOnlyList<string>, IEnumerable<object?[]>)[]
             {
                 ("Tổng quan", new[] { "Chỉ số", "Giá trị" }, new object?[][]
@@ -104,10 +104,11 @@ public partial class ReportWindow : Window
                     new object?[] { "Hoàn tiền", report.Refunded }, new object?[] { "Doanh thu thuần", report.NetRevenue },
                     new object?[] { "Tiền mặt", report.Cash }, new object?[] { "VietQR", report.Transfer },
                     new object?[] { "Giảm giá thủ công", report.Orders.Sum(o => o.DiscountAmount) }, new object?[] { "Khuyến mãi", report.Orders.Sum(o => o.PromotionAmount) },
-                    new object?[] { "Đổi điểm", report.Orders.Sum(o => o.LoyaltyAmount) }, new object?[] { "Giá trị TB/đơn", Math.Round(report.AverageOrderValue) }
+                    new object?[] { "Đổi điểm", report.Orders.Sum(o => o.LoyaltyAmount) }, new object?[] { "Voucher", report.Orders.Sum(o => o.VoucherAmount) },
+                    new object?[] { "Thuế VAT", report.Orders.Sum(o => o.VatAmount) }, new object?[] { "Giá trị TB/đơn", Math.Round(report.AverageOrderValue) }
                 }),
-                ("Đơn hàng", new[] { "Mã đơn", "Thời gian", "Kênh", "Loại đơn", "Thanh toán", "Tạm tính", "Phụ thu kênh", "Khuyến mãi", "Đổi điểm", "Giảm giá", "Thực thu", "Đã hoàn", "Khách", "Trạng thái" },
-                    report.Orders.Select(o => new object?[] { o.DailyOrderNumberFormatted, o.CreatedAt, o.Channel, o.ServiceType, Pay(o.PaymentMethod), o.SubtotalAmount, o.ChannelSurcharge, o.PromotionAmount, o.LoyaltyAmount, o.DiscountAmount, o.TotalAmount, o.RefundedAmount, o.CustomerPhone, o.IsCancelled ? "Đã hủy" : o.RefundStatus })),
+                ("Đơn hàng", new[] { "Mã đơn", "Thời gian", "Kênh", "Loại đơn", "Thanh toán", "Tạm tính", "Phụ thu kênh", "Khuyến mãi", "Đổi điểm", "Giảm giá", "Voucher", "Thuế VAT", "Thực thu", "Đã hoàn", "Khách", "Trạng thái" },
+                    report.Orders.Select(o => new object?[] { o.DailyOrderNumberFormatted, o.CreatedAt, o.Channel, o.ServiceType, Pay(o.PaymentMethod), o.SubtotalAmount, o.ChannelSurcharge, o.PromotionAmount, o.LoyaltyAmount, o.DiscountAmount, o.VoucherAmount, o.VatAmount, o.TotalAmount, o.RefundedAmount, o.CustomerPhone, o.IsCancelled ? "Đã hủy" : o.RefundStatus })),
                 ("Chi tiết món", new[] { "Mã đơn", "Món", "Size", "Số lượng", "Thành tiền" },
                     report.Orders.SelectMany(o => o.Items.Select(i => new object?[] { o.DailyOrderNumberFormatted, i.ProductName, i.Size, i.Quantity, i.TotalPrice }))),
                 ("Món bán", new[] { "Món", "Số lượng", "Doanh thu" }, report.Products.Select(p => new object?[] { p.ProductName, p.Quantity, p.Revenue })),

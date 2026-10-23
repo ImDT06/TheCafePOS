@@ -7,6 +7,7 @@ namespace TheCafePOS_WPF.Models
         public int StockQuantity { get; set; }
         public string Unit { get; set; } = "Cái";
         public int WarningThreshold { get; set; } = 50;
+        public decimal UnitCost { get; set; }
 
         public bool IsLowStock => StockQuantity <= WarningThreshold;
     }

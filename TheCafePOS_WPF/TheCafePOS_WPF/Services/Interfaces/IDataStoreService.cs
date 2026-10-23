@@ -5,7 +5,7 @@ namespace TheCafePOS_WPF.Services.Interfaces
     /// this aggregate exists for the composition root and the data store itself.
     /// </summary>
     public interface IDataStoreService : ICatalogService, IInventoryService, IShiftService, IFinanceService,
-        ICustomerService, IPromotionService, IStoreSettingsService, IOrderService
+        ICustomerService, IPromotionService, IStoreSettingsService, IOrderService, IVoucherService, IPurchasingService
     {
     }
 }

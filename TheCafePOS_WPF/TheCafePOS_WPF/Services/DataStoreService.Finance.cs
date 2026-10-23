@@ -24,10 +24,17 @@ public partial class DataStoreService
         ValidateMoney(amount, reason);
         var order = CompletedOrders.FirstOrDefault(o => o.Id == orderId && o.PaymentStatus == "Completed") ?? throw new InvalidOperationException("Không tìm thấy đơn đã thanh toán.");
         if (amount > order.RefundableAmount) throw new InvalidOperationException("Số tiền vượt phần còn được hoàn của đơn.");
-        if (order.PaymentMethod == "Cash" && amount > ExpectedCash) throw new InvalidOperationException("Tiền dự kiến trong ngăn kéo không đủ. Ghi nhận bổ sung tiền trước khi hoàn.");
-        if (order.PaymentMethod == "VietQR" && string.IsNullOrWhiteSpace(reference)) throw new InvalidOperationException("Nhập mã giao dịch chuyển khoản hoàn tiền đã thực hiện.");
+        // Mixed orders hand back cash first, up to the cash still unrefunded; the rest goes back by transfer.
+        decimal cashBack = order.PaymentMethod switch
+        {
+            "Cash" => amount,
+            "Mixed" => Math.Max(0, Math.Min(amount, order.CashPortion - Refunds.Where(r => r.OrderId == order.Id).Sum(r => r.DrawerAmount))),
+            _ => 0
+        };
+        if (cashBack > ExpectedCash) throw new InvalidOperationException("Tiền dự kiến trong ngăn kéo không đủ. Ghi nhận bổ sung tiền trước khi hoàn.");
+        if (order.PaymentMethod is "VietQR" or "Mixed" && amount > cashBack && string.IsNullOrWhiteSpace(reference)) throw new InvalidOperationException("Nhập mã giao dịch chuyển khoản hoàn tiền đã thực hiện.");
         var approver = _auth.RequireApproval(RefundAction(id, orderId, amount, reason, reference));
-        var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, Reason = reason.Trim(), Reference = reference.Trim(), Operator = _auth.CurrentUser!.Username, Approver = approver };
+        var entry = new RefundEntry { Id = id, OrderId = order.Id, ShiftId = CurrentShift.Id, Amount = amount, Method = order.PaymentMethod, CashAmount = order.PaymentMethod == "Mixed" ? cashBack : 0, Reason = reason.Trim(), Reference = reference.Trim(), Operator = _auth.CurrentUser!.Username, Approver = approver };
         Mutate(() => { order.RefundedAmount += amount; Refunds.Add(entry); RevokeLoyalty(order, amount); });
         return entry;
     }
@@ -58,6 +65,8 @@ public partial class DataStoreService
                     ing.Stock -= move.Change;
                     IngredientMovements.Add(new IngredientMovement { IngredientId = ing.Id, IngredientName = ing.Name, Type = "Hủy đơn", Change = -move.Change, After = ing.Stock, Reason = tag, Operator = _auth.CurrentUser?.Username ?? "" });
                 }
+            // The customer did not get the order, so the voucher can be used again.
+            if (FindVoucher(order.VoucherCode) is { UsedCount: > 0 } voucher) voucher.UsedCount--;
             order.FulfillmentStatus = "Dừng phục vụ";
             // Payment stays "Completed": the full refund entry already nets the revenue to zero in reports.
             order.IsCancelled = true;

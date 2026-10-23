@@ -23,6 +23,9 @@ public class StoreState
     public List<Ingredient> Ingredients { get; set; } = new();
     public List<IngredientMovement> IngredientMovements { get; set; } = new();
     public StoreSettings Settings { get; set; } = new();
+    public List<Voucher> Vouchers { get; set; } = new();
+    public List<Supplier> Suppliers { get; set; } = new();
+    public List<PurchaseReceipt> PurchaseReceipts { get; set; } = new();
 }
 public partial class DataStoreService
 {
@@ -30,7 +33,7 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 7, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 7, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings, Vouchers = Vouchers, Suppliers = Suppliers, PurchaseReceipts = PurchaseReceipts };
     // Early seed data used emoji and all-caps names; show them like every other category.
     private static readonly Dictionary<string, string> LegacyCategoryNames = new()
     {
@@ -50,6 +53,7 @@ public partial class DataStoreService
         Customers = state.Customers ?? new(); Promotions = state.Promotions ?? new();
         Ingredients = state.Ingredients ?? new(); IngredientMovements = state.IngredientMovements ?? new();
         Settings = state.Settings ?? new();
+        Vouchers = state.Vouchers ?? new(); Suppliers = state.Suppliers ?? new(); PurchaseReceipts = state.PurchaseReceipts ?? new();
     }
     private void LoadState()
     {
@@ -129,9 +133,9 @@ public partial class DataStoreService
         if (initialCash < 0) throw new InvalidOperationException("Tiền đầu ca không được âm.");
         Mutate(() => CurrentShift = new Shift { CashierName = _auth.CurrentUser!.Username, InitialCash = initialCash });
     }
-    public decimal ExpectedCash => CurrentShift.InitialCash + CompletedOrders.Where(o => o.ShiftId == CurrentShift.Id && o.PaymentMethod == "Cash" && o.PaymentStatus == "Completed").Sum(o => o.TotalAmount)
+    public decimal ExpectedCash => CurrentShift.InitialCash + CompletedOrders.Where(o => o.ShiftId == CurrentShift.Id && o.PaymentStatus == "Completed").Sum(o => o.CashPortion)
         + CashEntries.Where(e => e.ShiftId == CurrentShift.Id).Sum(e => e.SignedAmount)
-        - Refunds.Where(r => r.ShiftId == CurrentShift.Id && r.Method == "Cash").Sum(r => r.Amount);
+        - Refunds.Where(r => r.ShiftId == CurrentShift.Id).Sum(r => r.DrawerAmount);
     public void RequireOpenShift()
     {
         _auth.RequireSignedIn();
@@ -144,7 +148,7 @@ public partial class DataStoreService
         if (actualCash < 0) throw new InvalidOperationException("Tiền thực tế không được âm.");
         Mutate(() => { CurrentShift.ActualCash = actualCash; CurrentShift.ExpectedCash = ExpectedCash; CurrentShift.EndTime = DateTime.Now; CurrentShift.Status = "Closed"; Shifts.Add(CurrentShift); });
     }
-    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0, string channel = StoreSettings.Counter)
+    public Order Checkout(IEnumerable<OrderItem> cart, string method, decimal cash, string checkoutId, bool qrApproved = false, string serviceType = "Mang đi", decimal discount = 0, string discountReason = "", string customerPhone = "", int redeemPoints = 0, string channel = StoreSettings.Counter, string voucherCode = "", decimal transferAmount = 0)
     {
         RequireOpenShift();
         var existing = CompletedOrders.FirstOrDefault(o => o.Id == checkoutId);
@@ -157,23 +161,34 @@ public partial class DataStoreService
         // Delivery-app orders: listed at the channel price, paid out by the platform, no in-store promotions.
         bool app = channel != StoreSettings.Counter;
         var appChannel = app ? Settings.Channels.FirstOrDefault(c => c.Name == channel && c.IsActive) ?? throw new InvalidOperationException("Kênh bán không hợp lệ hoặc đang tắt.") : null;
-        if (app && (discount > 0 || redeemPoints > 0 || method != "Platform")) throw new InvalidOperationException("Đơn từ app giao hàng không áp dụng giảm giá/đổi điểm và được ghi nhận là thanh toán qua nền tảng.");
+        voucherCode = NormalizeVoucherCode(voucherCode);
+        if (app && (discount > 0 || redeemPoints > 0 || voucherCode.Length > 0 || method != "Platform")) throw new InvalidOperationException("Đơn từ app giao hàng không áp dụng giảm giá/đổi điểm và được ghi nhận là thanh toán qua nền tảng.");
         if (!app && method == "Platform") throw new InvalidOperationException("Chỉ đơn từ app giao hàng mới ghi nhận thanh toán qua nền tảng.");
         if (app) serviceType = "Mang đi";
         var promos = app ? (Amount: 0m, Names: "") : PromotionsFor(items, CafeNow);
         decimal promoAmount = promos.Amount, loyaltyAmount = redeemPoints * PointValue;
-        if (discount < 0 || discount != decimal.Truncate(discount) || discount + promoAmount + loyaltyAmount >= subtotal) throw new InvalidOperationException("Số tiền giảm phải là số nguyên, không âm và nhỏ hơn tạm tính.");
+        decimal voucherAmount = voucherCode.Length == 0 ? 0 : EvaluateVoucher(voucherCode, subtotal, promoAmount, CafeNow);
+        if (discount < 0 || discount != decimal.Truncate(discount) || discount + promoAmount + loyaltyAmount + voucherAmount >= subtotal) throw new InvalidOperationException("Số tiền giảm phải là số nguyên, không âm và nhỏ hơn tạm tính.");
         if (discount > 0 && string.IsNullOrWhiteSpace(discountReason)) throw new InvalidOperationException("Nhập lý do giảm giá.");
         if (DiscountNeedsApproval(subtotal, discount)) _auth.RequireApproval(AuthService.DiscountApprovalAction(checkoutId, discount, discountReason));
         decimal surcharge = appChannel is null ? 0 : Math.Ceiling(subtotal * appChannel.MarkupPercent / 100m / 1000m) * 1000m;
-        decimal total = subtotal + surcharge - discount - promoAmount - loyaltyAmount;
+        decimal net = subtotal + surcharge - discount - promoAmount - loyaltyAmount - voucherAmount;
+        int vatPercent = Settings.VatPercent;
+        bool vatIncluded = Settings.PricesIncludeVat;
+        decimal vat = VatFor(net, vatPercent, vatIncluded);
+        decimal total = vatIncluded ? net : net + vat;
         if (total <= 0) throw new InvalidOperationException("Tổng tiền phải lớn hơn 0.");
-        if (method is not ("Cash" or "VietQR" or "Platform")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
-        if (method == "Cash" && !Core.CashAmount.IsValid(cash)) throw new InvalidOperationException("Tiền khách đưa phải là số nguyên không âm, tối đa 999.999.999.999đ.");
-        if (method == "Cash" && cash < total) throw new InvalidOperationException($"Tiền khách đưa còn thiếu {total - cash:N0}đ.");
+        if (method is not ("Cash" or "VietQR" or "Platform" or "Mixed")) throw new InvalidOperationException("Phương thức thanh toán không hợp lệ.");
+        if (method != "Mixed" && transferAmount != 0) throw new InvalidOperationException("Chỉ thanh toán kết hợp mới có phần chuyển khoản.");
+        // Mixed: the customer pays part in cash and the rest by transfer; change only comes from the cash part.
+        decimal cashDue = method == "Mixed" ? total - transferAmount : total;
+        if (method == "Mixed" && (transferAmount <= 0 || transferAmount >= total || transferAmount != decimal.Truncate(transferAmount))) throw new InvalidOperationException("Phần chuyển khoản phải là số nguyên lớn hơn 0 và nhỏ hơn tổng tiền.");
+        if (method is "Cash" or "Mixed" && !Core.CashAmount.IsValid(cash)) throw new InvalidOperationException("Tiền khách đưa phải là số nguyên không âm, tối đa 999.999.999.999đ.");
+        if (method is "Cash" or "Mixed" && cash < cashDue) throw new InvalidOperationException($"Tiền khách đưa còn thiếu {cashDue - cash:N0}đ.");
         if (method == "VietQR" && (!qrApproved || !_auth.HasPaymentApproval(checkoutId, total))) throw new InvalidOperationException("Cần quản lý xác nhận đã nhận chuyển khoản.");
+        if (method == "Mixed" && (!qrApproved || !_auth.HasPaymentApproval(checkoutId, transferAmount))) throw new InvalidOperationException("Cần xác nhận đã nhận phần chuyển khoản.");
         if (serviceType is not ("Mang đi" or "Tại chỗ")) throw new InvalidOperationException("Chọn loại đơn hợp lệ.");
-        var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promos.Names, CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, Channel = channel, ChannelSurcharge = surcharge, TotalAmount = total, PaymentMethod = method, CashGiven = method == "Cash" ? cash : 0, ChangeReturned = method == "Cash" ? cash - total : 0 };
+        var order = new Order { ServiceType = serviceType, FulfillmentStatus = "Chờ làm", PaidAt = DateTimeOffset.Now, CreatedAt = CafeNow, Id = checkoutId, ShiftId = CurrentShift.Id, DailyOrderNumber = GetNextDailyOrderNumber(), Items = items, SubtotalAmount = subtotal, DiscountAmount = discount, DiscountReason = discountReason.Trim(), PromotionAmount = promoAmount, PromotionName = promos.Names, CustomerPhone = customer?.Phone ?? "", PointsRedeemed = redeemPoints, Channel = channel, ChannelSurcharge = surcharge, VoucherCode = voucherCode, VoucherAmount = voucherAmount, VatPercent = vatPercent, VatIncluded = vatIncluded, VatAmount = vat, TotalAmount = total, PaymentMethod = method, TransferAmount = method == "Mixed" ? transferAmount : 0, CashGiven = method is "Cash" or "Mixed" ? cash : 0, ChangeReturned = method is "Cash" or "Mixed" ? cash - cashDue : 0 };
         foreach (var item in items) { item.OrderId = order.Id; item.ReadyQuantity = item.DeliveredQuantity = 0; }
         Mutate(() =>
         {
@@ -184,6 +199,7 @@ public partial class DataStoreService
             foreach (var packaging in PackagingInventory.Where(p => p.StockQuantity != stockBefore[p.Id]))
                 RecordStockMovement(packaging, stockBefore[packaging.Id], "Bán hàng", $"Đơn #{order.DailyOrderNumber:D2}", order.Id);
             ApplyLoyalty(order);
+            if (FindVoucher(voucherCode) is { } voucher) voucher.UsedCount++;
             DeductIngredientsForOrder(order);
             CompletedOrders.Add(order);
             if (Draft?.Id == checkoutId) Draft = null;
@@ -221,7 +237,8 @@ public partial class DataStoreService
             "Nhập kho" when quantity > 0 => (long)item.StockQuantity + quantity,
             "Kiểm kê" when quantity >= 0 => quantity,
             "Điều chỉnh" when quantity != 0 => (long)item.StockQuantity + quantity,
-            _ => throw new InvalidOperationException("Nhập kho cần số dương; kiểm kê cần số không âm; điều chỉnh cần số khác 0.")
+            WasteMovement when quantity > 0 => (long)item.StockQuantity - quantity,
+            _ => throw new InvalidOperationException("Nhập kho và hao hụt cần số dương; kiểm kê cần số không âm; điều chỉnh cần số khác 0.")
         };
         if (target < 0 || target > int.MaxValue) throw new InvalidOperationException("Tồn kho sau thay đổi phải từ 0 đến 2.147.483.647.");
         Mutate(() =>

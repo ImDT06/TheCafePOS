@@ -210,6 +210,9 @@ public partial class ManagementWindow : Window
     }
     private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (_dialogs.Create<StoreSettingsWindow>(this).ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
     private void OpenPromotions_Click(object sender, RoutedEventArgs e) => _dialogs.Create<PromotionsWindow>(this).ShowDialog();
+    private void OpenVouchers_Click(object sender, RoutedEventArgs e) => _dialogs.Create<VouchersWindow>(this).ShowDialog();
+    private void OpenPurchasing_Click(object sender, RoutedEventArgs e) { _dialogs.Create<PurchasingWindow>(this).ShowDialog(); Refresh(); }
+    private void OpenStockReport_Click(object sender, RoutedEventArgs e) => _dialogs.Create<StockReportWindow>(this).ShowDialog();
     private void OpenCustomers_Click(object sender, RoutedEventArgs e) { _dialogs.Create<CustomerListWindow>(this).ShowDialog(); RefreshBackupInfo(); }
     private string CloudText()
     {

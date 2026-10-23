@@ -42,7 +42,7 @@ public partial class PackagingStatusModal : Window
         Core.TouchInput.SetAllowNegative(Quantity, (Operation.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Điều chỉnh");
         Core.TouchInput.SetUnit(Quantity, (DgPackaging.SelectedItem as PackagingItem)?.Unit ?? "đơn vị");
         if (DgPackaging.SelectedItem is not PackagingItem item || !int.TryParse(Quantity.Text, out var quantity)) return;
-        long after = ((ComboBoxItem)Operation.SelectedItem).Content.ToString() == "Kiểm kê" ? quantity : (long)item.StockQuantity + quantity;
+        long after = ((ComboBoxItem)Operation.SelectedItem).Content.ToString() switch { "Kiểm kê" => quantity, "Hao hụt" => (long)item.StockQuantity - quantity, _ => (long)item.StockQuantity + quantity };
         Preview.Text = $"Tồn: {item.StockQuantity} → {after} ({after - item.StockQuantity:+0;-0;0})";
     }
     private void PackagingSelected(object sender, SelectionChangedEventArgs e) { RefreshHistory(); UpdatePreview(); }

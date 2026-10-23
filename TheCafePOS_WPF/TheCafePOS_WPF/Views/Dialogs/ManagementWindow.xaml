@@ -136,6 +136,7 @@
               <TextBlock Text="Khuyến mãi" FontWeight="Bold" Margin="0,24,0,0" />
               <TextBlock Text="Giờ vàng giảm %, mua X tặng Y, combo giá cố định. Các chương trình đang bật được cộng dồn tự động." Style="{StaticResource Hint}" />
               <Button Content="Chương trình khuyến mãi…" Padding="8" Click="OpenPromotions_Click" />
+              <Button Content="Voucher…" Padding="8" Click="OpenVouchers_Click" />
             </StackPanel>
           </Border>
           <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Margin="8,0,0,0">
@@ -152,6 +153,8 @@
               <Button Content="Quản lý khách hàng…" Padding="8" Click="OpenCustomers_Click" />
               <TextBlock Text="Kho nguyên liệu" FontWeight="Bold" Margin="0,24,0,8" />
               <Button Content="Mở kho nguyên liệu…" Padding="8" Click="OpenIngredients_Click" />
+              <Button Content="Nhập hàng &amp; nhà cung cấp…" Padding="8" Click="OpenPurchasing_Click" />
+              <Button Content="Cảnh báo tồn kho &amp; hao hụt…" Padding="8" Click="OpenStockReport_Click" />
             </StackPanel>
           </Border>
         </Grid>

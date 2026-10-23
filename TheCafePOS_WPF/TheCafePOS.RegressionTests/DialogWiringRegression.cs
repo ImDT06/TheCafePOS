@@ -48,6 +48,10 @@ internal static class DialogWiringRegression
         Wire<CustomerListWindow>();
         Wire<OrderQueueWindow>();
         Wire<CustomerModal>();
+        Wire<ReceiptWindow>(typeof(Order), typeof(bool));
+        Wire<VouchersWindow>();
+        Wire<PurchasingWindow>();
+        Wire<StockReportWindow>();
         Wire<TheCafePOS_WPF.MainWindow>();
 
         Check(services.GetRequiredService<IDialogFactory>() is DialogFactory, "Dialog factory is registered");

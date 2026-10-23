@@ -295,7 +295,7 @@ public sealed class StockReportWindow : Window
     private readonly IPurchasingService _purchasing;
     private readonly DataGrid _low = FormUi.Grid("Không có mặt hàng nào dưới ngưỡng cảnh báo");
     private readonly DataGrid _loss = FormUi.Grid("Không có hao hụt trong khoảng ngày này");
-    private readonly DatePicker _from = new() { SelectedDate = DateTime.Today.AddDays(-30), Margin = new Thickness(0, 0, 8, 0) }, _to = new() { SelectedDate = DateTime.Today, Margin = new Thickness(0, 0, 8, 0) };
+    private readonly DatePicker _from = new() { SelectedDate = DateTime.Today.AddDays(-30), Width = 170, Margin = new Thickness(0, 0, 8, 0) }, _to = new() { SelectedDate = DateTime.Today, Width = 170, Margin = new Thickness(0, 0, 8, 0) };
     private readonly TextBlock _lossSummary = PosUi.Text("", 15, true, PosUi.Danger), _lowSummary = PosUi.Text("", 15, true);
 
     public StockReportWindow(IPurchasingService purchasing, IAuthService auth)

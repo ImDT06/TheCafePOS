@@ -109,7 +109,7 @@ internal static class CoreRegression
         Check(ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today, secondShiftId).Revenue == 25000, "Report shift filter");
         Check(ReportService.Build(store.CompletedOrders, DateTime.Today.AddDays(-1), DateTime.Today.AddDays(-1)).Revenue == 0, "Report date filter");
         Reject(() => ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today.AddDays(-1)), "Reject reversed date range");
-        Check(ReportService.ToCsv(report).Contains("cash-order"), "CSV includes persisted order reference");
+        Check(ReportService.ToWorkbook(report, "", null, null).Single(s => s.Name == "Đơn hàng").Rows.Any(r => r.Contains("cash-order")), "Excel includes persisted order reference");
         var saved = TestHost.Database.Read<StoreState>("store")!;
         Check(saved.Orders.Count == 3 && saved.Shifts.Count == 2 && saved.CurrentShift.Status == "Closed", "SQLite snapshot contains all completed transactions");
         int initialStraws = store.PackagingInventory.Single(p => p.Id == "pack-5").StockQuantity;

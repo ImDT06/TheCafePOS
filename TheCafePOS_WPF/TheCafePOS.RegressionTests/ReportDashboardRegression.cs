@@ -26,7 +26,7 @@ internal static class ReportDashboardRegression
         Check(report.AverageOrderValue == 82500, "Average order value uses gross completed sales");
         Check(report.Daily[1].OrderCount == 0 && report.Daily[1].NetRevenue == -55000, "Refund-only day retains negative net revenue");
         Check(report.Daily.Sum(d => d.NetRevenue) == report.NetRevenue && report.NetRevenue == 110000, "Daily totals reconcile with summary");
-        Check(ReportService.ToDailyCsv(report).Contains("2026-10-02,0,0,55000,-55000"), "Daily CSV preserves signed values and refund date");
+        Check(ReportService.ToWorkbook(report, "", null, null).Single(s => s.Name == "Theo ngày").Rows.Any(r => r[0] is DateTime d && d == new DateTime(2026, 10, 2) && (int)r[1]! == 0 && (decimal)r[2]! == 0 && (decimal)r[3]! == 55000 && (decimal)r[4]! == -55000), "Daily sheet preserves signed values and refund date");
         var empty = ReportService.Build(orders, day.AddDays(3), day.AddDays(4), refunds: refunds);
         Check(empty.AverageOrderValue == 0 && empty.Daily.Count == 0, "Empty period has safe average and empty chart");
         var singleDay = ReportService.Build(orders, day, day, "a", refunds);

@@ -7,17 +7,26 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class VietQRModal : Window
     {
+        private readonly IAuthService _auth;
+        private readonly IDialogFactory _dialogs;
+        private readonly IVietQRService _bank;
+        private readonly ISePayService _sePay;
         private readonly decimal _amount;
         private readonly int _dailyOrderNumber;
         private readonly string _reference;
 
-        public VietQRModal(decimal amount, int dailyOrderNumber, string reference)
+        public VietQRModal(decimal amount, int dailyOrderNumber, string reference, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, ISePayService sePay)
         {
+            _auth = auth;
+            _dialogs = dialogs;
+            _bank = bank;
+            _sePay = sePay;
             InitializeComponent();
             Loaded += (_, _) => StartAutoConfirm();
             _amount = amount;
@@ -43,7 +52,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
         {
             try
             {
-                string qrUrl = VietQRService.GenerateQRUrl(_amount, _reference);
+                string qrUrl = _bank.GenerateQRUrl(_amount, _reference);
                 var bytes = await Http.GetByteArrayAsync(qrUrl);
                 var bitmap = new BitmapImage();
                 using (var stream = new MemoryStream(bytes))
@@ -73,7 +82,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
         // Every 4s ask SePay whether the transfer arrived; on a match, record a system approval and finish.
         private void StartAutoConfirm()
         {
-            if (!SePayService.Enabled || _qrError is not null) return;
+            if (!_sePay.Enabled || _qrError is not null) return;
             var since = DateTime.Now.AddMinutes(-2);
             string memo = VietQRService.TransferMemo(_reference);
             TxtPaymentStatus.Text = "Đang chờ khách chuyển khoản… (tự xác nhận qua SePay)";
@@ -84,10 +93,10 @@ namespace TheCafePOS_WPF.Views.Dialogs
                 _checking = true;
                 try
                 {
-                    var txId = await SePayService.FindTransferAsync(memo, _amount, since);
+                    var txId = await _sePay.FindTransferAsync(memo, _amount, since);
                     if (txId is null) return;
                     _poll.Stop();
-                    AuthService.Instance.ApproveBySystem(AuthService.PaymentApprovalAction(_reference, _amount), "SePay:" + txId);
+                    _auth.ApproveBySystem(AuthService.PaymentApprovalAction(_reference, _amount), "SePay:" + txId);
                     SystemSounds.Asterisk.Play();
                     DialogResult = true;
                 }
@@ -100,7 +109,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
 
         private void BtnSimulateSuccess_Click(object sender, RoutedEventArgs e)
         {
-            var approval = new PinApprovalModal(AuthService.PaymentApprovalAction(_reference, _amount)) { Owner = this };
+            var approval = _dialogs.Create<PinApprovalModal>(this, AuthService.PaymentApprovalAction(_reference, _amount));
             if (approval.ShowDialog() == true) DialogResult = true;
         }
 

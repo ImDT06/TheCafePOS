@@ -12,8 +12,8 @@ internal static class CheckoutFlowRegression
             try { action(); } catch (InvalidOperationException) { Console.WriteLine("PASS " + message); return; }
             throw new Exception("Expected rejection: " + message);
         }
-        var auth = AuthService.Instance;
-        var store = DataStoreService.Instance;
+        var auth = TestHost.Auth;
+        var store = TestHost.Store;
         auth.CreateAccount("checkout-owner", "CheckoutPass!2026", "Owner");
         auth.Login("checkout-owner", "CheckoutPass!2026");
         var category = new Category { Name = "Checkout test" }; store.SaveCategory(category);
@@ -24,7 +24,7 @@ internal static class CheckoutFlowRegression
         Reject(() => store.ValidateCheckoutCart(items, "Mang đi"), "Payment preview rejects a closed shift");
         store.OpenShift(0);
         foreach (var id in new[] { "pack-1", "pack-3", "pack-5" }) store.UpdateStock(id, "Kiểm kê", 10, "Checkout test");
-        string Disk() => JsonSerializer.Serialize(LocalDatabase.Instance.Read<StoreState>("store"));
+        string Disk() => JsonSerializer.Serialize(TestHost.Database.Read<StoreState>("store"));
         string Stock() => JsonSerializer.Serialize(store.PackagingInventory);
         var before = Disk(); var stock = Stock();
         store.ValidateCheckoutCart(items, "Mang đi");

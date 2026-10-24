@@ -17,7 +17,7 @@
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
           <Grid x:Name="QrFrame" Width="240" Height="240" Margin="0,0,0,10"><ProgressBar x:Name="QrLoading" Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Width="40" Height="40"/><Image x:Name="ImgQR" Stretch="Uniform"/></Grid>
           <TextBlock Text="Số tiền thanh toán:" FontSize="13" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" TextWrapping="Wrap" />
-          <TextBlock x:Name="TxtAmount" Text="55.000đ" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PosAccent}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock x:Name="TxtAmount" Text="55.000đ" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PosMoney}" HorizontalAlignment="Center" TextWrapping="Wrap" />
           <TextBlock x:Name="TxtPaymentStatus" Text="Chờ xác nhận chuyển khoản" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PosWarning}" HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="350" />
         </StackPanel>
       </ScrollViewer>

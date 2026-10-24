@@ -35,27 +35,40 @@ public static class ReportService
         if (from.Date > to.Date) throw new InvalidOperationException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
         var orders = source.Where(o => o.PaymentStatus == "Completed" && o.CreatedAt.Date >= from.Date && o.CreatedAt.Date <= to.Date && (shiftId is null || o.ShiftId == shiftId)).OrderByDescending(o => o.CreatedAt).ToList();
         var products = orders.SelectMany(o => o.Items).GroupBy(i => new { i.ProductId, i.ProductName }).Select(g => new ProductSales(g.Key.ProductName, g.Sum(i => i.Quantity), g.Sum(i => i.TotalPrice))).OrderByDescending(p => p.Revenue).ToList();
-        return new(orders, products, orders.Sum(o => o.TotalAmount), orders.Where(o => o.PaymentMethod == "Cash").Sum(o => o.TotalAmount), orders.Where(o => o.PaymentMethod == "VietQR").Sum(o => o.TotalAmount))
+        return new(orders, products, orders.Sum(o => o.TotalAmount), orders.Sum(o => o.CashPortion), orders.Sum(o => o.PaymentMethod == "VietQR" ? o.TotalAmount : o.TransferAmount))
         {
             Refunds = (refunds ?? Array.Empty<RefundEntry>()).Where(r => r.CreatedAt.Date >= from.Date && r.CreatedAt.Date <= to.Date && (shiftId is null || r.ShiftId == shiftId)).OrderByDescending(r => r.CreatedAt).ToList(),
             CashEntries = (cashEntries ?? Array.Empty<CashEntry>()).Where(r => r.CreatedAt.Date >= from.Date && r.CreatedAt.Date <= to.Date && (shiftId is null || r.ShiftId == shiftId)).OrderByDescending(r => r.CreatedAt).ToList()
         };
     }
-    private static string Cell(string value)
+    /// <summary>Sheets of the Excel export: summary, daily totals, orders, lines, products, refunds and cash entries.</summary>
+    public static List<(string Name, IReadOnlyList<string> Header, IEnumerable<object?[]> Rows)> ToWorkbook(SalesReport report, string storeName, DateTime? from, DateTime? to)
     {
-        if (value.TrimStart().StartsWith('=') || value.TrimStart().StartsWith('+') || value.TrimStart().StartsWith('-') || value.TrimStart().StartsWith('@')) value = "'" + value;
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
-    }
-    public static string ToDailyCsv(SalesReport report) => "Ngày,Số đơn,Doanh thu bán hàng,Hoàn tiền,Doanh thu thuần\r\n" +
-        string.Join("\r\n", report.Daily.Select(d => string.Join(",", d.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            d.OrderCount.ToString(CultureInfo.InvariantCulture), d.Revenue.ToString(CultureInfo.InvariantCulture),
-            d.Refunded.ToString(CultureInfo.InvariantCulture), d.NetRevenue.ToString(CultureInfo.InvariantCulture))));
-    public static string ToCsv(SalesReport report)
-    {
-        string Row(string type, string id, DateTime at, string method, decimal amount, string shift, string orderId, string reason, string actor, string approver, string reference = "") => string.Join(",", Cell(type), Cell(id), Cell(at.ToString("yyyy-MM-dd HH:mm:ss")), Cell(method), amount.ToString(CultureInfo.InvariantCulture), Cell(shift), Cell(orderId), Cell(reason), Cell(actor), Cell(approver), Cell(reference));
-        var rows = report.Orders.Select(o => Row("Bán hàng", o.Id, o.CreatedAt, o.PaymentMethod, o.TotalAmount, o.ShiftId, o.Id, "", "", ""))
-            .Concat(report.Refunds.Select(r => Row("Hoàn tiền", r.Id, r.CreatedAt, r.Method, -r.Amount, r.ShiftId, r.OrderId, r.Reason, r.Operator, r.Approver, r.Reference)))
-            .Concat(report.CashEntries.Select(e => Row(e.TypeLabel, e.Id, e.CreatedAt, "Cash", e.SignedAmount, e.ShiftId, "", e.Reason, e.Operator, e.Approver)));
-        return "Loại,Mã phiếu,Ngày,Phương thức,Số tiền có dấu,Ca,Mã đơn,Lý do,Nhân viên,Người duyệt,Mã giao dịch ngoài\r\n" + string.Join("\r\n", rows);
+        static string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Platform" => "Nền tảng", "Mixed" => "Kết hợp", _ => m };
+        return new()
+        {
+            ("Tổng quan", new[] { "Chỉ số", "Giá trị" }, new object?[][]
+            {
+                new object?[] { "Cửa hàng", storeName },
+                new object?[] { "Từ ngày", from }, new object?[] { "Đến ngày", to },
+                new object?[] { "Số đơn", report.Orders.Count }, new object?[] { "Doanh thu bán hàng", report.Revenue },
+                new object?[] { "Hoàn tiền", report.Refunded }, new object?[] { "Doanh thu thuần", report.NetRevenue },
+                new object?[] { "Tiền mặt", report.Cash }, new object?[] { "VietQR", report.Transfer },
+                new object?[] { "Giảm giá thủ công", report.Orders.Sum(o => o.DiscountAmount) }, new object?[] { "Khuyến mãi", report.Orders.Sum(o => o.PromotionAmount) },
+                new object?[] { "Đổi điểm", report.Orders.Sum(o => o.LoyaltyAmount) }, new object?[] { "Voucher", report.Orders.Sum(o => o.VoucherAmount) },
+                new object?[] { "Thuế VAT", report.Orders.Sum(o => o.VatAmount) }, new object?[] { "Giá trị TB/đơn", Math.Round(report.AverageOrderValue) }
+            }),
+            ("Theo ngày", new[] { "Ngày", "Số đơn", "Doanh thu bán hàng", "Hoàn tiền", "Doanh thu thuần" },
+                report.Daily.Select(d => new object?[] { d.Date, d.OrderCount, d.Revenue, d.Refunded, d.NetRevenue })),
+            ("Đơn hàng", new[] { "Mã đơn", "Thời gian", "Kênh", "Loại đơn", "Thanh toán", "Tạm tính", "Phụ thu kênh", "Khuyến mãi", "Đổi điểm", "Giảm giá", "Voucher", "Thuế VAT", "Thực thu", "Đã hoàn", "Khách", "Trạng thái", "Ca", "Mã hệ thống" },
+                report.Orders.Select(o => new object?[] { o.DailyOrderNumberFormatted, o.CreatedAt, o.Channel, o.ServiceType, Pay(o.PaymentMethod), o.SubtotalAmount, o.ChannelSurcharge, o.PromotionAmount, o.LoyaltyAmount, o.DiscountAmount, o.VoucherAmount, o.VatAmount, o.TotalAmount, o.RefundedAmount, o.CustomerPhone, o.IsCancelled ? "Đã hủy" : o.RefundStatus, o.ShiftId, o.Id })),
+            ("Chi tiết món", new[] { "Mã đơn", "Món", "Size", "Số lượng", "Thành tiền" },
+                report.Orders.SelectMany(o => o.Items.Select(i => new object?[] { o.DailyOrderNumberFormatted, i.ProductName, i.Size, i.Quantity, i.TotalPrice }))),
+            ("Món bán", new[] { "Món", "Số lượng", "Doanh thu" }, report.Products.Select(p => new object?[] { p.ProductName, p.Quantity, p.Revenue })),
+            ("Hoàn tiền", new[] { "Thời gian", "Mã phiếu", "Mã đơn", "Số tiền", "Phương thức", "Lý do", "Mã GD", "Nhân viên", "Người duyệt", "Ca" },
+                report.Refunds.Select(r => new object?[] { r.CreatedAt, r.Id, r.OrderId, r.Amount, Pay(r.Method), r.Reason, r.Reference, r.Operator, r.Approver, r.ShiftId })),
+            ("Thu chi", new[] { "Thời gian", "Loại", "Số tiền", "Lý do", "Nhân viên", "Người duyệt", "Ca" },
+                report.CashEntries.Select(c => new object?[] { c.CreatedAt, c.Type == "In" ? "Thu" : "Chi", c.Amount, c.Reason, c.Operator, c.Approver, c.ShiftId }))
+        };
     }
 }

@@ -106,7 +106,21 @@ Mật khẩu được băm PBKDF2-SHA256 với salt riêng. Năm lần đăng nh
 - SQLite lưu các tài liệu JSON trong bảng `documents`: trạng thái cửa hàng, tài khoản/nhật ký duyệt, đơn giữ và cấu hình ngân hàng. Đơn hàng, kho và ca được lưu cùng một giao dịch; nếu ghi thất bại, trạng thái bộ nhớ được khôi phục.
 - Đơn đã thanh toán lưu bản sao các dòng món, không thay đổi theo sửa giá thực đơn về sau. Mã đơn duy nhất tách biệt số thứ tự trong ngày. Thanh toán lặp cùng mã không trừ kho lần nữa.
 - Dữ liệu mẫu chỉ tạo khi chưa có trạng thái cửa hàng. Nếu không đọc được dữ liệu, ứng dụng báo lỗi thay vì ghi đè bằng dữ liệu mẫu.
-- Sao lưu bằng cách đóng ứng dụng rồi sao chép `cafe.db`; khôi phục khi ứng dụng đã đóng. Không lưu cơ sở dữ liệu thật vào Git.
+- Không lưu cơ sở dữ liệu thật vào Git.
+
+## Sao lưu và khôi phục
+
+- Ứng dụng tự sao lưu mỗi ngày khi mở và sau mỗi lần chốt ca vào thư mục `Backups` cạnh `cafe.db`, giữ 14 bản gần nhất. Bản sao lưu dùng SQLite online backup nên vẫn đúng khi đang bán hàng.
+- Mỗi bản được đưa lên Supabase Storage (bucket riêng tư `backups`, thư mục theo tên máy) để máy hỏng hoặc mất không làm mất dữ liệu. Mất mạng thì bản sao lưu nằm trong hàng đợi và được tải lại lần sau; quầy bán không bị chặn. Trạng thái xem ở **Quản trị > Sao lưu dữ liệu**.
+- Cấu hình một lần trên máy bán hàng:
+  1. Supabase Dashboard > SQL Editor: chạy [docs/supabase-backup.sql](docs/supabase-backup.sql) (tạo bucket riêng tư và quy tắc chỉ cho phép tải lên).
+  2. PowerShell, rồi mở lại ứng dụng:
+     ```powershell
+     setx THECAFEPOS_SUPABASE_URL "https://<project>.supabase.co"
+     setx THECAFEPOS_SUPABASE_KEY "<publishable key>"
+     ```
+  Chỉ dùng **publishable (anon) key**; ứng dụng từ chối secret/service_role key vì khóa đó đọc và xóa được mọi bản sao lưu. Khóa trên máy chỉ được thêm file mới, không xem hay xóa được bản nào.
+- Khôi phục: tải file `.db` từ Supabase Storage (hoặc lấy trong thư mục `Backups`), vào **Quản trị > Khôi phục từ bản sao lưu…**. Dữ liệu hiện tại được giữ thành một bản sao lưu an toàn trước khi thay; ứng dụng đóng lại sau khi khôi phục.
 
 ## Kiểm thử
 
@@ -116,23 +130,20 @@ Phạm vi cho môn Kiểm chứng phần mềm tập trung vào **bán hàng/tí
 powershell -File scripts/test-regressions.ps1
 ```
 
-Đây là chương trình kiểm thử hồi quy độc lập, trả mã lỗi khi có kiểm tra thất bại. Kiểm tra: phân quyền, băm mật khẩu, khóa đăng nhập, dữ liệu thực đơn, tiền mặt thiếu/âm, duyệt QR, thanh toán trùng, hoàn tác khi thiếu kho, đóng/mở ca, tổng hợp báo cáo và CSV. Lượt chạy thứ hai mở lại cơ sở dữ liệu bằng tiến trình mới để kiểm tra dữ liệu tồn tại qua khởi động lại.
+Bộ kiểm thử hồi quy dùng xUnit (`dotnet test`, cũng chạy được từ Test Explorer của Visual Studio). Mỗi test chạy các service thật trên một cơ sở dữ liệu tạm riêng, không đụng dữ liệu của quán. Kiểm tra: phân quyền, băm mật khẩu, khóa đăng nhập, dữ liệu thực đơn, tiền mặt thiếu/âm, duyệt QR, thanh toán trùng, hoàn tác khi thiếu kho, đóng/mở ca, tổng hợp báo cáo và CSV. Kiểm tra dữ liệu tồn tại qua khởi động lại bằng cách dựng lại toàn bộ service trên cùng cơ sở dữ liệu. GitHub Actions chạy bộ test này và kiểm thử giao diện cho mọi pull request.
 
 Kiểm tra giao diện thủ công: tạo chủ quán → thêm nhân viên/món → mở ca → bán tiền mặt → giữ/gọi đơn → cấu hình QR và quản lý duyệt → chốt ca → lọc báo cáo/xuất CSV → đóng/mở lại ứng dụng và kiểm tra dữ liệu.
 
-Trong môi trường triển khai hiện tại, build Release thành công. Việc chạy chương trình kiểm thử bị Windows Application Control chặn với lỗi `0x800711C7`, kể cả khi chạy ngoài sandbox; chưa có kết quả kiểm thử runtime hay kiểm tra giao diện trực tiếp.
+Trên máy phát triển có bật Smart App Control, Windows có thể chặn file test vừa build (lỗi `0x800711C7`, xem [docs/app-control-diagnosis.md](docs/app-control-diagnosis.md)); khi đó dựa vào kết quả GitHub Actions của pull request.
 
 ## Giới hạn hiện tại
 
 - QR tạo ảnh từ dịch vụ VietQR qua mạng; xác nhận tiền là thao tác thủ công có quản lý duyệt, chưa có webhook/đối soát tự động.
 - Dịch vụ tem tạo dữ liệu và nhật ký, chưa gửi lệnh tới máy in vật lý.
-- SupabaseService cũ chưa được dùng cho lưu trữ hoặc đồng bộ. Phiên bản này lưu tại máy, không hỗ trợ nhiều máy cùng bán hay đồng bộ nhiều chi nhánh.
+- Supabase chỉ dùng để giữ bản sao lưu ngoài máy, không đồng bộ dữ liệu: không hỗ trợ nhiều máy cùng bán hay nhiều chi nhánh. Khi khôi phục, các đơn sau lần sao lưu gần nhất sẽ mất.
 - Cách lưu snapshot phù hợp quy mô một máy; cần tách bảng và truy vấn có chỉ mục khi lượng dữ liệu lớn. Ứng dụng giới hạn một tiến trình trong phiên Windows, không dùng chung file dữ liệu giữa các phiên/máy.
 - Hoàn tiền hiện theo số tiền của đơn, chưa chọn số lượng từng món để hoàn hoặc tự chuyển tiền qua ngân hàng. Báo cáo chưa tính giá vốn/lợi nhuận. Chưa có sửa/xóa phiếu tài chính; nhập sai cần ghi phiếu đối ứng có lý do và quản lý duyệt khi phù hợp.
 - Giỏ đang nhập được giữ khi đóng cửa sổ bình thường; chưa phục hồi tự động khi mất điện hoặc tiến trình bị dừng đột ngột.
-
-
-Cấu hình Supabase dự phòng được đọc từ biến môi trường THECAFEPOS_SUPABASE_URL và THECAFEPOS_SUPABASE_KEY; không lưu khóa trong mã nguồn. Luồng bán hàng hiện tại dùng SQLite, không cần hai biến này.
 
 ## Cập nhật giao diện POS (08/10/2026)
 

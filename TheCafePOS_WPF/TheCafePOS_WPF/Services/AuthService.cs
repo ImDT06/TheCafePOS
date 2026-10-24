@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using TheCafePOS_WPF.Models;
 
 namespace TheCafePOS_WPF.Services;
 
@@ -9,6 +10,10 @@ public class StaffAccount
     public bool MustChangePassword { get; set; }
     public string Username { get; set; } = "";
     public string Role { get; set; } = "Cashier";
+    [System.Text.Json.Serialization.JsonIgnore] public string RoleLabel => RoleName(Role);
+
+    /// <summary>Vietnamese label for a stored role; the stored values stay English.</summary>
+    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Manager" => "Quản lý", "Cashier" => "Thu ngân", _ => role };
     public string Salt { get; set; } = "";
     public string PasswordHash { get; set; } = "";
 }
@@ -26,9 +31,16 @@ public class AuthState
 }
 public sealed partial class AuthService : Interfaces.IAuthService
 {
-    static AuthService() { }
-    public static AuthService Instance { get; } = new();
-    private AuthState _state = LocalDatabase.Instance.Read<AuthState>("auth") ?? new();
+    private readonly LocalDatabase _db;
+    private readonly Func<Shift> _currentShift;
+    private AuthState _state;
+    /// <param name="currentShift">Read when an account change needs it; the shift store itself depends on this service.</param>
+    public AuthService(LocalDatabase db, Func<Shift> currentShift)
+    {
+        _db = db;
+        _currentShift = currentShift;
+        _state = db.Read<AuthState>("auth") ?? new();
+    }
     private readonly Dictionary<string, (int Count, DateTime Until)> _attempts = new(StringComparer.OrdinalIgnoreCase);
     public StaffAccount? CurrentUser { get; private set; }
     public bool NeedsSetup => _state.Accounts.Count == 0;
@@ -39,7 +51,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     }
     public void Logout()
     {
-        LocalDatabase.Instance.Write("session", "");
+        _db.Write("session", "");
         CurrentUser = null;
     }
     public string RequireApproval(string action)
@@ -75,7 +87,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
         byte[] salt = RandomNumberGenerator.GetBytes(16);
         var account = new StaffAccount { Username = username, Role = first ? "Owner" : role, Salt = Convert.ToBase64String(salt), PasswordHash = Convert.ToBase64String(Hash(password, salt)) };
         _state.Accounts.Add(account);
-        try { LocalDatabase.Instance.Write("auth", _state); }
+        try { _db.Write("auth", _state); }
         catch { _state.Accounts.Remove(account); throw; }
     }
     private static byte[] Hash(string password, byte[] salt) => Rfc2898DeriveBytes.Pbkdf2(password, salt, 210000, HashAlgorithmName.SHA256, 32);
@@ -101,7 +113,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
         RequireSignedIn();
         var record = new ApprovalRecord { Operator = CurrentUser!.Username, Approver = source, Action = paymentAction };
         _state.Audit.Add(record);
-        try { LocalDatabase.Instance.Write("auth", _state); }
+        try { _db.Write("auth", _state); }
         catch { _state.Audit.Remove(record); throw; }
     }
     public void Approve(string username, string password, string action)
@@ -111,7 +123,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
         if (account.MustChangePassword || account.Role is not ("Owner" or "Manager")) throw new InvalidOperationException("Tài khoản không có quyền duyệt hoặc cần đổi mật khẩu tạm.");
         var record = new ApprovalRecord { Operator = CurrentUser?.Username ?? "", Approver = account.Username, Action = action };
         _state.Audit.Add(record);
-        try { LocalDatabase.Instance.Write("auth", _state); }
+        try { _db.Write("auth", _state); }
         catch { _state.Audit.Remove(record); throw; }
     }
 
@@ -124,7 +136,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
             update();
             account.SessionVersion++;
             _state.Audit.Add(new ApprovalRecord { Operator = currentName ?? "", Approver = currentName ?? "", Action = action + " | " + account.Username });
-            LocalDatabase.Instance.Write("auth", _state);
+            _db.Write("auth", _state);
         }
         catch
         {
@@ -161,7 +173,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     public void SetAccountActive(string username, bool active)
     {
         var target = ManagedAccount(username);
-        var shift = DataStoreService.Instance.CurrentShift;
+        var shift = _currentShift();
         if (!active && shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi khóa tài khoản.");
         UpdateAccount(target, active ? "Mở khóa tài khoản" : "Khóa tài khoản", () => target.IsActive = active);
         if (active) _attempts.Remove(username);
@@ -169,7 +181,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     public void DeleteAccount(string username)
     {
         var target = ManagedAccount(username);
-        var shift = DataStoreService.Instance.CurrentShift;
+        var shift = _currentShift();
         if (shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi xóa tài khoản.");
         // Orders, shifts and audit keep the username as text, so history stays readable.
         UpdateAccount(target, "Xóa tài khoản", () => _state.Accounts.Remove(target));
@@ -181,6 +193,6 @@ public sealed partial class AuthService : Interfaces.IAuthService
         if (role is not ("Cashier" or "Manager")) throw new InvalidOperationException("Vai trò không hợp lệ.");
         if (role == "Manager" && CurrentUser?.Role != "Owner") throw new InvalidOperationException("Chỉ chủ quán được bổ nhiệm quản lý.");
         if (target.Role == role) return;
-        UpdateAccount(target, $"Đổi vai trò {target.Role} → {role}", () => target.Role = role);
+        UpdateAccount(target, $"Đổi vai trò {StaffAccount.RoleName(target.Role)} → {StaffAccount.RoleName(role)}", () => target.Role = role);
     }
 }

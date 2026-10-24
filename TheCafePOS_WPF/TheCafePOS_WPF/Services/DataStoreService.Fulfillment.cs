@@ -7,17 +7,17 @@ public partial class DataStoreService
     public void SaveWorkspace(IEnumerable<HeldOrderInfo> held, DraftOrder? draft)
     {
         var before = Draft;
-        try { Draft = draft; LocalDatabase.Instance.WritePair("store", Snapshot(), "held-orders", held.ToList()); }
+        try { Draft = draft; _db.WritePair("store", Snapshot(), "held-orders", held.ToList()); }
         catch { Draft = before; throw; }
     }
     public void UpdateFulfillment(string orderId, string action, string? lineId = null, string reason = "")
     {
-        AuthService.Instance.RequireSignedIn();
+        _auth.RequireSignedIn();
         var order = CompletedOrders.Single(o => o.Id == orderId);
         if (order.FulfillmentStatus == "Legacy") throw new InvalidOperationException("Đơn lịch sử không theo dõi phục vụ.");
         if (action is "reopen" or "stop")
         {
-            AuthService.Instance.RequireManager();
+            _auth.RequireManager();
             if (string.IsNullOrWhiteSpace(reason)) throw new InvalidOperationException("Cần nhập lý do.");
         }
         else if (order.FulfillmentStatus is "Đã giao" or "Dừng phục vụ") throw new InvalidOperationException("Đơn đã kết thúc; cần quản lý mở lại.");
@@ -43,7 +43,7 @@ public partial class DataStoreService
             }
             if (action != "stop") order.FulfillmentStatus = order.Items.All(i => i.DeliveredQuantity == i.Quantity) ? "Đã giao"
                 : order.Items.All(i => i.ReadyQuantity == i.Quantity) ? "Chờ giao" : "Đang làm";
-            order.ServiceEvents.Add(new() { Operator = AuthService.Instance.CurrentUser!.Username, Action = action, Before = before, After = Describe(), Reason = reason.Trim() });
+            order.ServiceEvents.Add(new() { Operator = _auth.CurrentUser!.Username, Action = action, Before = before, After = Describe(), Reason = reason.Trim() });
         });
     }
 }

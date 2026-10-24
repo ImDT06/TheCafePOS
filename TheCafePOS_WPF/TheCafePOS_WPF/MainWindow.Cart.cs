@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.ViewModels;
 using TheCafePOS_WPF.Views.Dialogs;
 namespace TheCafePOS_WPF;
 public partial class MainWindow
@@ -27,7 +28,7 @@ public partial class MainWindow
         popup.Child = new Border
         {
             Background = System.Windows.Media.Brushes.White, CornerRadius = new CornerRadius(10), Padding = new Thickness(4), Margin = new Thickness(8), Width = 230,
-            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xDF, 0xE7, 0xE2)), BorderThickness = new Thickness(1),
+            BorderBrush = Core.Palette.Border, BorderThickness = new Thickness(1),
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Opacity = 0.18 },
             Child = new StackPanel { Children =
             {
@@ -42,19 +43,13 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: OrderItem item }) return;
         if (split && item.Quantity <= 1) { MessageBox.Show(this, "Dòng cần ít nhất 2 sản phẩm để tách."); return; }
-        var product = _store.Products.FirstOrDefault(p => p.Id == item.ProductId && p.IsActive);
+        var product = _vm.FindActiveProduct(item.ProductId);
         if (product is null) { MessageBox.Show(this, "Món đã ngừng bán. Hãy xóa và chọn món khác."); return; }
         var draft = OrderConfigurationService.Clone(item);
         if (split) draft.Quantity = 1;
-        var modal = new OptionCustomModal(product, _currentDailyOrderNumber, draft, split) { Owner = this };
+        var modal = _dialogs.Create<OptionCustomModal>(this, product, _vm.CurrentDailyOrderNumber, draft, split);
         if (modal.ShowDialog() != true) return;
-        int index = _cartItems.IndexOf(item);
-        if (split)
-        {
-            item.Quantity--;
-            _cartItems.Insert(index + 1, modal.ResultItem);
-        }
-        else _cartItems[index] = modal.ResultItem;
-        LbCartItems.Items.Refresh(); UpdateCartTotal();
+        if (split) _vm.SplitItem(item, modal.ResultItem);
+        else _vm.ReplaceItem(item, modal.ResultItem);
     }
 }

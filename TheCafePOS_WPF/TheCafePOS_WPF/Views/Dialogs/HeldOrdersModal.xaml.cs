@@ -1,17 +1,20 @@
 using System.Windows;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class HeldOrdersModal : Window
     {
+        private readonly IHoldOrderService _holds;
         public HeldOrderInfo? SelectedHeldOrder { get; private set; }
 
-        public HeldOrdersModal()
+        public HeldOrdersModal(IHoldOrderService holds)
         {
+            _holds = holds;
             InitializeComponent();
-            LbHeldOrders.ItemsSource = HoldOrderService.Instance.HeldOrders;
-            if (HoldOrderService.Instance.HeldOrders.Count > 0)
+            LbHeldOrders.ItemsSource = _holds.HeldOrders;
+            if (_holds.HeldOrders.Count > 0)
             {
                 LbHeldOrders.SelectedIndex = 0;
             }
@@ -21,7 +24,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
         {
             if (LbHeldOrders.SelectedItem is HeldOrderInfo item)
             {
-                try { SelectedHeldOrder = HoldOrderService.Instance.RecallOrder(item.Id); DialogResult = true; }
+                try { SelectedHeldOrder = _holds.RecallOrder(item.Id); DialogResult = true; }
                 catch (System.Exception ex) { MessageBox.Show(this, ex.Message); }
             }
             else
@@ -37,8 +40,8 @@ namespace TheCafePOS_WPF.Views.Dialogs
             if (MessageBox.Show(this, $"Hủy đơn giữ lúc {item.HeldTime:HH:mm} ({item.Items.Count} dòng món, {item.TotalAmount:N0}đ)? Không thể khôi phục.", "Hủy đơn giữ", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             try
             {
-                HoldOrderService.Instance.DiscardOrder(item.Id);
-                if (HoldOrderService.Instance.HeldOrders.Count > 0) LbHeldOrders.SelectedIndex = 0;
+                _holds.DiscardOrder(item.Id);
+                if (_holds.HeldOrders.Count > 0) LbHeldOrders.SelectedIndex = 0;
                 TheCafePOS_WPF.Core.Toast.Show(this, "Đã hủy đơn giữ.");
             }
             catch (System.Exception ex) { TheCafePOS_WPF.Core.Toast.Show(this, ex.Message, true); }

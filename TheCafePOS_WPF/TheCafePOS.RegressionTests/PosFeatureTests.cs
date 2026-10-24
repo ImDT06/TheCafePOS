@@ -355,7 +355,7 @@ public sealed class PosFeatureTests : IDisposable
     [InlineData("", "", "")]
     [InlineData("Đá để riêng", "Đá để riêng", "")]
     [InlineData("Không ống hút, ghi tên An", "Không ống hút", "ghi tên An")]
-    [InlineData("Pha đậm, Đá để riêng", "Đá để riêng|Pha đậm", "")]
+    [InlineData("Túi riêng, Đá để riêng", "Đá để riêng|Túi riêng", "")]
     public void Quick_notes_round_trip_through_the_saved_note(string note, string chips, string freeText)
     {
         var (picked, rest) = TheCafePOS_WPF.Views.Dialogs.OptionCustomModal.SplitNote(note);

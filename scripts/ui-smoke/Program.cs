@@ -43,15 +43,29 @@ partial class Preview {
   }
   var management=(ManagementWindow)windows[0];var search=(TextBox)management.FindName("MenuSearch");search.Text="Americano";
   var products=(DataGrid)management.FindName("Products");if(products.Items.Count!=3)throw new Exception("Menu search failed");products.SelectedIndex=0;
-  var category=(ComboBox)management.FindName("ProductCategory");if(category.SelectedItem==null)throw new Exception("Category selection lost");
+  if(products.SelectedItem is not ProductAdminRow{CategoryName:not "—"})throw new Exception("Category name missing");
   Render(management,"ManagementWindow-selected",1120,728);
   management.Left=-10000;management.Top=-10000;management.ShowInTaskbar=false;management.Show();
   var frame=new System.Windows.Threading.DispatcherFrame();var wait=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};wait.Tick+=(_,_)=>{wait.Stop();frame.Continue=false;};wait.Start();System.Windows.Threading.Dispatcher.PushFrame(frame);
-  Render(management,"ManagementWindow-shown",1120,728);management.Hide();
+  Render(management,"ManagementWindow-shown",1120,728);
+  // Every tab, including the tools embedded in Kho / Khuyến mãi / Khách hàng / Cài đặt, must load inside the window.
+  var managementTabs=(TabControl)((DockPanel)management.Content).Children.OfType<TabControl>().Single();
+  // Flush is defined later around the main window; pump the dispatcher directly here.
+  Action Pump=()=>{var f=new System.Windows.Threading.DispatcherFrame();System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle,new Action(()=>f.Continue=false));System.Windows.Threading.Dispatcher.PushFrame(f);};
+  // Two levels: the main tabs and, while each is open, the sub-tabs of Kho, Khuyến mãi and Cài đặt.
+  void CheckTab(TabItem tabItem,string name){
+    var toolHost=tabItem.Content as ContentControl ?? (tabItem.Content as DockPanel)?.Children.OfType<ContentControl>().FirstOrDefault();
+    if(toolHost!=null&&toolHost.Name.EndsWith("Host")&&toolHost.Content is not FrameworkElement{IsLoaded:true})throw new Exception("Embedded tool did not load: "+tabItem.Header);
+    Render(management,"ManagementWindow-tab"+name,1120,728);}
+  for(int i=0;i<managementTabs.Items.Count;i++){managementTabs.SelectedIndex=i;Pump();var top=(TabItem)managementTabs.Items[i];CheckTab(top,"-"+i);
+    if(top.Content is TabControl nested)for(int j=0;j<nested.Items.Count;j++){nested.SelectedIndex=j;Pump();CheckTab((TabItem)nested.Items[j],"-"+i+"-"+j);}}
+  managementTabs.SelectedIndex=0;Pump();
+  Check(true,"Every management tab and embedded tool loads");
+  management.Hide();
   var report=(Window)windows[3];report.Left=-10000;report.Top=-10000;report.ShowInTaskbar=false;report.Show();
   frame=new System.Windows.Threading.DispatcherFrame();wait.Start();System.Windows.Threading.Dispatcher.PushFrame(frame);
   Render(report,"ReportWindow-shown",report.Width,report.Height-32);report.Hide();
-  category.IsDropDownOpen=true;category.ApplyTemplate();if(category.Template.FindName("PART_Popup",category)==null)throw new Exception("ComboBox popup missing");category.IsDropDownOpen=false;
+  var category=(ComboBox)management.FindName("MenuCategoryFilter");category.IsDropDownOpen=true;category.ApplyTemplate();if(category.Template.FindName("PART_Popup",category)==null)throw new Exception("ComboBox popup missing");category.IsDropDownOpen=false;
   if(Descendants<ScrollViewer>((DependencyObject)management.Content).Count()==0)throw new Exception("Scrolling missing");
     Console.WriteLine("PASS search, selection, dropdown template and scroll hosts");
   var main=services.GetRequiredService<TheCafePOS_WPF.MainWindow>();main.WindowState=WindowState.Normal;main.Left=-10000;main.Top=-10000;main.ShowInTaskbar=false;
@@ -66,11 +80,11 @@ partial class Preview {
   input.Text=" ";other.Focus();Flush();Check(hint.Visibility==Visibility.Collapsed,"Whitespace input does not paint over hint");
   input.Clear();other.Focus();Flush();Check(hint.Visibility==Visibility.Visible,"Cleared and blurred search restores hint");
   var after=host.TranslatePoint(new Point(),input);Check(before==after,"Input content does not shift on focus");
-  var scroller=(ScrollViewer)main.FindName("CategoryScroller");
-  main.Width=960;Flush();((Button)main.FindName("NextCategories")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
-  Check(scroller.HorizontalOffset>0,"Category next button scrolls");
-  scroller.ScrollToRightEnd();Flush();Check(!((Button)main.FindName("NextCategories")).IsEnabled,"End of categories disables next");
-  scroller.ScrollToLeftEnd();Flush();Check(!((Button)main.FindName("PreviousCategories")).IsEnabled,"Start of categories disables previous");
+  // Categories form a vertical rail beside the menu: one entry per row, left-aligned, never wider than the rail.
+  var chips=(ItemsControl)main.FindName("PnlCategories");main.Width=960;Flush();
+  var chipBoxes=chips.Items.Cast<object>().Select(i=>(FrameworkElement)chips.ItemContainerGenerator.ContainerFromItem(i)).Select(c=>(Pos:c.TranslatePoint(new Point(),chips),Width:c.ActualWidth)).ToList();
+  Check(chipBoxes.All(c=>Math.Abs(c.Pos.X)<1&&c.Width<=chips.ActualWidth+1),"Category rail entries line up in one column");
+  Check(chipBoxes.Select(c=>Math.Round(c.Pos.Y)).Distinct().Count()==chipBoxes.Count,"Each category has its own row");
   foreach(var width in new[]{960,1240}){main.Width=width;main.Height=680;Flush();Render(main,"MainWindow-audit-"+width,width,648);}
   var money=new TheCafePOS_WPF.Core.NumberPad("100000",false,"Tiền khách đưa","đ",55000);
   Render(money,"NumberPad-cash",580,588);
@@ -105,8 +119,10 @@ partial class Preview {
   TheCafePOS_WPF.Core.TouchInput.OpenCommand.Execute(null,cashBox);
   Check(cashBox.Text=="200000" && store.CompletedOrders.Count==orderCount,"Apply updates cash field without creating payment");
   cashHost.Close();
+  TheCafePOS_WPF.Core.Toast.Show(main,"Đã thêm 2 × Combo Sắc Xinh - Matcha Latte Tây Bắc (M)",false,("Tùy chỉnh",()=>{}));Flush();
+  var addToast=Application.Current.Windows.OfType<Window>().Last(w=>w.IsVisible&&w.WindowStyle==WindowStyle.None&&w.Content is Border);Render(addToast,"Toast-added",Math.Max(320,addToast.ActualWidth),Math.Max(60,addToast.ActualHeight));addToast.Close();
   TheCafePOS_WPF.Core.Toast.Show(main,"Đã xóa Americano Classic khỏi đơn",false,("Hoàn tác",()=>{}));Flush();
-  var toastWindow=Application.Current.Windows.OfType<Window>().Last(w=>w.Content is MaterialDesignThemes.Wpf.Snackbar);
+  var toastWindow=Application.Current.Windows.OfType<Window>().Last(w=>w.IsVisible&&w.WindowStyle==WindowStyle.None&&w.Content is Border);
   Render(toastWindow,"Toast-undo",Math.Max(320,toastWindow.ActualWidth),Math.Max(60,toastWindow.ActualHeight));toastWindow.Close();
   CheckCartFlows(main, store);
   main.Close();app.Shutdown();

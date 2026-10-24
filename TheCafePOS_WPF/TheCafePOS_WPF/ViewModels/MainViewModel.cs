@@ -20,6 +20,9 @@ namespace TheCafePOS_WPF.ViewModels
     public class MainViewModel : ViewModelBase
     {
         public const string AllCategories = "ALL";
+        public const string BestSellers = "TOP";
+        private const int BestSellerCount = 12;
+        private List<string> _bestSellerIds = new();
         public const string DefaultServiceType = "Mang đi";
         public const string DineIn = "Tại chỗ";
         public const int MaxLineQuantity = 999;
@@ -132,6 +135,7 @@ namespace TheCafePOS_WPF.ViewModels
 
         public IReadOnlyList<(string Id, string Name)> CategoryOptions =>
             new[] { (AllCategories, "Tất cả") }
+                .Concat(BestSellerIds().Count > 0 ? new[] { (BestSellers, "Bán chạy") } : Array.Empty<(string, string)>())
                 .Concat(_catalog.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)))
                 .ToList();
 
@@ -248,7 +252,20 @@ namespace TheCafePOS_WPF.ViewModels
         /// <summary>Reloads categories from the store (after catalog edits) and shows the whole menu.</summary>
         public void ReloadMenu()
         {
-            CategoryList = CategoryOptions.Select(c => new CategoryOption(c.Id, c.Name)).ToList();
+            // Featured sections: the seeded new-items, deals and seasonal-combo sections, plus any placed before the regular groups.
+            var featured = _catalog.Categories.Where(c => c.DisplayOrder < 0).Select(c => c.Id)
+                .Concat(new[] { DataStoreService.NewCategoryId, DataStoreService.DealCategoryId, DataStoreService.SeasonalComboCategoryId }).ToHashSet();
+            string Highlight(string id) => id == BestSellers ? "best" : featured.Contains(id) ? "featured" : "";
+            var options = CategoryOptions;
+            int firstRegular = options.Select((c, i) => (c.Id, i)).FirstOrDefault(x => x.Id != AllCategories && Highlight(x.Id) == "", (Id: "", i: -1)).i;
+            bool anyHighlight = options.Any(c => Highlight(c.Id) != "");
+            // Each regular group shows its most-sold item of the last 30 days, falling back to the first item with a photo.
+            var sold = SoldSince(DataStoreService.CafeNow.AddDays(-30));
+            string Photo(string id) => _catalog.Products
+                .Where(p => p.CategoryId == id && p.IsActive && !string.IsNullOrWhiteSpace(p.ImageUrl))
+                .OrderByDescending(p => sold.GetValueOrDefault(p.Id)).Select(p => p.ImageUrl).FirstOrDefault() ?? "";
+            CategoryList = options.Select((c, i) => new CategoryOption(c.Id, c.Name, Highlight(c.Id), anyHighlight && i == firstRegular,
+                c.Id == AllCategories || Highlight(c.Id) != "" ? "" : Photo(c.Id))).ToList();
             OnPropertyChanged(nameof(CategoryList));
             SelectCategory(AllCategories);
         }
@@ -256,6 +273,7 @@ namespace TheCafePOS_WPF.ViewModels
         public void SelectCategory(string categoryId)
         {
             SelectedCategoryId = categoryId;
+            if (categoryId == BestSellers) _bestSellerIds = BestSellerIds();
             foreach (var option in CategoryList) option.IsSelected = option.Id == categoryId;
             RefreshMenu();
         }
@@ -275,17 +293,28 @@ namespace TheCafePOS_WPF.ViewModels
             OnPropertyChanged(nameof(HasNoProducts));
         }
 
-        /// <summary>Sellable products of the selected category matching the keyword; sold-out items stay visible, last.</summary>
+        /// <summary>Sellable products of the selected category matching the keyword, grouped in chip order; sold-out items stay visible, last.</summary>
         public IReadOnlyList<Product> FilterProducts(string? keyword)
         {
             string search = keyword?.Trim().ToLower() ?? "";
+            var categoryOrder = _catalog.Categories.GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First().DisplayOrder);
             return _catalog.Products.Where(p =>
             {
-                bool matchCat = SelectedCategoryId == AllCategories || p.CategoryId == SelectedCategoryId || p.FeaturedCategoryIds.Contains(SelectedCategoryId);
+                bool matchCat = SelectedCategoryId == AllCategories || SelectedCategoryId == BestSellers && _bestSellerIds.Contains(p.Id) || p.CategoryId == SelectedCategoryId || p.FeaturedCategoryIds.Contains(SelectedCategoryId);
                 bool matchSearch = search.Length == 0 || p.Name.ToLower().Contains(search);
                 return (!p.IsTopping || p.SoldSeparately) && p.IsActive && _catalog.Categories.Any(c => c.Id == p.CategoryId && c.IsActive) && matchCat && matchSearch;
-            }).OrderBy(p => p.IsSoldOut).ToList();
+            }).OrderBy(p => p.IsSoldOut).ThenBy(p => SelectedCategoryId == BestSellers ? _bestSellerIds.IndexOf(p.Id) : 0)
+                .ThenBy(p => categoryOrder.GetValueOrDefault(p.CategoryId)).ToList();
         }
+
+        /// <summary>Most-sold products of the last 7 days by cups/portions, best first.</summary>
+        private List<string> BestSellerIds() =>
+            SoldSince(DataStoreService.CafeNow.AddDays(-7)).OrderByDescending(s => s.Value).Select(s => s.Key).Take(BestSellerCount).ToList();
+
+        /// <summary>Cups/portions sold per product in paid orders since the given time.</summary>
+        private Dictionary<string, int> SoldSince(DateTime since) =>
+            _orders.CompletedOrders.Where(o => o.PaymentStatus == "Completed" && o.CreatedAt >= since)
+                .SelectMany(o => o.Items).GroupBy(i => i.ProductId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
 
         public Product? FindActiveProduct(string productId) => _catalog.Products.FirstOrDefault(p => p.Id == productId && p.IsActive);
 

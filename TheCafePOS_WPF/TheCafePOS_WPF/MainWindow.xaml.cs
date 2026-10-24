@@ -100,35 +100,16 @@ namespace TheCafePOS_WPF
             button.BringIntoView();
         }
 
-        private void PreviousCategories_Click(object sender, RoutedEventArgs e) =>
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset - CategoryScroller.ViewportWidth * 0.8);
-
-        private void NextCategories_Click(object sender, RoutedEventArgs e) =>
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset + CategoryScroller.ViewportWidth * 0.8);
-
-        private void CategoryScroller_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            CategoryScroller.ScrollToHorizontalOffset(CategoryScroller.HorizontalOffset - e.Delta);
-            e.Handled = true;
-        }
-
-        private void CategoryScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
-        {
-            if (PreviousCategories == null || NextCategories == null) return;
-            PreviousCategories.IsEnabled = CategoryScroller.HorizontalOffset > 0.5;
-            NextCategories.IsEnabled = CategoryScroller.HorizontalOffset < CategoryScroller.ScrollableWidth - 0.5;
-            var visibility = CategoryScroller.ScrollableWidth > 0.5 ? Visibility.Visible : Visibility.Hidden;
-            PreviousCategories.Visibility = NextCategories.Visibility = visibility;
-        }
-
         private void ProductTile_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement { DataContext: MenuTile tile }) return;
             if (tile.IsSoldOut) { Toast.Show(this, $"{tile.Name} đang hết hàng. Chuột phải để báo có hàng lại.", true); return; }
+            // Drinks with several sizes need a choice, so they open the options dialog instead of quick-adding.
+            if (tile.Product.IsBeverage && tile.Product.Sizes.Count > 1) { OpenProductOptionModal(tile.Product); return; }
             OrderItem line;
             try { line = _vm.QuickAdd(tile.Product); }
             catch (InvalidOperationException) { OpenProductOptionModal(tile.Product); return; }
-            Toast.Show(this, $"Đã thêm {tile.Name} · {line.Quantity} {(line.IsBeverage ? "ly" : "phần")}", false, ("Tùy chỉnh", () => CustomizeLine(line)));
+            Toast.Show(this, $"Đã thêm {line.Quantity} × {tile.Name}", false, ("Tùy chỉnh", () => CustomizeLine(line)));
         }
 
         // The options button sits inside the tile; mark the click handled so the tile does not also quick-add.
@@ -252,11 +233,18 @@ namespace TheCafePOS_WPF
 
         #region Operational Actions (POS-05, POS-08, POS-10)
 
-        // Cashier shortcuts: F2 search, F4 cash, F5 VietQR, F8 hold, F9 held orders.
+        // Cashier shortcuts: F2 search, F4 cash, F5 VietQR, F8 hold, F9 held orders, Ctrl+1..9 category chips in order.
         private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             Button? target = e.Key switch { System.Windows.Input.Key.F4 => BtnCash, System.Windows.Input.Key.F5 => BtnQr, System.Windows.Input.Key.F8 => BtnHold, System.Windows.Input.Key.F9 => BtnHeldOrders, System.Windows.Input.Key.F6 => BtnQueue, _ => null };
-            if (e.Key == System.Windows.Input.Key.F2) { TxtSearch.Focus(); TxtSearch.SelectAll(); e.Handled = true; }
+            int chip = e.Key is >= System.Windows.Input.Key.D1 and <= System.Windows.Input.Key.D9 ? e.Key - System.Windows.Input.Key.D1
+                : e.Key is >= System.Windows.Input.Key.NumPad1 and <= System.Windows.Input.Key.NumPad9 ? e.Key - System.Windows.Input.Key.NumPad1 : -1;
+            if (chip >= 0 && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
+            {
+                if (chip < _vm.CategoryList.Count) _vm.SelectCategory(_vm.CategoryList[chip].Id);
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.F2) { TxtSearch.Focus(); TxtSearch.SelectAll(); e.Handled = true; }
             else if (target is { IsEnabled: true }) { target.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); e.Handled = true; }
         }
 
@@ -336,12 +324,6 @@ namespace TheCafePOS_WPF
                 var modal = _dialogs.Create<ReprintStickerModal>(this, sticker);
                 modal.ShowDialog();
             }
-        }
-
-        private void BtnPackaging_Click(object sender, RoutedEventArgs e)
-        {
-            var modal = _dialogs.Create<PackagingStatusModal>(this);
-            modal.ShowDialog();
         }
 
         private void BtnBlindDrop_Click(object sender, RoutedEventArgs e)

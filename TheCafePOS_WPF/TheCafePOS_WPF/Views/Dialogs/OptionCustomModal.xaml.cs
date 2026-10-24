@@ -18,7 +18,7 @@ public partial class OptionCustomModal : Window
         public Grid Surface { get; init; } = null!;
     }
     // Requests cashiers type most often; picked ones are joined in front of the free-text note.
-    public static readonly string[] QuickNoteOptions = { "Đá để riêng", "Topping để riêng", "Không ống hút", "Pha đậm" };
+    public static readonly string[] QuickNoteOptions = { "Đá để riêng", "Topping để riêng", "Không ống hút", "Túi riêng" };
     private readonly List<System.Windows.Controls.Primitives.ToggleButton> _quickNotes = new();
     private readonly Product _product;
     private readonly bool _singleUnit;

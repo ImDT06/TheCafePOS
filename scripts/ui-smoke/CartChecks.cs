@@ -145,7 +145,10 @@ partial class Preview
         Click((Button)main.FindName("BtnHold")); Click(staleUndo);
         Check(cart.Items.Count == 0, "Undo from a held order cannot insert an item into the next draft");
 
-        var tile = Descendants<Button>(products).First(b => b.Name == "Tile");
+        // Drinks sold in several sizes open the options dialog instead; quick add is for single-size items.
+        var quick = store.Products.First(p => p.IsActive && !p.IsSoldOut && p.IsBeverage && p.Sizes.Count == 1);
+        search.Text = quick.Name; Flush();
+        var tile = Descendants<Button>(products).First(b => b.Name == "Tile" && b.DataContext is TheCafePOS_WPF.ViewModels.MenuTile { Product.Id: var id } && id == quick.Id);
         Click(tile); Click(tile);
         Check(cart.Items.Count == 1 && ((TheCafePOS_WPF.Models.OrderItem)cart.Items[0]).Quantity == 2, "Tapping a product twice adds two default cups to one line without a dialog");
         var previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };

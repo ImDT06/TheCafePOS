@@ -90,7 +90,7 @@
     <TextBlock Text="Ghi chú" Style="{StaticResource Section}"/>
     <!-- Common requests are one tap; the free-text box stays for anything else. -->
     <WrapPanel x:Name="QuickNotes"/>
-    <TextBox Margin="0,0,6,0" md:HintAssist.Hint="Ghi chú khác (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" MaxLength="300" TextWrapping="NoWrap" AcceptsReturn="False" VerticalContentAlignment="Center" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: ghi tên khách lên ly"/>
+    <TextBox Margin="0,12,6,0" md:HintAssist.Hint="Ghi chú khác (không bắt buộc)" x:Name="Note" TextChanged="Note_TextChanged" MaxLength="300" TextWrapping="Wrap" AcceptsReturn="False" MinHeight="96" MaxHeight="140" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top" BorderBrush="{StaticResource PosBorderStrong}" ToolTip="Ví dụ: ghi tên khách lên ly"/>
    </StackPanel>
    <Grid x:Name="ToppingSection" Grid.Column="1" Grid.RowSpan="3">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

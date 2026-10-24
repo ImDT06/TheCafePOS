@@ -13,8 +13,6 @@ public partial class ManagementWindow : Window
     private readonly IDialogFactory _dialogs;
     private readonly IVietQRService _bank;
     private readonly IBackupService _backup;
-    private string? _productId, _categoryId;
-    private string _productImageUrl = "";
     public ManagementWindow(ICatalogService catalog, ICustomerService customers, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup)
     {
         _catalog = catalog;
@@ -25,17 +23,35 @@ public partial class ManagementWindow : Window
         _backup = backup;
         _auth.RequireManager();
         InitializeComponent(); Refresh();
+        // Tools open inside their tabs. Built without an owner: this window is not shown yet.
+        IngredientsHost.Content = Embed<IngredientWindow>();
+        var packaging = _dialogs.Create<PackagingStatusModal>(null);
+        packaging.BtnClose.Visibility = Visibility.Collapsed;
+        PackagingHost.Content = Embedded.Take(packaging, this);
+        PurchasingHost.Content = Embed<PurchasingWindow>();
+        StockReportHost.Content = Embed<StockReportWindow>();
+        PromotionsHost.Content = Embed<PromotionsWindow>();
+        VouchersHost.Content = Embed<VouchersWindow>();
+        CustomersHost.Content = Embed<CustomerListWindow>();
+        StoreSettingsHost.Content = Embed<StoreSettingsWindow>();
+        // Stock, recipes and member points change inside those tools; the menu list and member summary follow.
+        CustomersHost.Unloaded += (_, _) => RefreshBackupInfo();
+        IngredientsHost.Unloaded += (_, _) => Refresh();
         var bankSettings = _bank.Settings;
         BankCode.Text = bankSettings.BankId; BankAccount.Text = bankSettings.AccountNo; BankOwner.Text = bankSettings.AccountName; LoadPromoAndBackup(); SePayToken.Password = bankSettings.SePayToken;
     }
+    private const string AllCategories = "";
+    private FrameworkElement Embed<T>() where T : Window => Embedded.Take(_dialogs.Create<T>(null), this);
+
     private void Refresh()
     {
+        var filterId = MenuCategoryFilter.SelectedValue as string ?? AllCategories;
+        MenuCategoryFilter.ItemsSource = new[] { new Category { Id = AllCategories, Name = "Tất cả danh mục" } }.Concat(_catalog.Categories.OrderBy(c => c.DisplayOrder)).ToList();
+        MenuCategoryFilter.SelectedValue = filterId;
+        if (MenuCategoryFilter.SelectedItem is null) MenuCategoryFilter.SelectedIndex = 0;
         FilterProducts();
-        Categories.ItemsSource = _catalog.Categories.OrderBy(c => c.DisplayOrder).ToList();
-        // Rebinding drops the selection; restore it so a later save keeps the product's category.
-        var categoryId = ProductCategory.SelectedValue;
-        ProductCategory.ItemsSource = _catalog.Categories.ToList();
-        ProductCategory.SelectedValue = categoryId;
+        Categories.ItemsSource = _catalog.Categories.OrderBy(c => c.DisplayOrder)
+            .Select((c, i) => new CategoryAdminRow(c, i + 1, _catalog.Products.Count(p => p.CategoryId == c.Id))).ToList();
         var staffName = (Staff.SelectedItem as StaffAccount)?.Username;
         Staff.ItemsSource = _auth.Accounts.ToList();
         Staff.SelectedItem = _auth.Accounts.FirstOrDefault(a => a.Username == staffName);
@@ -47,83 +63,77 @@ public partial class ManagementWindow : Window
     {
         if (Products == null) return;
         string keyword = MenuSearch?.Text.Trim() ?? "";
-        Products.ItemsSource = _catalog.Products.Where(p => p.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).OrderBy(p => p.Name).ToList();
+        string categoryId = MenuCategoryFilter?.SelectedValue as string ?? AllCategories;
+        var categories = _catalog.Categories.ToDictionary(c => c.Id);
+        // Grouped like the till's chips, so each category reads as one block.
+        Products.ItemsSource = _catalog.Products
+            .Where(p => p.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) && (categoryId == AllCategories || p.CategoryId == categoryId))
+            .OrderBy(p => categories.TryGetValue(p.CategoryId, out var c) ? c.DisplayOrder : int.MaxValue).ThenBy(p => p.Name)
+            .Select(p => new ProductAdminRow(p, categories.TryGetValue(p.CategoryId, out var c) ? c.Name : "—"))
+            .ToList();
     }
     private void MenuSearch_TextChanged(object sender, TextChangedEventArgs e) => FilterProducts();
+    private void MenuCategoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) => FilterProducts();
     private void Run(Action action)
     {
         try { action(); Refresh(); Status.Text = ""; Toast.Show(this, "Đã lưu thành công."); }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
-    private void ProductSelected(object sender, SelectionChangedEventArgs e)
+    private void NewCategory_Click(object sender, RoutedEventArgs e) => EditCategory("");
+    private void EditCategory(string categoryId) => ShowEditor(CategoryEditorHost, CategoryPlaceholder, new CategoryEditorPanel(categoryId, _catalog));
+    private void CategoryRow_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (Products.SelectedItem is not Product p) return;
-        _productId = p.Id; ProductName.Text = p.Name; ProductPrice.Text = p.BasePrice.ToString("0"); ProductCategory.SelectedValue = p.CategoryId; ProductActive.IsChecked = p.IsActive; ProductSoldOut.IsChecked = p.IsSoldOut;
-        ShowProductImage(p.ImageUrl);
+        if (sender is DataGridRow { Item: CategoryAdminRow row }) EditCategory(row.Category.Id);
     }
-    private void ShowProductImage(string url)
+    private void CategoryRow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        _productImageUrl = url;
-        ProductImage.Source = Core.ProductImages.Load(url);
-        ProductImageHint.Visibility = ProductImage.Source is null ? Visibility.Visible : Visibility.Collapsed;
+        if (e.Key != System.Windows.Input.Key.Enter || sender is not DataGridRow { Item: CategoryAdminRow row }) return;
+        e.Handled = true;
+        EditCategory(row.Category.Id);
     }
-    private void PickImage_Click(object sender, RoutedEventArgs e)
+    private void EditCategoryMenu_Click(object sender, RoutedEventArgs e)
     {
-        string imagesDir = System.IO.Path.Combine(AppContext.BaseDirectory, "Images");
-        System.IO.Directory.CreateDirectory(imagesDir);
-        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Chọn ảnh minh họa", Filter = "Ảnh (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg", InitialDirectory = imagesDir };
-        if (dialog.ShowDialog(this) != true) return;
-        try
+        if (sender is FrameworkElement { DataContext: CategoryAdminRow row }) EditCategory(row.Category.Id);
+    }
+    private void ToggleCategoryMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: CategoryAdminRow row }) return;
+        var category = System.Text.Json.JsonSerializer.Deserialize<Category>(System.Text.Json.JsonSerializer.Serialize(row.Category))!;
+        category.IsActive = !category.IsActive;
+        Run(() => _catalog.SaveCategory(category));
+    }
+    private void NewProduct_Click(object sender, RoutedEventArgs e) => EditProduct("");
+    private void EditProduct(string productId) => ShowEditor(ProductEditorHost, ProductPlaceholder, new ProductEditorPanel(productId, _catalog, _dialogs));
+    // The editor replaces the add prompt in the side column; closing it brings the prompt back.
+    private void ShowEditor(ContentControl host, FrameworkElement placeholder, EditorPanel editor)
+    {
+        editor.Done += changed =>
         {
-            // Images already in the bundled folder are referenced directly instead of duplicated.
-            // Also matches a pick from the repo's Images folder, which the build copies here under the same name.
-            if (System.IO.File.Exists(System.IO.Path.Combine(imagesDir, System.IO.Path.GetFileName(dialog.FileName))))
-            {
-                ShowProductImage("Images/" + System.IO.Path.GetFileName(dialog.FileName));
-                return;
-            }
-            // Copy next to the bundled images so the product keeps its photo if the original file moves.
-            string name = "custom-" + Guid.NewGuid().ToString("N")[..8] + System.IO.Path.GetExtension(dialog.FileName).ToLowerInvariant();
-            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(AppContext.BaseDirectory, "Images"));
-            System.IO.File.Copy(dialog.FileName, System.IO.Path.Combine(AppContext.BaseDirectory, "Images", name));
-            ShowProductImage("Images/" + name);
-            if (ProductImage.Source is null) { Status.Text = "Không đọc được file ảnh."; ShowProductImage(""); }
-        }
-        catch (Exception ex) { Status.Text = "Không thể chép ảnh: " + ex.Message; }
+            if (host.Content != editor) return;
+            host.Content = null; placeholder.Visibility = Visibility.Visible;
+            Refresh(); // also after a cancel: sizes or a recipe may have been saved from inside the editor
+            if (changed) { Status.Text = ""; Toast.Show(this, "Đã lưu thành công."); }
+        };
+        host.Content = editor; placeholder.Visibility = Visibility.Collapsed;
     }
-    private void RemoveImage_Click(object sender, RoutedEventArgs e) => ShowProductImage("");
-    private void NewProduct_Click(object sender, RoutedEventArgs e)
+    private void ProductRow_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        Products.SelectedItem = null; _productId = null; ProductName.Clear(); ProductPrice.Clear(); ProductActive.IsChecked = true; ProductSoldOut.IsChecked = false; ShowProductImage("");
+        if (sender is DataGridRow { Item: ProductAdminRow row }) EditProduct(row.Product.Id);
     }
-    private void SaveProduct_Click(object sender, RoutedEventArgs e) => Run(() =>
+    private void ProductRow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(ProductName.Text)) throw FieldError.Mark(ProductName, "Nhập tên món.");
-        if (!decimal.TryParse(ProductPrice.Text, out var price) || price < 0) throw FieldError.Mark(ProductPrice, "Giá phải là số không âm.");
-        if (ProductCategory.SelectedValue is null) throw FieldError.Mark(ProductCategory, "Chọn danh mục cho món.");
-        var existing = _catalog.Products.FirstOrDefault(p => p.Id == _productId);
-        var product = existing is null ? new Product() : System.Text.Json.JsonSerializer.Deserialize<Product>(System.Text.Json.JsonSerializer.Serialize(existing))!;
-        product.Name = ProductName.Text.Trim(); product.BasePrice = price; product.CategoryId = ProductCategory.SelectedValue as string ?? ""; product.IsActive = ProductActive.IsChecked == true; product.IsSoldOut = ProductSoldOut.IsChecked == true; product.ImageUrl = _productImageUrl;
-        _catalog.SaveProduct(product);
-        NewProduct_Click(sender, e);
-    });
-    private void CategorySelected(object sender, SelectionChangedEventArgs e)
-    {
-        if (Categories.SelectedItem is not Category c) return;
-        _categoryId = c.Id; CategoryName.Text = c.Name; CategoryActive.IsChecked = c.IsActive;
+        if (e.Key != System.Windows.Input.Key.Enter || sender is not DataGridRow { Item: ProductAdminRow row }) return;
+        e.Handled = true;
+        EditProduct(row.Product.Id);
     }
-    private void ConfigureProduct_Click(object sender, RoutedEventArgs e)
+    private void EditProductMenu_Click(object sender, RoutedEventArgs e)
     {
-        if (_catalog.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi cấu hình."; return; }
-        _dialogs.Create<ProductConfigurationWindow>(this, product).ShowDialog(); Refresh();
+        if (sender is FrameworkElement { DataContext: ProductAdminRow row }) EditProduct(row.Product.Id);
     }
-    private void NewCategory_Click(object sender, RoutedEventArgs e) { Categories.SelectedItem = null; _categoryId = null; CategoryName.Clear(); CategoryActive.IsChecked = true; }
-    private void SaveCategory_Click(object sender, RoutedEventArgs e) => Run(() =>
+    private void ToggleSoldOutMenu_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(CategoryName.Text)) throw FieldError.Mark(CategoryName, "Nhập tên danh mục.");
-        _catalog.SaveCategory(new Category { Id = _categoryId ?? Guid.NewGuid().ToString(), Name = CategoryName.Text.Trim(), IsActive = CategoryActive.IsChecked == true, DisplayOrder = _catalog.Categories.FirstOrDefault(c => c.Id == _categoryId)?.DisplayOrder ?? _catalog.Categories.Count + 1 });
-        NewCategory_Click(sender, e);
-    });
+        if (sender is FrameworkElement { DataContext: ProductAdminRow row }) Run(() => _catalog.SetProductSoldOut(row.Product.Id, !row.Product.IsSoldOut));
+    }
     private void StaffSelected(object sender, SelectionChangedEventArgs e)
     {
         if (Staff.SelectedItem is not StaffAccount acc) return;
@@ -146,7 +156,7 @@ public partial class ManagementWindow : Window
     }
     private void CreateStaff_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
-        var role = ((ComboBoxItem)StaffRole.SelectedItem).Content.ToString()!;
+        var role = (string)((ComboBoxItem)StaffRole.SelectedItem).Tag;
         if (Staff.SelectedItem is null && string.IsNullOrWhiteSpace(StaffName.Text)) throw FieldError.Mark(StaffName, "Nhập tên đăng nhập.");
         if ((Staff.SelectedItem is null || StaffPassword.Password.Length > 0) && StaffPassword.Password.Length < 8) throw FieldError.Mark(StaffPassword, "Mật khẩu tối thiểu 8 ký tự.");
         if (Staff.SelectedItem is StaffAccount acc)
@@ -166,20 +176,6 @@ public partial class ManagementWindow : Window
         if (Staff.SelectedItem is not StaffAccount acc) { Status.Text = "Chọn nhân viên trước."; return; }
         if (ConfirmDelete($"Xóa tài khoản {acc.Username}? Lịch sử đơn và ca vẫn được giữ.", "Xóa tài khoản"))
             Run(() => { _auth.DeleteAccount(acc.Username); NewStaff_Click(sender, e); });
-    }
-    private void DeleteProduct_Click(object sender, RoutedEventArgs e)
-    {
-        if (_productId is not string productId) { Status.Text = "Chọn món trước."; return; }
-        if (ConfirmDelete($"Xóa vĩnh viễn món {ProductName.Text}? Nếu chỉ tạm ngưng, hãy bỏ chọn \"Đang bán\".", "Xóa món"))
-            Run(() => { _catalog.DeleteProduct(productId); NewProduct_Click(sender, e); });
-    }
-    private void DeleteCategory_Click(object sender, RoutedEventArgs e)
-    {
-        if (_categoryId is not string categoryId) { Status.Text = "Chọn danh mục trước."; return; }
-        int count = _catalog.Products.Count(p => p.CategoryId == categoryId);
-        string message = count == 0 ? $"Xóa danh mục {CategoryName.Text}?" : $"Danh mục {CategoryName.Text} đang có {count} món. Xóa luôn cả {count} món này?\nLịch sử đơn và báo cáo vẫn được giữ. Nếu chỉ muốn tạm ẩn, hãy bỏ chọn \"Đang hiển thị\".";
-        if (ConfirmDelete(message, "Xóa danh mục"))
-            Run(() => { _catalog.DeleteCategory(categoryId, deleteProducts: true); NewCategory_Click(sender, e); });
     }
     private void ResetPassword_Click(object sender, RoutedEventArgs e)
     {
@@ -202,18 +198,6 @@ public partial class ManagementWindow : Window
         CloudInfo.Text = CloudText();
         MemberInfo.Text = $"{_customers.Customers.Count} thành viên, {_customers.Customers.Sum(c => c.Points):N0} điểm chưa đổi. Tích 1 điểm / 10.000đ, đổi 1 điểm = 1.000đ.";
     }
-    private void OpenIngredients_Click(object sender, RoutedEventArgs e) { _dialogs.Create<IngredientWindow>(this).ShowDialog(); Refresh(); }
-    private void Recipe_Click(object sender, RoutedEventArgs e)
-    {
-        if (_catalog.Products.FirstOrDefault(p => p.Id == _productId) is not Product product) { Status.Text = "Lưu và chọn món trước khi khai báo công thức."; return; }
-        if (_dialogs.Create<RecipeWindow>(this, product).ShowDialog() == true) { Refresh(); Toast.Show(this, "Đã lưu công thức."); }
-    }
-    private void OpenStoreSettings_Click(object sender, RoutedEventArgs e) { if (_dialogs.Create<StoreSettingsWindow>(this).ShowDialog() == true) Toast.Show(this, "Đã lưu cài đặt cửa hàng."); }
-    private void OpenPromotions_Click(object sender, RoutedEventArgs e) => _dialogs.Create<PromotionsWindow>(this).ShowDialog();
-    private void OpenVouchers_Click(object sender, RoutedEventArgs e) => _dialogs.Create<VouchersWindow>(this).ShowDialog();
-    private void OpenPurchasing_Click(object sender, RoutedEventArgs e) { _dialogs.Create<PurchasingWindow>(this).ShowDialog(); Refresh(); }
-    private void OpenStockReport_Click(object sender, RoutedEventArgs e) => _dialogs.Create<StockReportWindow>(this).ShowDialog();
-    private void OpenCustomers_Click(object sender, RoutedEventArgs e) { _dialogs.Create<CustomerListWindow>(this).ShowDialog(); RefreshBackupInfo(); }
     private string CloudText()
     {
         if (_backup.CloudProblem is { } problem) return "Sao lưu cloud: " + problem;
@@ -258,4 +242,23 @@ public partial class ManagementWindow : Window
         System.Diagnostics.Process.Start("explorer.exe", _backup.Folder);
     }
     private void SaveBank_Click(object sender, RoutedEventArgs e) => Run(() => _bank.SaveSettings(new BankSettings { BankId = BankCode.Text.Trim(), AccountNo = BankAccount.Text.Trim(), AccountName = BankOwner.Text.Trim(), SePayToken = SePayToken.Password.Trim() }));
+}
+
+/// <summary>One row of the menu list in the management window.</summary>
+public sealed record ProductAdminRow(Product Product, string CategoryName)
+{
+    public string Name => Product.Name;
+    public string ImageUrl => Product.ImageUrl;
+    public string FormattedPrice => Product.FormattedPrice;
+    public string Status => !Product.IsActive ? "Ẩn" : Product.IsSoldOut ? "Hết hàng" : "Đang bán";
+    public string SoldOutMenuText => Product.IsSoldOut ? "Báo có hàng lại" : "Đánh dấu hết hàng";
+}
+
+/// <summary>One row of the category list in the management window.</summary>
+public sealed record CategoryAdminRow(Category Category, int Position, int Count)
+{
+    public string Name => Category.Name;
+    public string ProductCount => $"{Count} món";
+    public string Status => Category.IsActive ? "Đang hiển thị" : "Ẩn";
+    public string ToggleMenuText => Category.IsActive ? "Ẩn khỏi màn bán hàng" : "Hiện lại trên màn bán hàng";
 }

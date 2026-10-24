@@ -10,6 +10,10 @@ public class StaffAccount
     public bool MustChangePassword { get; set; }
     public string Username { get; set; } = "";
     public string Role { get; set; } = "Cashier";
+    [System.Text.Json.Serialization.JsonIgnore] public string RoleLabel => RoleName(Role);
+
+    /// <summary>Vietnamese label for a stored role; the stored values stay English.</summary>
+    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Manager" => "Quản lý", "Cashier" => "Thu ngân", _ => role };
     public string Salt { get; set; } = "";
     public string PasswordHash { get; set; } = "";
 }
@@ -189,6 +193,6 @@ public sealed partial class AuthService : Interfaces.IAuthService
         if (role is not ("Cashier" or "Manager")) throw new InvalidOperationException("Vai trò không hợp lệ.");
         if (role == "Manager" && CurrentUser?.Role != "Owner") throw new InvalidOperationException("Chỉ chủ quán được bổ nhiệm quản lý.");
         if (target.Role == role) return;
-        UpdateAccount(target, $"Đổi vai trò {target.Role} → {role}", () => target.Role = role);
+        UpdateAccount(target, $"Đổi vai trò {StaffAccount.RoleName(target.Role)} → {StaffAccount.RoleName(role)}", () => target.Role = role);
     }
 }

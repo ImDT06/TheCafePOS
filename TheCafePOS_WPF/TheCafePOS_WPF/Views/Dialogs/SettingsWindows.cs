@@ -46,9 +46,10 @@ public sealed class StoreSettingsWindow : Window
                 if (!int.TryParse(limit.Text, out var l) || l is < 0 or > 100) throw FieldError.Mark(limit, "Nhập từ 0 đến 100.");
                 if (!int.TryParse(vat.Text, out var v) || v is < 0 or > 10) throw FieldError.Mark(vat, "Nhập VAT từ 0 đến 10%.");
                 _settings.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, VatPercent = v, PricesIncludeVat = vatIncluded.IsChecked == true, ReceiptFooter = footer.Text.Trim(), Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
-                DialogResult = true;
+                if (Embedded.IsEmbedded(this)) Toast.Show(Embedded.HostOf(this), "Đã lưu cài đặt cửa hàng.");
+                else DialogResult = true;
             }
-            catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+            catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
         }, "PrimaryButton", 48);
         save.IsDefault = true;
         var form = new StackPanel
@@ -174,15 +175,15 @@ public sealed class PromotionsWindow : Window
                 ProductIds = type == "Giờ vàng" ? new() : _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList()
             };
             _promotions.SavePromotion(promo);
-            _id = promo.Id; Refresh(); Toast.Show(this, "Đã lưu chương trình.");
+            _id = promo.Id; Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu chương trình.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void Delete()
     {
-        if (_id is null || _promotions.Promotions.All(p => p.Id != _id)) { Toast.Show(this, "Chọn chương trình trước.", true); return; }
-        if (MessageBox.Show(this, $"Xóa chương trình {_name.Text}?", "Xóa khuyến mãi", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (_id is null || _promotions.Promotions.All(p => p.Id != _id)) { Toast.Show(Embedded.HostOf(this), "Chọn chương trình trước.", true); return; }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa chương trình {_name.Text}?", "Xóa khuyến mãi", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         _promotions.DeletePromotion(_id); _id = null; Refresh(); Load(_promotions.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true });
     }
 }

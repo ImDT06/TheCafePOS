@@ -116,9 +116,9 @@ public sealed class IngredientWindow : Window
             if (!decimal.TryParse(_warn.Text, out var warn) || warn < 0) throw FieldError.Mark(_warn, "Ngưỡng phải là số không âm.");
             var id = _id ?? Guid.NewGuid().ToString();
             _inventory.SaveIngredient(new Ingredient { Id = id, Name = _name.Text, Unit = _unit.Text, WarningThreshold = warn });
-            _id = id; Refresh(); Toast.Show(this, "Đã lưu nguyên liệu.");
+            _id = id; Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu nguyên liệu.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void Adjust(string type)
@@ -128,9 +128,9 @@ public sealed class IngredientWindow : Window
             if (_id is null) throw new InvalidOperationException("Chọn nguyên liệu trước.");
             if (!decimal.TryParse(_qty.Text, out var qty)) throw FieldError.Mark(_qty, "Nhập số lượng.");
             _inventory.AdjustIngredient(_id, type, qty, _reason.Text);
-            Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(this, type == "Nhập kho" ? "Đã nhập kho." : "Đã cập nhật tồn kiểm kê.");
+            Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(Embedded.HostOf(this), type == "Nhập kho" ? "Đã nhập kho." : "Đã cập nhật tồn kiểm kê.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void Waste()
@@ -140,17 +140,17 @@ public sealed class IngredientWindow : Window
             if (_id is null) throw new InvalidOperationException("Chọn nguyên liệu trước.");
             if (!decimal.TryParse(_qty.Text, out var qty)) throw FieldError.Mark(_qty, "Nhập số lượng hao hụt.");
             _purchasing.RecordIngredientWaste(_id, qty, _reason.Text);
-            Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(this, "Đã ghi nhận hao hụt.");
+            Refresh(); Select(_inventory.Ingredients.First(i => i.Id == _id)); Toast.Show(Embedded.HostOf(this), "Đã ghi nhận hao hụt.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void Delete()
     {
-        if (_id is null) { Toast.Show(this, "Chọn nguyên liệu trước.", true); return; }
-        if (MessageBox.Show(this, $"Xóa nguyên liệu {_name.Text}?", "Xóa nguyên liệu", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        try { _inventory.DeleteIngredient(_id); _id = null; Select(null); Refresh(); Toast.Show(this, "Đã xóa."); }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        if (_id is null) { Toast.Show(Embedded.HostOf(this), "Chọn nguyên liệu trước.", true); return; }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa nguyên liệu {_name.Text}?", "Xóa nguyên liệu", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _inventory.DeleteIngredient(_id); _id = null; Select(null); Refresh(); Toast.Show(Embedded.HostOf(this), "Đã xóa."); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }
 
@@ -182,7 +182,7 @@ public sealed class RecipeWindow : Window
                 _inventory.SaveRecipe(product.Id, _rows.Select(r => new RecipeLine { IngredientId = r.IngredientId, Amount = r.Amount }).ToList());
                 DialogResult = true;
             }
-            catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+            catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
         }, "PrimaryButton", 48);
         save.IsDefault = true;
         var hint = PosUi.Text(product.IsBeverage ? "Nhập định lượng cho size M. Size S ×0.8, L ×1.3, XL ×1.6 được tính tự động." : "Định lượng cho 1 phần.", 13, color: PosUi.Muted);

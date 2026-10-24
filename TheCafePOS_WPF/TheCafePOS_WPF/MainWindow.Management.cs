@@ -11,7 +11,7 @@ public partial class MainWindow
     {
         var user = _auth.CurrentUser;
         var shift = _shifts.CurrentShift;
-        TxtSession.Text = $"{user?.Username} ({user?.Role}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
+        TxtSession.Text = $"{user?.Username} ({user?.RoleLabel}) • {(shift.Status == "Open" ? $"Ca đang mở: {shift.CashierName}" : "Chưa mở ca")}";
         BtnManagement.Visibility = BtnReports.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
         _vm.SetCheckoutError(null); // also re-evaluates the shift hint
     }

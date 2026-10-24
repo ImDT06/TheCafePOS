@@ -20,6 +20,7 @@ public partial class PackagingStatusModal : Window
         ManageTab.Visibility = Editor.Visibility;
         if (!_auth.IsManager) PermissionNote.Text = "Thu ngân được xem kho và lịch sử. Quản lý mới được nhập kho, kiểm kê hoặc điều chỉnh.";
         Refresh();
+        Loaded += (_, _) => Refresh(); // stock may have changed through purchasing while this sat in a tab
     }
     private void Refresh(string? selectedId = null)
     {
@@ -89,19 +90,19 @@ public partial class PackagingStatusModal : Window
             _inventory.SavePackagingItem(new PackagingItem { Id = id, Name = PackName.Text, Unit = PackUnit.Text, WarningThreshold = warning });
             Refresh(id);
             NewPack_Click(sender, e);
-            Status.Text = ""; Toast.Show(this, "Đã lưu bao bì. Dùng tab Tồn kho để nhập số lượng.");
+            Status.Text = ""; Toast.Show(Core.Embedded.HostOf(this), "Đã lưu bao bì. Dùng tab Tồn kho để nhập số lượng.");
         }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
     private void DeletePack_Click(object sender, RoutedEventArgs e)
     {
         if (PackList.SelectedItem is not PackagingItem p) { Status.Text = "Chọn bao bì trước."; return; }
-        if (MessageBox.Show(this, $"Xóa bao bì {p.Name}?", "Xóa bao bì", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
+        if (MessageBox.Show(Core.Embedded.HostOf(this), $"Xóa bao bì {p.Name}?", "Xóa bao bì", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
         {
             try
             {
                 _inventory.DeletePackagingItem(p.Id);
-                Status.Text = ""; Toast.Show(this, "Đã xóa bao bì.");
+                Status.Text = ""; Toast.Show(Core.Embedded.HostOf(this), "Đã xóa bao bì.");
                 Refresh();
                 NewPack_Click(sender, e);
             }

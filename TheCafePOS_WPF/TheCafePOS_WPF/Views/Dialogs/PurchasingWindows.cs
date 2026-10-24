@@ -114,17 +114,17 @@ public sealed class VouchersWindow : Window
             if (_from.SelectedDate is not DateTime from || _to.SelectedDate is not DateTime to) throw new InvalidOperationException("Chọn ngày bắt đầu và kết thúc.");
             var id = _id ?? Guid.NewGuid().ToString();
             _vouchers.SaveVoucher(new Voucher { Id = id, Code = _code.Text, Description = _description.Text, Type = _type.SelectedItem as string ?? Voucher.Amount, Value = value, MaxDiscount = max, MinSubtotal = min, ValidFrom = from, ValidTo = to, UsageLimit = limit, IsActive = _active.IsChecked == true });
-            _id = id; Refresh(); Toast.Show(this, "Đã lưu voucher.");
+            _id = id; Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu voucher.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void Delete()
     {
-        if (_id is null || _vouchers.Vouchers.All(v => v.Id != _id)) { Toast.Show(this, "Chọn voucher trước.", true); return; }
-        if (MessageBox.Show(this, $"Xóa voucher {_code.Text}?", "Xóa voucher", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        try { _vouchers.DeleteVoucher(_id); _id = null; Refresh(); Load(new Voucher()); _id = null; Toast.Show(this, "Đã xóa voucher."); }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        if (_id is null || _vouchers.Vouchers.All(v => v.Id != _id)) { Toast.Show(Embedded.HostOf(this), "Chọn voucher trước.", true); return; }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa voucher {_code.Text}?", "Xóa voucher", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _vouchers.DeleteVoucher(_id); _id = null; Refresh(); Load(new Voucher()); _id = null; Toast.Show(Embedded.HostOf(this), "Đã xóa voucher."); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }
 
@@ -246,7 +246,7 @@ public sealed class PurchasingWindow : Window
             _draft.Add(new PurchaseLine { ItemType = o.Type, ItemId = o.Id, ItemName = o.Name, Unit = o.Unit, Quantity = qty, UnitCost = cost });
             _qty.Clear(); _cost.Clear(); _item.SelectedItem = null;
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void SaveReceipt()
@@ -258,9 +258,9 @@ public sealed class PurchasingWindow : Window
             _receiptId = Guid.NewGuid().ToString();
             _draft.Clear(); _note.Clear(); _paid.IsChecked = false;
             Refresh();
-            Toast.Show(this, $"Đã lưu phiếu {receipt.Code}: {receipt.TotalAmount:N0}đ.");
+            Toast.Show(Embedded.HostOf(this), $"Đã lưu phiếu {receipt.Code}: {receipt.TotalAmount:N0}đ.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void LoadSupplier(Supplier? s)
@@ -275,17 +275,17 @@ public sealed class PurchasingWindow : Window
         {
             var id = _supplierId ?? Guid.NewGuid().ToString();
             _purchasing.SaveSupplier(new Supplier { Id = id, Name = _sName.Text, Phone = _sPhone.Text, Address = _sAddress.Text, Note = _sNote.Text, IsActive = _sActive.IsChecked == true });
-            _supplierId = id; Refresh(); _suppliers.SelectedItem = _purchasing.Suppliers.FirstOrDefault(x => x.Id == id); Toast.Show(this, "Đã lưu nhà cung cấp.");
+            _supplierId = id; Refresh(); _suppliers.SelectedItem = _purchasing.Suppliers.FirstOrDefault(x => x.Id == id); Toast.Show(Embedded.HostOf(this), "Đã lưu nhà cung cấp.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 
     private void DeleteSupplier()
     {
-        if (_supplierId is null) { Toast.Show(this, "Chọn nhà cung cấp trước.", true); return; }
-        if (MessageBox.Show(this, $"Xóa nhà cung cấp {_sName.Text}?", "Xóa nhà cung cấp", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        try { _purchasing.DeleteSupplier(_supplierId); LoadSupplier(null); Refresh(); Toast.Show(this, "Đã xóa."); }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        if (_supplierId is null) { Toast.Show(Embedded.HostOf(this), "Chọn nhà cung cấp trước.", true); return; }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa nhà cung cấp {_sName.Text}?", "Xóa nhà cung cấp", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _purchasing.DeleteSupplier(_supplierId); LoadSupplier(null); Refresh(); Toast.Show(Embedded.HostOf(this), "Đã xóa."); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }
 
@@ -351,6 +351,6 @@ public sealed class StockReportWindow : Window
             _loss.ItemsSource = rows;
             _lossSummary.Text = $"Tổng giá trị hao hụt: {rows.Sum(r => r.Value):N0}đ ({rows.Count} mặt hàng)";
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }

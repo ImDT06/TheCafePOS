@@ -1,76 +1,130 @@
-﻿<Window xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes" Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.ManagementWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" Title="Quản trị cửa hàng" Width="1120" Height="760" MinWidth="920" MinHeight="620" WindowStartupLocation="CenterOwner" Background="{StaticResource PosCanvas}">
+﻿<Window xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes" Style="{StaticResource PosWindow}" x:Class="TheCafePOS_WPF.Views.Dialogs.ManagementWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:touch="clr-namespace:TheCafePOS_WPF.Core" xmlns:conv="clr-namespace:TheCafePOS_WPF.Core.Converters" Title="Quản trị cửa hàng" Width="1120" Height="760" MinWidth="920" MinHeight="620" WindowStartupLocation="CenterOwner" Background="{StaticResource PosCanvas}">
+  <Window.Resources>
+    <conv:ProductImageConverter x:Key="AdminProductImage" />
+    <!-- One menu per row (x:Shared) so each binds to its own product. -->
+    <!-- Status label shared by the menu and category lists: green by default, amber when sold out, grey when hidden. -->
+    <DataTemplate x:Key="StatusBadge">
+      <Border x:Name="Badge" CornerRadius="10" Padding="10,3" HorizontalAlignment="Left" Background="{StaticResource PosMoneySoft}"><TextBlock x:Name="BadgeText" Text="{Binding Status}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource PosMoney}" /></Border>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding Status}" Value="Hết hàng"><Setter TargetName="Badge" Property="Background" Value="{StaticResource PosWarningSoft}" /><Setter TargetName="BadgeText" Property="Foreground" Value="{StaticResource PosWarningInk}" /></DataTrigger>
+        <DataTrigger Binding="{Binding Status}" Value="Ẩn"><Setter TargetName="Badge" Property="Background" Value="{StaticResource PosSubtle}" /><Setter TargetName="BadgeText" Property="Foreground" Value="{StaticResource PosMuted}" /></DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+    <ContextMenu x:Key="CategoryRowMenu" x:Shared="False">
+      <MenuItem Header="Sửa danh mục…" Click="EditCategoryMenu_Click" />
+      <MenuItem Header="{Binding ToggleMenuText}" Click="ToggleCategoryMenu_Click" />
+    </ContextMenu>
+    <ContextMenu x:Key="ProductRowMenu" x:Shared="False">
+      <MenuItem Header="Sửa món…" Click="EditProductMenu_Click" />
+      <MenuItem Header="{Binding SoldOutMenuText}" Click="ToggleSoldOutMenu_Click" />
+    </ContextMenu>
+  </Window.Resources>
   <DockPanel Margin="18">
     <StackPanel DockPanel.Dock="Top">
       <TextBlock Text="Quản trị cửa hàng" Style="{StaticResource PageTitle}" />
-      <TextBlock Text="Thực đơn, nhân viên và thông tin nhận tiền" Style="{StaticResource Hint}" />
+      <TextBlock Text="Thực đơn, kho, khuyến mãi, khách hàng, nhân viên và cài đặt quán" Style="{StaticResource Hint}" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,0" />
     <TabControl>
       <TabItem Header="Thực đơn">
         <Grid Margin="12">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="350" />
-          </Grid.ColumnDefinitions>
-          <DockPanel Margin="0,0,15,0">
-            <StackPanel DockPanel.Dock="Top">
-              <TextBox md:HintAssist.Hint="Tìm món trong thực đơn" x:Name="MenuSearch" TextChanged="MenuSearch_TextChanged" AutomationProperties.Name="Tìm tên món trong quản trị" ToolTip="Tìm tên món" Margin="0,0,0,10" />
-            </StackPanel>
-            <Button DockPanel.Dock="Bottom" Content="+ Thêm món mới" Padding="8" Margin="0,10,0,0" Click="NewProduct_Click" />
-            <DataGrid x:Name="Products" touch:EmptyState.Text="Không có món phù hợp — bấm &quot;+ Thêm món mới&quot;" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="ProductSelected">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Tên món" Binding="{Binding Name}" Width="*" />
-                <DataGridTextColumn Header="Giá mặc định" Binding="{Binding FormattedPrice}" Width="125" />
-                <DataGridCheckBoxColumn Header="Đang bán" Binding="{Binding IsActive}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
-                  <DataGridCheckBoxColumn Header="Hết hàng" Binding="{Binding IsSoldOut}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
-              </DataGrid.Columns>
-            </DataGrid>
-          </DockPanel>
-          <Border Grid.Column="1" Style="{StaticResource SurfaceCard}">
-            <DockPanel>
-              <Button Style="{StaticResource PrimaryButton}" Content="Lưu món" Padding="8" Click="SaveProduct_Click" DockPanel.Dock="Bottom" Margin="0,14,0,0" />
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                  <TextBlock Text="Thông tin món" Style="{StaticResource SectionTitle}" />
-                  <Border Height="130" CornerRadius="8" Background="{StaticResource PosBorder}" Margin="0,4,0,8"><Grid><TextBlock x:Name="ProductImageHint" Text="Chưa có ảnh" Foreground="{StaticResource PosMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" /><Image x:Name="ProductImage" Stretch="Uniform" Margin="6" /></Grid></Border>
-                  <UniformGrid Columns="2" Margin="0,0,0,10"><Button Content="Chọn ảnh…" Padding="8" Margin="0,0,4,0" Click="PickImage_Click" /><Button Content="Gỡ ảnh" Padding="8" Margin="4,0,0,0" Click="RemoveImage_Click" /></UniformGrid>
-                  <TextBlock Text="Chọn một món để sửa hoặc thêm món mới." Style="{StaticResource Hint}" />
-                  <TextBox md:HintAssist.Hint="Tên món" x:Name="ProductName" Margin="0,4,0,10" />
-                  <ComboBox md:HintAssist.Hint="Danh mục" x:Name="ProductCategory" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10" />
-                  <TextBox md:HintAssist.Hint="Giá cơ bản (đồng)" x:Name="ProductPrice" touch:TouchInput.Label="Giá cơ bản của món" touch:TouchInput.Numeric="True" Margin="0,4,0,10" />
-                  <CheckBox x:Name="ProductActive" Content="Đang bán (bỏ chọn để ẩn khỏi thực đơn)" IsChecked="True" Margin="0,4,0,6" />
-                  <CheckBox x:Name="ProductSoldOut" Content="Hết hàng tạm thời (vẫn hiện, làm mờ)" Margin="0,4,0,10" />
-                  <Button Content="Cấu hình size / topping / đường đá" Padding="8" Margin="0,8,0,0" Click="ConfigureProduct_Click" />
-                  <Button Content="Công thức (định lượng nguyên liệu)…" Padding="8" Margin="0,8,0,0" Click="Recipe_Click" />
-                  <Button Content="Xóa món" Style="{StaticResource DangerButton}" Padding="8" Margin="0,24,0,0" Click="DeleteProduct_Click" />
-                </StackPanel>
-              </ScrollViewer>
-            </DockPanel>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="350" /></Grid.ColumnDefinitions>
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+            <TextBox x:Name="MenuSearch" md:HintAssist.Hint="Tìm tên món" md:HintAssist.IsFloating="False" md:TextFieldAssist.HasLeadingIcon="True" md:TextFieldAssist.LeadingIcon="Magnify" TextChanged="MenuSearch_TextChanged" AutomationProperties.Name="Tìm tên món trong quản trị" VerticalContentAlignment="Center" />
+            <ComboBox Grid.Column="1" x:Name="MenuCategoryFilter" Margin="10,0,0,0" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="MenuCategoryFilter_SelectionChanged" AutomationProperties.Name="Lọc theo danh mục" md:HintAssist.IsFloating="False" />
+          </Grid>
+          <TextBlock DockPanel.Dock="Bottom" Text="Bấm vào món để sửa. Chuột phải để báo hết hàng / có hàng nhanh." Style="{StaticResource Hint}" Margin="0,8,0,0" />
+          <!-- Read-only list: clicking a row opens the editor window; status is only a label here. -->
+          <DataGrid x:Name="Products" touch:EmptyState.Text="Không có món phù hợp" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.RowStyle>
+              <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                <Setter Property="Cursor" Value="Hand" />
+                <EventSetter Event="MouseLeftButtonUp" Handler="ProductRow_Click" />
+                <EventSetter Event="KeyDown" Handler="ProductRow_KeyDown" />
+                <Setter Property="ContextMenu" Value="{StaticResource ProductRowMenu}" />
+              </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Width="56">
+                <DataGridTemplateColumn.CellTemplate><DataTemplate><Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource PosSubtle}"><Image Source="{Binding ImageUrl, Converter={StaticResource AdminProductImage}}" Stretch="Uniform" Margin="2" /></Border></DataTemplate></DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Tên món" Binding="{Binding Name}" Width="*" />
+              <DataGridTextColumn Header="Danh mục" Binding="{Binding CategoryName}" Width="180" />
+              <DataGridTextColumn Header="Giá" Binding="{Binding FormattedPrice}" Width="110" />
+              <DataGridTemplateColumn Header="Trạng thái" Width="120" CellTemplate="{StaticResource StatusBadge}" />
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+          <!-- Fixed side column: the add prompt until something is picked, then the editor in its place. -->
+          <Border Grid.Column="1" Margin="15,0,0,0" Style="{StaticResource SurfaceCard}">
+            <Grid>
+              <StackPanel x:Name="ProductPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12">
+                <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource PosAccentSoft}" HorizontalAlignment="Center"><md:PackIcon Kind="Coffee" Width="30" Height="30" Foreground="{StaticResource PosAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <TextBlock Text="Chọn một món trong danh sách để sửa, hoặc thêm món mới." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource PosMuted}" Margin="0,14,0,16" />
+                <Button Style="{StaticResource PrimaryButton}" Padding="18,8" HorizontalAlignment="Center" Click="NewProduct_Click" AutomationProperties.Name="Thêm món mới"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="Thêm món mới" VerticalAlignment="Center" /></StackPanel></Button>
+              </StackPanel>
+              <ContentControl x:Name="ProductEditorHost" Focusable="False" />
+            </Grid>
           </Border>
         </Grid>
       </TabItem>
       <TabItem Header="Danh mục">
         <Grid Margin="12">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="350" />
-          </Grid.ColumnDefinitions>
-          <DockPanel Margin="0,0,15,0"><Button DockPanel.Dock="Bottom" Content="+ Thêm danh mục mới" Padding="8" Margin="0,10,0,0" Click="NewCategory_Click" /><ListBox x:Name="Categories" touch:EmptyState.Text="Chưa có danh mục" DisplayMemberPath="Name" SelectionChanged="CategorySelected" /></DockPanel>
-          <Border Grid.Column="1" Style="{StaticResource SurfaceCard}">
-            <DockPanel>
-              <Button Style="{StaticResource PrimaryButton}" Content="Lưu danh mục" Padding="8" Click="SaveCategory_Click" DockPanel.Dock="Bottom" Margin="0,14,0,0" />
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                  <TextBlock Text="Nhóm thực đơn" Style="{StaticResource SectionTitle}" />
-                  <TextBlock Text="Sắp nhóm giúp thu ngân tìm món nhanh hơn." Style="{StaticResource Hint}" />
-                  <TextBox md:HintAssist.Hint="Tên danh mục" x:Name="CategoryName" Margin="0,4,0,10" />
-                  <CheckBox x:Name="CategoryActive" Content="Đang hiển thị" IsChecked="True" Margin="0,4,0,10" />
-                  <Button Content="Xóa danh mục" Style="{StaticResource DangerButton}" Padding="8" Margin="0,24,0,0" Click="DeleteCategory_Click" />
-                </StackPanel>
-              </ScrollViewer>
-            </DockPanel>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="350" /></Grid.ColumnDefinitions>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="Thứ tự ở đây là thứ tự hàng chip trên màn bán hàng." Style="{StaticResource Hint}" Margin="0,0,0,10" />
+          <TextBlock DockPanel.Dock="Bottom" Text="Bấm vào danh mục để sửa. Chuột phải để ẩn / hiện nhanh." Style="{StaticResource Hint}" Margin="0,8,0,0" />
+          <DataGrid x:Name="Categories" touch:EmptyState.Text="Chưa có danh mục" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single">
+            <DataGrid.RowStyle>
+              <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                <Setter Property="Cursor" Value="Hand" />
+                <EventSetter Event="MouseLeftButtonUp" Handler="CategoryRow_Click" />
+                <EventSetter Event="KeyDown" Handler="CategoryRow_KeyDown" />
+                <Setter Property="ContextMenu" Value="{StaticResource CategoryRowMenu}" />
+              </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="#" Binding="{Binding Position}" Width="56" />
+              <DataGridTextColumn Header="Tên danh mục" Binding="{Binding Name}" Width="*" />
+              <DataGridTextColumn Header="Số món" Binding="{Binding ProductCount}" Width="110" />
+              <DataGridTemplateColumn Header="Trạng thái" Width="140" CellTemplate="{StaticResource StatusBadge}" />
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+          <!-- Fixed side column: the add prompt until something is picked, then the editor in its place. -->
+          <Border Grid.Column="1" Margin="15,0,0,0" Style="{StaticResource SurfaceCard}">
+            <Grid>
+              <StackPanel x:Name="CategoryPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12">
+                <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource PosAccentSoft}" HorizontalAlignment="Center"><md:PackIcon Kind="ShapeOutline" Width="30" Height="30" Foreground="{StaticResource PosAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <TextBlock Text="Chọn một danh mục để sửa, hoặc thêm danh mục mới." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource PosMuted}" Margin="0,14,0,16" />
+                <Button Style="{StaticResource PrimaryButton}" Padding="18,8" HorizontalAlignment="Center" Click="NewCategory_Click" AutomationProperties.Name="Thêm danh mục"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="Thêm danh mục" VerticalAlignment="Center" /></StackPanel></Button>
+              </StackPanel>
+              <ContentControl x:Name="CategoryEditorHost" Focusable="False" />
+            </Grid>
           </Border>
         </Grid>
+      </TabItem>
+      <TabItem Header="Kho &amp; Nhập hàng">
+        <TabControl Margin="0,4,0,0">
+          <TabItem Header="Nguyên liệu"><ContentControl x:Name="IngredientsHost" Focusable="False" /></TabItem>
+          <TabItem Header="Bao bì"><ContentControl x:Name="PackagingHost" Focusable="False" /></TabItem>
+          <TabItem Header="Nhập hàng &amp; NCC"><ContentControl x:Name="PurchasingHost" Focusable="False" /></TabItem>
+          <TabItem Header="Cảnh báo &amp; hao hụt"><ContentControl x:Name="StockReportHost" Focusable="False" /></TabItem>
+        </TabControl>
+      </TabItem>
+      <TabItem Header="Khuyến mãi">
+        <TabControl Margin="0,4,0,0">
+          <TabItem Header="Chương trình"><ContentControl x:Name="PromotionsHost" Focusable="False" /></TabItem>
+          <TabItem Header="Voucher"><ContentControl x:Name="VouchersHost" Focusable="False" /></TabItem>
+        </TabControl>
+      </TabItem>
+      <TabItem Header="Khách hàng">
+        <DockPanel Margin="0,4,0,0">
+          <TextBlock DockPanel.Dock="Top" x:Name="MemberInfo" Style="{StaticResource Hint}" Margin="12,0,12,8" />
+          <ContentControl x:Name="CustomersHost" Focusable="False" />
+        </DockPanel>
       </TabItem>
       <TabItem Header="Nhân viên">
         <Grid Margin="12">
@@ -82,7 +136,7 @@
           <DataGrid x:Name="Staff" touch:EmptyState.Text="Chưa có nhân viên" IsReadOnly="True" AutoGenerateColumns="False" SelectionChanged="StaffSelected">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="*" />
-              <DataGridTextColumn Header="Vai trò" Binding="{Binding Role}" Width="100" />
+              <DataGridTextColumn Header="Vai trò" Binding="{Binding RoleLabel}" Width="100" />
               <DataGridCheckBoxColumn Header="Hoạt động" Binding="{Binding IsActive}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
               <DataGridCheckBoxColumn Header="Đổi mật khẩu" Binding="{Binding MustChangePassword}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
             </DataGrid.Columns>
@@ -97,8 +151,8 @@
                   <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="StaffName" Margin="0,4,0,10" />
                   <PasswordBox md:HintAssist.Hint="Mật khẩu mới (bỏ trống nếu không đổi)" x:Name="StaffPassword" Margin="0,4,0,10" />
                   <ComboBox md:HintAssist.Hint="Vai trò" x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10">
-                    <ComboBoxItem Content="Cashier" />
-                    <ComboBoxItem Content="Manager" />
+                    <ComboBoxItem Content="Thu ngân" Tag="Cashier" />
+                    <ComboBoxItem Content="Quản lý" Tag="Manager" />
                   </ComboBox>
                   <TextBlock Text="Các thao tác nhanh (dành cho tài khoản đang chọn):" TextWrapping="Wrap" Margin="0,16,0,8" />
                   <Button Content="Đặt lại mật khẩu tạm thời" Padding="8" Click="ResetPassword_Click" />
@@ -110,54 +164,40 @@
           </Border>
         </Grid>
       </TabItem>
-      <TabItem Header="Chuyển khoản">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <Border Style="{StaticResource SurfaceCard}" Margin="12" MaxWidth="560" HorizontalAlignment="Left">
-            <StackPanel>
-              <TextBlock Text="Thông tin tài khoản nhận tiền" FontWeight="Bold" FontSize="16" />
-              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Mã ngân hàng (ví dụ MB)" x:Name="BankCode" />
-              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Số tài khoản" x:Name="BankAccount" />
-              <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Tên chủ tài khoản" x:Name="BankOwner" />
-              <PasswordBox Margin="0,8,0,8" md:HintAssist.Hint="API Token SePay (không bắt buộc)" x:Name="SePayToken" ToolTip="my.sepay.vn → Cấu hình công ty → API Access → Thêm API" />
-<TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: quản lý kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,8,0,16" />
-              <Button Style="{StaticResource PrimaryButton}" Content="Lưu thông tin chuyển khoản" Padding="8" Click="SaveBank_Click" />
+      <TabItem Header="Cài đặt">
+        <TabControl Margin="0,4,0,0">
+          <TabItem Header="Cửa hàng"><ContentControl x:Name="StoreSettingsHost" Focusable="False" /></TabItem>
+          <TabItem Header="Chuyển khoản"><ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12" MaxWidth="620" HorizontalAlignment="Left">
+            <Border Style="{StaticResource SurfaceCard}" Margin="0,0,0,12">
+              <StackPanel>
+                <TextBlock Text="Thông tin tài khoản nhận tiền" FontWeight="Bold" FontSize="16" />
+                <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Mã ngân hàng (ví dụ MB)" x:Name="BankCode" />
+                <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Số tài khoản" x:Name="BankAccount" />
+                <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Tên chủ tài khoản" x:Name="BankOwner" />
+                <PasswordBox Margin="0,8,0,8" md:HintAssist.Hint="API Token SePay (không bắt buộc)" x:Name="SePayToken" ToolTip="my.sepay.vn → Cấu hình công ty → API Access → Thêm API" />
+                <TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: quản lý kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,8,0,16" />
+                <Button Style="{StaticResource PrimaryButton}" Content="Lưu thông tin chuyển khoản" Padding="8" Click="SaveBank_Click" />
+              </StackPanel>
+            </Border>
             </StackPanel>
-          </Border>
-        </ScrollViewer>
-      </TabItem>
-      <TabItem Header="Cửa hàng &amp; Sao lưu">
-        <Grid Margin="0,12,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-          <Border Style="{StaticResource SurfaceCard}" Margin="0,0,8,0">
-            <StackPanel>
-              <TextBlock Text="Cửa hàng &amp; bán hàng" FontWeight="Bold" />
-              <TextBlock Text="Thông tin quán, hạn mức giảm giá của thu ngân và các kênh app giao hàng." Style="{StaticResource Hint}" />
-              <Button Style="{StaticResource PrimaryButton}" Content="Cài đặt cửa hàng…" Padding="8" Click="OpenStoreSettings_Click" />
-              <TextBlock Text="Khuyến mãi" FontWeight="Bold" Margin="0,24,0,0" />
-              <TextBlock Text="Giờ vàng giảm %, mua X tặng Y, combo giá cố định. Các chương trình đang bật được cộng dồn tự động." Style="{StaticResource Hint}" />
-              <Button Content="Chương trình khuyến mãi…" Padding="8" Click="OpenPromotions_Click" />
-              <Button Content="Voucher…" Padding="8" Click="OpenVouchers_Click" />
+          </ScrollViewer></TabItem>
+          <TabItem Header="Sao lưu"><ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12" MaxWidth="620" HorizontalAlignment="Left">
+            <Border Style="{StaticResource SurfaceCard}" Margin="0">
+              <StackPanel>
+                <TextBlock Text="Sao lưu dữ liệu" FontWeight="Bold" FontSize="16" />
+                <TextBlock Text="App tự sao lưu mỗi ngày và sau mỗi lần chốt ca, giữ 14 bản gần nhất trên máy và đưa từng bản lên Supabase để máy hỏng không mất dữ liệu." Style="{StaticResource Hint}" />
+                <TextBlock x:Name="BackupInfo" Margin="0,0,0,4" TextWrapping="Wrap" />
+                <TextBlock x:Name="CloudInfo" Margin="0,0,0,12" TextWrapping="Wrap" />
+                <Button x:Name="BackupNowButton" Style="{StaticResource PrimaryButton}" Content="Sao lưu ngay" Padding="8" Click="BackupNow_Click" />
+                <Button Content="Mở thư mục sao lưu" Padding="8" Margin="0,8,0,0" Click="OpenBackups_Click" />
+                <Button Content="Khôi phục từ bản sao lưu…" Style="{StaticResource DangerButton}" Padding="8" Margin="0,8,0,0" Click="RestoreBackup_Click" />
+              </StackPanel>
+            </Border>
             </StackPanel>
-          </Border>
-          <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Margin="8,0,0,0">
-            <StackPanel>
-              <TextBlock Text="Sao lưu dữ liệu" FontWeight="Bold" />
-              <TextBlock Text="App tự sao lưu mỗi ngày và sau mỗi lần chốt ca, giữ 14 bản gần nhất trên máy và đưa từng bản lên Supabase để máy hỏng không mất dữ liệu." Style="{StaticResource Hint}" />
-              <TextBlock x:Name="BackupInfo" Margin="0,0,0,4" TextWrapping="Wrap" />
-              <TextBlock x:Name="CloudInfo" Margin="0,0,0,12" TextWrapping="Wrap" />
-              <Button x:Name="BackupNowButton" Style="{StaticResource PrimaryButton}" Content="Sao lưu ngay" Padding="8" Click="BackupNow_Click" />
-              <Button Content="Mở thư mục sao lưu" Padding="8" Margin="0,8,0,0" Click="OpenBackups_Click" />
-              <Button Content="Khôi phục từ bản sao lưu…" Style="{StaticResource DangerButton}" Padding="8" Margin="0,8,0,0" Click="RestoreBackup_Click" />
-              <TextBlock Text="Khách hàng thành viên" FontWeight="Bold" Margin="0,24,0,0" />
-              <TextBlock x:Name="MemberInfo" Style="{StaticResource Hint}" />
-              <Button Content="Quản lý khách hàng…" Padding="8" Click="OpenCustomers_Click" />
-              <TextBlock Text="Kho nguyên liệu" FontWeight="Bold" Margin="0,24,0,8" />
-              <Button Content="Mở kho nguyên liệu…" Padding="8" Click="OpenIngredients_Click" />
-              <Button Content="Nhập hàng &amp; nhà cung cấp…" Padding="8" Click="OpenPurchasing_Click" />
-              <Button Content="Cảnh báo tồn kho &amp; hao hụt…" Padding="8" Click="OpenStockReport_Click" />
-            </StackPanel>
-          </Border>
-        </Grid>
+          </ScrollViewer></TabItem>
+        </TabControl>
       </TabItem>
     </TabControl>
   </DockPanel>

@@ -107,10 +107,10 @@ public sealed class CustomerListWindow : Window
     {
         try
         {
-            if (_grid.SelectedItem is Customer c) { _customers.UpdateCustomer(c.Phone, _name.Text, _phone.Text); Refresh(); Toast.Show(this, "Đã lưu thông tin khách."); return; }
+            if (_grid.SelectedItem is Customer c) { _customers.UpdateCustomer(c.Phone, _name.Text, _phone.Text); Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu thông tin khách."); return; }
             var created = _customers.RegisterCustomer(_phone.Text, _name.Text);
             _search.Clear(); Refresh(); _grid.SelectedItem = created; _grid.ScrollIntoView(created);
-            Toast.Show(this, $"Đã thêm {created.Name}.");
+            Toast.Show(Embedded.HostOf(this), $"Đã thêm {created.Name}.");
         }
         catch (InvalidOperationException ex) { FieldError.Mark(ex.Message.Contains("điện thoại") ? _phone : _name, ex.Message); }
     }
@@ -118,8 +118,8 @@ public sealed class CustomerListWindow : Window
     private void Delete()
     {
         if (_grid.SelectedItem is not Customer c) return;
-        if (MessageBox.Show(this, $"Xóa thành viên {c.Name} ({c.Phone})? {c.Points:N0} điểm chưa đổi sẽ mất. Các đơn đã bán vẫn giữ trong báo cáo.", "Xóa khách", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        try { _customers.DeleteCustomer(c.Phone); _grid.SelectedItem = null; Refresh(); ShowSelected(); Toast.Show(this, $"Đã xóa {c.Name}."); }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa thành viên {c.Name} ({c.Phone})? {c.Points:N0} điểm chưa đổi sẽ mất. Các đơn đã bán vẫn giữ trong báo cáo.", "Xóa khách", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _customers.DeleteCustomer(c.Phone); _grid.SelectedItem = null; Refresh(); ShowSelected(); Toast.Show(Embedded.HostOf(this), $"Đã xóa {c.Name}."); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }

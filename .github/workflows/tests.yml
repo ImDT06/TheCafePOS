@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Regression tests
+        shell: pwsh
+        run: ./scripts/test-regressions.ps1
+
+      - name: UI smoke tests
+        shell: pwsh
+        run: ./scripts/test-ui.ps1
+
+      # Rendered dialogs and windows, for reviewing layout changes in a PR.
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: artifacts/dialog-preview/*.png
+          if-no-files-found: ignore

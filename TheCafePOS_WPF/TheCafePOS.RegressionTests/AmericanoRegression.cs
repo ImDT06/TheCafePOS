@@ -10,8 +10,8 @@ internal static class AmericanoRegression
             if (!valid) throw new Exception(message);
             Console.WriteLine("PASS " + message);
         }
-        var store = DataStoreService.Instance;
-        Check(store.Products.Count(p => p.IsActive && !p.IsTopping) == 87 && store.Products.Count(p => p.IsActive && p.IsTopping) == 22, "Complete public menu, homepage additions, two deals and topping catalog imported");
+        var store = TestHost.Store;
+        Check(store.Products.Count(p => p.IsActive && !p.IsTopping) == 84 && store.Products.Count(p => p.IsActive && p.IsTopping) == 22, "Complete public menu, homepage additions, topping catalog imported; fixed-price bundles retired");
         Check(store.Categories.Count(c => c.IsActive) == 18, "Menu includes sixteen source categories and two featured sections");
         Check(store.Products.Where(p => p.IsActive && !p.IsTopping).All(p => File.Exists(Path.Combine(AppContext.BaseDirectory, p.ImageUrl))), "Every sale product has a packaged image");
         Check(store.Products.Where(p => p.IsActive && p.IsBeverage).All(p => p.Sizes.Any(s => s.Name == p.DefaultSize) && p.Sizes.All(s => s.ExtraPrice >= 0)), "Every beverage has valid default size and nonnegative adjustments");
@@ -26,20 +26,20 @@ internal static class AmericanoRegression
         var retail = store.Products.Single(p => p.Name == "Pizza Tomyum Hải Sản");
         var food = OrderConfigurationService.Create(retail, "", 100, 100, 2, Array.Empty<(string, int)>(), "", store.Products);
         Check(food.TotalPrice == 118000 && !food.IsBeverage && !food.HasIceOption && food.Size == "", "Food has no drink size or ice options");
-        AuthService.Instance.CreateAccount("catalog-owner", "CatalogTest!2026", "Owner");
-        AuthService.Instance.Login("catalog-owner", "CatalogTest!2026");
+        TestHost.Auth.CreateAccount("catalog-owner", "CatalogTest!2026", "Owner");
+        TestHost.Auth.Login("catalog-owner", "CatalogTest!2026");
         store.OpenShift(0);
         var stockBefore = store.PackagingInventory.ToDictionary(p => p.Id, p => p.StockQuantity);
         var foodOrder = store.Checkout(new[] { food }, "Cash", 118000, "food-test");
         Check(store.PackagingInventory.All(p => p.StockQuantity == stockBefore[p.Id]), "Food checkout never deducts drink packaging");
-        StickerPrinterService.Instance.GenerateStickersForOrder(foodOrder);
+        TestHost.Stickers.GenerateStickersForOrder(foodOrder);
         Check(!store.StickerLogs.Any(s => s.OrderId == foodOrder.Id), "Food checkout never generates beverage labels");
 
-        var state = LocalDatabase.Instance.Read<StoreState>("store")!;
+        var state = TestHost.Database.Read<StoreState>("store")!;
         state.MenuSchemaVersion = 1;
         state.Products.RemoveAll(p => p.Id == hot.Id);
         state.Products.Single(p => p.Id == classic.Id).BasePrice = 60000;
-        LocalDatabase.Instance.Write("store", state);
+        TestHost.Database.Write("store", state);
         var reload = typeof(DataStoreService).GetMethod("LoadState", BindingFlags.Instance | BindingFlags.NonPublic)!;
         reload.Invoke(store, null);
         Check(store.Products.Single(p => p.Id == classic.Id).BasePrice == 49000, "Explicit catalog upgrade applies official price and retains product ID");
@@ -49,6 +49,6 @@ internal static class AmericanoRegression
         store.Save();
         reload.Invoke(store, null);
         Check(store.Products.Count == count && !store.Products.Single(p => p.Name == "Americano Nóng").IsActive, "Reload neither duplicates nor reactivates coffee");
-        Check(LocalDatabase.Instance.Read<StoreState>("store")!.MenuSchemaVersion == 7, "Menu and homepage upgrades persisted");
+        Check(TestHost.Database.Read<StoreState>("store")!.MenuSchemaVersion == 8, "Menu, homepage and deal upgrades persisted");
     }
 }

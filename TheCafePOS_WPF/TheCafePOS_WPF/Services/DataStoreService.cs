@@ -9,8 +9,8 @@ namespace TheCafePOS_WPF.Services
 {
     public partial class DataStoreService : IDataStoreService
     {
-        private static DataStoreService? _instance;
-        public static DataStoreService Instance => _instance ??= new DataStoreService();
+        private readonly LocalDatabase _db;
+        private readonly IAuthService _auth;
 
         public List<Category> Categories { get; private set; } = new List<Category>();
         public List<Product> Products { get; private set; } = new List<Product>();
@@ -20,8 +20,10 @@ namespace TheCafePOS_WPF.Services
 
         public Shift CurrentShift { get; private set; }
 
-        private DataStoreService()
+        public DataStoreService(LocalDatabase db, IAuthService auth)
         {
+            _db = db;
+            _auth = auth;
             CurrentShift = new Shift
             {
                 CashierName = "Thu Ngân CA 1",

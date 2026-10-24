@@ -11,7 +11,7 @@ internal static class FinanceRegression
             try { action(); } catch (InvalidOperationException) { checks++; Console.WriteLine("PASS " + label); return; }
             throw new Exception("Expected rejection: " + label);
         }
-        var store = DataStoreService.Instance; var auth = AuthService.Instance;
+        var store = TestHost.Store; var auth = TestHost.Auth;
         auth.Login("owner", "OwnerPass!2026");
         if (reload)
         {
@@ -85,7 +85,8 @@ internal static class FinanceRegression
         Check(store.Shifts.All(s => s.ExpectedCash == oldShifts[s.Id]), "Refund never changes previously closed shift");
         var report = ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today, shiftId, store.Refunds, store.CashEntries);
         Check(report.Revenue == 0 && report.Refunded == 75000 && report.NetRevenue == -75000 && report.CashIn == 20000 && report.CashOut == 10000, "Cross-shift refunds use refund shift and cash flows stay separate from sales");
-        Check(ReportService.ToCsv(report).Contains("BANK-123") && ReportService.ToCsv(report).Contains("qr-refund"), "CSV includes refund ledger IDs and external reference");
+        var refundRows = ReportService.ToWorkbook(report, "", null, null).Single(s => s.Name == "Hoàn tiền").Rows.ToList();
+        Check(refundRows.Any(r => r.Contains("BANK-123")) && refundRows.Any(r => r.Contains("qr-refund")), "Excel includes refund ledger IDs and external reference");
         var nextDayRefund = new TheCafePOS_WPF.Models.RefundEntry { Amount = 123, CreatedAt = DateTime.Today.AddDays(1), ShiftId = shiftId };
         Check(ReportService.Build(store.CompletedOrders, DateTime.Today, DateTime.Today, null, store.Refunds.Append(nextDayRefund)).Refunded == 75000, "Refund reporting uses refund date");
         store.CloseShift(60000);

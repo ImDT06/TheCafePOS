@@ -3,33 +3,38 @@ using System.Windows.Controls;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
 public partial class PackagingStatusModal : Window
 {
-    private readonly DataStoreService _store = DataStoreService.Instance;
-    public PackagingStatusModal()
+    private readonly IInventoryService _inventory;
+    private readonly IAuthService _auth;
+    public PackagingStatusModal(IInventoryService inventory, IAuthService auth)
     {
+        _inventory = inventory;
+        _auth = auth;
         InitializeComponent();
-        Editor.Visibility = AuthService.Instance.IsManager ? Visibility.Visible : Visibility.Collapsed;
+        Editor.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
         ManageTab.Visibility = Editor.Visibility;
-        if (!AuthService.Instance.IsManager) PermissionNote.Text = "Thu ngân được xem kho và lịch sử. Quản lý mới được nhập kho, kiểm kê hoặc điều chỉnh.";
+        if (!_auth.IsManager) PermissionNote.Text = "Thu ngân được xem kho và lịch sử. Quản lý mới được nhập kho, kiểm kê hoặc điều chỉnh.";
         Refresh();
+        Loaded += (_, _) => Refresh(); // stock may have changed through purchasing while this sat in a tab
     }
     private void Refresh(string? selectedId = null)
     {
-        PackList.ItemsSource = _store.PackagingInventory.ToList();
-        DgPackaging.ItemsSource = _store.PackagingInventory.ToList();
-        DgPackaging.SelectedItem = _store.PackagingInventory.FirstOrDefault(p => p.Id == selectedId) ?? _store.PackagingInventory.FirstOrDefault();
-        Summary.Text = $"{_store.PackagingInventory.Count} loại bao bì • {_store.PackagingInventory.Count(p => p.IsLowStock)} loại chạm ngưỡng cảnh báo (tô vàng)";
+        PackList.ItemsSource = _inventory.PackagingInventory.ToList();
+        DgPackaging.ItemsSource = _inventory.PackagingInventory.ToList();
+        DgPackaging.SelectedItem = _inventory.PackagingInventory.FirstOrDefault(p => p.Id == selectedId) ?? _inventory.PackagingInventory.FirstOrDefault();
+        Summary.Text = $"{_inventory.PackagingInventory.Count} loại bao bì • {_inventory.PackagingInventory.Count(p => p.IsLowStock)} loại chạm ngưỡng cảnh báo (tô vàng)";
         RefreshHistory(); UpdatePreview();
     }
     private void RefreshHistory()
     {
         if (History == null || OnlySelected == null) return;
         var id = (DgPackaging.SelectedItem as PackagingItem)?.Id;
-        History.ItemsSource = _store.StockMovements.Where(m => OnlySelected.IsChecked != true || m.PackagingId == id).OrderByDescending(m => m.CreatedAt).ToList();
+        History.ItemsSource = _inventory.StockMovements.Where(m => OnlySelected.IsChecked != true || m.PackagingId == id).OrderByDescending(m => m.CreatedAt).ToList();
     }
     private void UpdatePreview()
     {
@@ -38,7 +43,7 @@ public partial class PackagingStatusModal : Window
         Core.TouchInput.SetAllowNegative(Quantity, (Operation.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Điều chỉnh");
         Core.TouchInput.SetUnit(Quantity, (DgPackaging.SelectedItem as PackagingItem)?.Unit ?? "đơn vị");
         if (DgPackaging.SelectedItem is not PackagingItem item || !int.TryParse(Quantity.Text, out var quantity)) return;
-        long after = ((ComboBoxItem)Operation.SelectedItem).Content.ToString() == "Kiểm kê" ? quantity : (long)item.StockQuantity + quantity;
+        long after = ((ComboBoxItem)Operation.SelectedItem).Content.ToString() switch { "Kiểm kê" => quantity, "Hao hụt" => (long)item.StockQuantity - quantity, _ => (long)item.StockQuantity + quantity };
         Preview.Text = $"Tồn: {item.StockQuantity} → {after} ({after - item.StockQuantity:+0;-0;0})";
     }
     private void PackagingSelected(object sender, SelectionChangedEventArgs e) { RefreshHistory(); UpdatePreview(); }
@@ -51,7 +56,7 @@ public partial class PackagingStatusModal : Window
         {
             if (id is null) throw new InvalidOperationException("Vui lòng chọn bao bì.");
             if (!int.TryParse(Quantity.Text, out int quantity)) throw new InvalidOperationException("Số lượng phải là số nguyên hợp lệ.");
-            _store.UpdateStock(id, ((ComboBoxItem)Operation.SelectedItem).Content.ToString()!, quantity, Reason.Text);
+            _inventory.UpdateStock(id, ((ComboBoxItem)Operation.SelectedItem).Content.ToString()!, quantity, Reason.Text);
             Quantity.Clear(); Reason.Clear(); Status.Text = "Đã lưu tồn kho và lịch sử thay đổi.";
         }
         catch (Exception ex) { Status.Text = ex.Message; }
@@ -82,22 +87,22 @@ public partial class PackagingStatusModal : Window
             if (string.IsNullOrWhiteSpace(PackUnit.Text)) throw FieldError.Mark(PackUnit, "Nhập đơn vị tính.");
             if (!int.TryParse(PackWarning.Text, out var warning) || warning < 0) throw FieldError.Mark(PackWarning, "Ngưỡng cảnh báo phải là số nguyên không âm.");
             var id = (PackList.SelectedItem as PackagingItem)?.Id ?? Guid.NewGuid().ToString();
-            _store.SavePackagingItem(new PackagingItem { Id = id, Name = PackName.Text, Unit = PackUnit.Text, WarningThreshold = warning });
+            _inventory.SavePackagingItem(new PackagingItem { Id = id, Name = PackName.Text, Unit = PackUnit.Text, WarningThreshold = warning });
             Refresh(id);
             NewPack_Click(sender, e);
-            Status.Text = ""; Toast.Show(this, "Đã lưu bao bì. Dùng tab Tồn kho để nhập số lượng.");
+            Status.Text = ""; Toast.Show(Core.Embedded.HostOf(this), "Đã lưu bao bì. Dùng tab Tồn kho để nhập số lượng.");
         }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
     private void DeletePack_Click(object sender, RoutedEventArgs e)
     {
         if (PackList.SelectedItem is not PackagingItem p) { Status.Text = "Chọn bao bì trước."; return; }
-        if (MessageBox.Show(this, $"Xóa bao bì {p.Name}?", "Xóa bao bì", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
+        if (MessageBox.Show(Core.Embedded.HostOf(this), $"Xóa bao bì {p.Name}?", "Xóa bao bì", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
         {
             try
             {
-                _store.DeletePackagingItem(p.Id);
-                Status.Text = ""; Toast.Show(this, "Đã xóa bao bì.");
+                _inventory.DeletePackagingItem(p.Id);
+                Status.Text = ""; Toast.Show(Core.Embedded.HostOf(this), "Đã xóa bao bì.");
                 Refresh();
                 NewPack_Click(sender, e);
             }

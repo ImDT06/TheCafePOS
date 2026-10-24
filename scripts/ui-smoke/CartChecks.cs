@@ -15,7 +15,8 @@ partial class Preview
     {
         void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
         void Flush() { main.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle); main.UpdateLayout(); }
-        void Click(Button button) { button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush(); }
+        // Cart row buttons are bound to view model commands, which a raised Click event does not run.
+        void Click(Button button) { if (button.Command is { } command) command.Execute(button.CommandParameter); else button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush(); }
         // Run assertions inside modal loops, always closing the dialog even if an assertion fails.
         Exception modalFailure = null;
         void InModal<T>(Action<T> action) where T : Window => main.Dispatcher.BeginInvoke(new Action(() =>
@@ -29,26 +30,31 @@ partial class Preview
 
         var product = store.Products.First(p => p.IsActive && p.IsBeverage && p.AllowedToppingIds.Count > 4);
         var search = (TextBox)main.FindName("TxtSearch"); search.Text = product.Name; Flush();
-        var products = (Panel)main.FindName("PnlProducts");
+        var products = (ItemsControl)main.FindName("PnlProducts");
         InModal<OptionCustomModal>(options =>
         {
             var rows = (UniformGrid)options.FindName("ToppingRows");
-            Check(rows.Children.Count == 4, "Topping first page displays four items");
-            var first = rows.Children[0];
-            Click(Descendants<Button>(first).Last());
-            Click((Button)options.FindName("NextToppings"));
-            Check(rows.Children.Count is > 0 and <= 4 && rows.Children[0] != first, "Topping next page changes visible items");
-            Render(options, "OptionCustomModal-toppings-page2", options.ActualWidth, options.ActualHeight - 32);
-            Click((Button)options.FindName("PreviousToppings"));
-            Check(rows.Children[0] == first && Descendants<TextBlock>(first).Any(t => t.Text == "1"), "Topping choice survives paging back");
-            Click((Button)options.FindName("PlusQuantity"));
+            Check(rows.Children.Count > 4, "All toppings are listed in one scrolling grid, no paging");
+            var first = (Grid)rows.Children[0];
+            var card = (Button)first.Children[0]; var minus = (Button)first.Children[1];
+            Check(minus.Visibility != Visibility.Visible, "Topping minus stays hidden until the topping is chosen");
+            Click(card); Click(card);
+            Check(minus.Visibility == Visibility.Visible && Descendants<TextBlock>(card).Any(t => t.Text == "×2"), "Tapping a topping card adds a portion each time");
+            Click(minus);
+            Check(Descendants<TextBlock>(card).Any(t => t.Text == "×1"), "Topping minus removes one portion");
+            Descendants<ToggleButton>(options).First(t => t.Content as string == "Đá để riêng").IsChecked = true;
+            options.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(options), 0, System.Windows.Input.Key.D3) { RoutedEvent = UIElement.PreviewKeyDownEvent });
+            Check(((TextBlock)options.FindName("QuantityText")).Text == "3", "Number key sets the quantity");
+            Click((Button)options.FindName("MinusQuantity"));
+            Render(options, "OptionCustomModal-toppings", options.ActualWidth, options.ActualHeight - 32);
             Click((Button)options.FindName("ConfirmButton"));
         });
-        Click(products.Children.OfType<Button>().Single()); CheckModal();
+        Click(Descendants<Button>(products).First(b => b.Name == "AddBadge")); CheckModal();
         var cart = (ListBox)main.FindName("LbCartItems");
-        Check(cart.Items.Count == 1, "Selecting a product adds a cart row");
+        Check(cart.Items.Count == 1, "Options button opens the dialog and adds a cart row");
         var added = (TheCafePOS_WPF.Models.OrderItem)cart.Items[0];
         Check(added.Quantity == 2 && added.SelectedToppings.Sum(t => t.Quantity) == 1, "Cart retains quantity and selected topping");
+        Check(added.Note == "Đá để riêng", "Quick note chip is saved as the line note");
         Button RowButton(PackIconKind kind) => Descendants<Button>(cart).First(b => b.Content is PackIcon icon && icon.Kind == kind);
         Check(Descendants<PackIcon>(cart).Count() >= 4, "Cart row renders Material action icons");
         var total = (TextBlock)main.FindName("TxtGrandTotal");
@@ -79,7 +85,7 @@ partial class Preview
         Check(!Descendants<Button>(more.Child).Last().IsEnabled, "Split is disabled for a single unit"); more.IsOpen = false;
 
         Button Undo() => Application.Current.Windows.Cast<Window>().Where(w => w.IsVisible)
-            .SelectMany(w => Descendants<Button>(w)).Single(b => Equals(b.Content, "Hoàn tác"));
+            .SelectMany(w => Descendants<Button>(w)).Single(b => b.Content is TextBlock { Text: "Hoàn tác" });
         Click(RowButton(PackIconKind.TrashCanOutline));
         Check(cart.Items.Count == 1, "Delete removes a cart row immediately"); Click(Undo());
         Check(cart.Items.Count == 2 && ReferenceEquals(cart.Items[0], added), "Undo restores the removed row at its original position");
@@ -139,8 +145,12 @@ partial class Preview
         Click((Button)main.FindName("BtnHold")); Click(staleUndo);
         Check(cart.Items.Count == 0, "Undo from a held order cannot insert an item into the next draft");
 
-        InModal<OptionCustomModal>(options => Click((Button)options.FindName("ConfirmButton")));
-        Click(products.Children.OfType<Button>().Single()); CheckModal();
+        // Drinks sold in several sizes open the options dialog instead; quick add is for single-size items.
+        var quick = store.Products.First(p => p.IsActive && !p.IsSoldOut && p.IsBeverage && p.Sizes.Count == 1);
+        search.Text = quick.Name; Flush();
+        var tile = Descendants<Button>(products).First(b => b.Name == "Tile" && b.DataContext is TheCafePOS_WPF.ViewModels.MenuTile { Product.Id: var id } && id == quick.Id);
+        Click(tile); Click(tile);
+        Check(cart.Items.Count == 1 && ((TheCafePOS_WPF.Models.OrderItem)cart.Items[0]).Quantity == 2, "Tapping a product twice adds two default cups to one line without a dialog");
         var previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         previewTimer.Tick += (_, _) =>
         {

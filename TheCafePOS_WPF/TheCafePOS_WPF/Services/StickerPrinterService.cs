@@ -23,14 +23,14 @@ namespace TheCafePOS_WPF.Services
 
     public class StickerPrinterService : IStickerPrinterService
     {
-        private static StickerPrinterService? _instance;
-        public static StickerPrinterService Instance => _instance ??= new StickerPrinterService();
+        private readonly IOrderService _orders;
 
         public ObservableCollection<PrintedStickerInfo> RecentPrintedStickers { get; private set; } = new ObservableCollection<PrintedStickerInfo>();
 
-        private StickerPrinterService()
+        public StickerPrinterService(IOrderService orders)
         {
-            foreach (var log in DataStoreService.Instance.StickerLogs.OrderByDescending(l => l.PrintedAt).Take(200))
+            _orders = orders;
+            foreach (var log in _orders.StickerLogs.OrderByDescending(l => l.PrintedAt).Take(200))
                 RecentPrintedStickers.Add(new PrintedStickerInfo { OrderId = log.OrderId, DailyOrderNumber = log.DailyOrderNumber, ProductName = log.ProductName, OptionsSummary = log.OptionsSummary, Index = log.StickerIndex, Total = log.TotalStickers, PrintTime = log.PrintedAt, Reason = log.Reason });
         }
 
@@ -61,7 +61,7 @@ namespace TheCafePOS_WPF.Services
                     stickers.Add(sticker);
                     RecentPrintedStickers.Insert(0, sticker);
 
-                    DataStoreService.Instance.StickerLogs.Add(new StickerPrintLog
+                    _orders.StickerLogs.Add(new StickerPrintLog
                     {
                         OrderId = order.Id,
                         DailyOrderNumber = order.DailyOrderNumber,
@@ -95,7 +95,7 @@ namespace TheCafePOS_WPF.Services
 
             RecentPrintedStickers.Insert(0, newSticker);
 
-            DataStoreService.Instance.StickerLogs.Add(new StickerPrintLog
+            _orders.StickerLogs.Add(new StickerPrintLog
             {
                 OrderId = originalSticker.OrderId,
                 DailyOrderNumber = originalSticker.DailyOrderNumber,

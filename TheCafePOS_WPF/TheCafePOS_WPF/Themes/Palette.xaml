@@ -1,22 +1,47 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
- <!-- The only colours the UI should use. Hard-coded hex values outside this file are a smell. -->
- <SolidColorBrush x:Key="PosAccent" Color="#12634B"/>
- <SolidColorBrush x:Key="PosAccentDark" Color="#123D35"/>
- <SolidColorBrush x:Key="PosAccentSoft" Color="#E8F2ED"/>
- <SolidColorBrush x:Key="PosSelected" Color="#DCEEE4"/>
- <SolidColorBrush x:Key="PosSubtle" Color="#F1F6F3"/>
- <SolidColorBrush x:Key="PosInk" Color="#183D34"/>
- <SolidColorBrush x:Key="PosMuted" Color="#52665F"/>
- <SolidColorBrush x:Key="PosCanvas" Color="#F3F5F4"/>
- <SolidColorBrush x:Key="PosSurface" Color="#FFFFFF"/>
- <SolidColorBrush x:Key="PosBorder" Color="#DFE7E2"/>
- <SolidColorBrush x:Key="PosBorderStrong" Color="#B8C8BF"/>
- <SolidColorBrush x:Key="PosDanger" Color="#B42318"/>
- <SolidColorBrush x:Key="PosDangerSoft" Color="#FFF1F0"/>
- <SolidColorBrush x:Key="PosDangerBorder" Color="#F2C7C2"/>
- <SolidColorBrush x:Key="PosWarning" Color="#B45309"/>
- <SolidColorBrush x:Key="PosWarningInk" Color="#92400E"/>
- <SolidColorBrush x:Key="PosWarningSoft" Color="#FFF7ED"/>
- <SolidColorBrush x:Key="PosWarningBorder" Color="#FED7AA"/>
- <SolidColorBrush x:Key="PosInfo" Color="#1D4ED8"/>
+ <!-- The only place colours are defined: change a value here and XAML, code-built dialogs (Core/Palette.cs),
+      shadows and the Material primary colour all follow. Hard-coded colours anywhere else are a bug. -->
+ <Color x:Key="PosAccentColor">#6F4E37</Color>
+ <Color x:Key="PosAccentDarkColor">#3B2A20</Color>
+ <Color x:Key="PosAccentSoftColor">#F3ECE4</Color>
+ <Color x:Key="PosSelectedColor">#EADFD3</Color>
+ <Color x:Key="PosSubtleColor">#F7F2EC</Color>
+ <Color x:Key="PosInkColor">#2B211B</Color>
+ <Color x:Key="PosMutedColor">#6B5D53</Color>
+ <Color x:Key="PosCanvasColor">#F6F1EB</Color>
+ <Color x:Key="PosSurfaceColor">#FFFFFF</Color>
+ <Color x:Key="PosBorderColor">#E7DED4</Color>
+ <Color x:Key="PosBorderStrongColor">#CDBFB1</Color>
+ <!-- Money (amounts to collect, change, revenue) is green everywhere, independent of the brand colour. -->
+ <Color x:Key="PosMoneyColor">#15803D</Color>
+ <Color x:Key="PosMoneySoftColor">#ECFDF3</Color>
+ <Color x:Key="PosDangerColor">#B42318</Color>
+ <Color x:Key="PosDangerSoftColor">#FFF1F0</Color>
+ <Color x:Key="PosDangerBorderColor">#F2C7C2</Color>
+ <Color x:Key="PosWarningColor">#B45309</Color>
+ <Color x:Key="PosWarningInkColor">#92400E</Color>
+ <Color x:Key="PosWarningSoftColor">#FFF7ED</Color>
+ <Color x:Key="PosWarningBorderColor">#FED7AA</Color>
+ <Color x:Key="PosInfoColor">#0369A1</Color>
+ <SolidColorBrush x:Key="PosAccent" Color="{StaticResource PosAccentColor}"/>
+ <SolidColorBrush x:Key="PosAccentDark" Color="{StaticResource PosAccentDarkColor}"/>
+ <SolidColorBrush x:Key="PosAccentSoft" Color="{StaticResource PosAccentSoftColor}"/>
+ <SolidColorBrush x:Key="PosSelected" Color="{StaticResource PosSelectedColor}"/>
+ <SolidColorBrush x:Key="PosSubtle" Color="{StaticResource PosSubtleColor}"/>
+ <SolidColorBrush x:Key="PosInk" Color="{StaticResource PosInkColor}"/>
+ <SolidColorBrush x:Key="PosMuted" Color="{StaticResource PosMutedColor}"/>
+ <SolidColorBrush x:Key="PosCanvas" Color="{StaticResource PosCanvasColor}"/>
+ <SolidColorBrush x:Key="PosSurface" Color="{StaticResource PosSurfaceColor}"/>
+ <SolidColorBrush x:Key="PosBorder" Color="{StaticResource PosBorderColor}"/>
+ <SolidColorBrush x:Key="PosBorderStrong" Color="{StaticResource PosBorderStrongColor}"/>
+ <SolidColorBrush x:Key="PosMoney" Color="{StaticResource PosMoneyColor}"/>
+ <SolidColorBrush x:Key="PosMoneySoft" Color="{StaticResource PosMoneySoftColor}"/>
+ <SolidColorBrush x:Key="PosDanger" Color="{StaticResource PosDangerColor}"/>
+ <SolidColorBrush x:Key="PosDangerSoft" Color="{StaticResource PosDangerSoftColor}"/>
+ <SolidColorBrush x:Key="PosDangerBorder" Color="{StaticResource PosDangerBorderColor}"/>
+ <SolidColorBrush x:Key="PosWarning" Color="{StaticResource PosWarningColor}"/>
+ <SolidColorBrush x:Key="PosWarningInk" Color="{StaticResource PosWarningInkColor}"/>
+ <SolidColorBrush x:Key="PosWarningSoft" Color="{StaticResource PosWarningSoftColor}"/>
+ <SolidColorBrush x:Key="PosWarningBorder" Color="{StaticResource PosWarningBorderColor}"/>
+ <SolidColorBrush x:Key="PosInfo" Color="{StaticResource PosInfoColor}"/>
 </ResourceDictionary>

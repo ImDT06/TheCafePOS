@@ -24,7 +24,7 @@ public partial class DataStoreService
     }
     public Customer RegisterCustomer(string phone, string name)
     {
-        AuthService.Instance.RequireSignedIn();
+        _auth.RequireSignedIn();
         var p = NormalizePhone(phone);
         if (Customers.Any(c => c.Phone == p)) throw new InvalidOperationException("Số điện thoại đã là thành viên.");
         var customer = new Customer { Phone = p, Name = string.IsNullOrWhiteSpace(name) ? "Khách " + p[^4..] : name.Trim() };
@@ -35,7 +35,7 @@ public partial class DataStoreService
     // The phone is the member key, so changing it moves the purchase history to the new number as well.
     public void UpdateCustomer(string phone, string name, string? newPhone = null)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Nhập tên khách hàng.");
         string target = string.IsNullOrWhiteSpace(newPhone) ? customer.Phone : NormalizePhone(newPhone);
@@ -53,18 +53,20 @@ public partial class DataStoreService
     // Removes the member profile and its points; paid orders keep their phone for reports and refunds still work.
     public void DeleteCustomer(string phone)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var customer = FindCustomer(phone) ?? throw new InvalidOperationException("Không tìm thấy khách hàng.");
         Mutate(() => Customers.Remove(customer));
     }
     public List<Order> CustomerOrders(string phone) => CompletedOrders.Where(o => o.CustomerPhone == phone).OrderByDescending(o => o.CreatedAt).ToList();
 
     public bool DiscountNeedsApproval(decimal subtotal, decimal discount) =>
-        discount > 0 && !AuthService.Instance.IsManager && discount > Math.Floor(subtotal * Settings.CashierDiscountLimitPercent / 100m);
+        discount > 0 && !_auth.IsManager && discount > Math.Floor(subtotal * Settings.CashierDiscountLimitPercent / 100m);
     public void SaveSettings(StoreSettings settings)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (settings.CashierDiscountLimitPercent is < 0 or > 100) throw new InvalidOperationException("Hạn mức giảm giá phải từ 0 đến 100%.");
+        if (settings.VatPercent is < 0 or > 10) throw new InvalidOperationException("Thuế VAT phải từ 0 đến 10%.");
+        if ((settings.ReceiptFooter ?? "").Length > 200) throw new InvalidOperationException("Lời chào cuối hóa đơn tối đa 200 ký tự.");
         if (settings.Channels.Any(c => string.IsNullOrWhiteSpace(c.Name) || c.Name == StoreSettings.Counter || c.MarkupPercent is < 0 or > 100)) throw new InvalidOperationException("Kênh bán cần tên hợp lệ và phụ thu từ 0 đến 100%.");
         if (settings.Channels.GroupBy(c => c.Name.Trim(), StringComparer.CurrentCultureIgnoreCase).Any(g => g.Count() > 1)) throw new InvalidOperationException("Tên kênh bán bị trùng.");
         Mutate(() => Settings = settings);
@@ -72,7 +74,7 @@ public partial class DataStoreService
 
     public void DeletePromotion(string id)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         Mutate(() => Promotions.RemoveAll(p => p.Id == id));
     }
 
@@ -115,8 +117,9 @@ public partial class DataStoreService
     }
 
     // As many complete sets as the cart holds; each set costs ComboPrice instead of its items' prices.
-    private static decimal Combo(Promotion promo, List<OrderItem> items)
+    private decimal Combo(Promotion promo, List<OrderItem> items)
     {
+        if (promo.Slots.Count > 0) return SlotCombo(promo, items);
         if (promo.ProductIds.Count == 0) return 0;
         var pools = promo.ProductIds.Distinct().ToDictionary(id => id, id => items.Where(i => i.ProductId == id).SelectMany(i => Enumerable.Repeat(i.UnitPrice, i.Quantity)).OrderByDescending(p => p).ToList());
         int sets = pools.Values.Min(p => p.Count);
@@ -125,13 +128,46 @@ public partial class DataStoreService
         return saving;
     }
 
+    // Each set takes one unit per slot; the combo price replaces the items' base prices, so a larger size or
+    // toppings are still charged on top. Scarcest slot fills first, with the dearest eligible unit, so a unit
+    // that fits two slots is not used up by the wrong one.
+    private decimal SlotCombo(Promotion promo, List<OrderItem> items)
+    {
+        if (promo.Slots.Any(s => s.CategoryIds.Count == 0 && s.ProductIds.Count == 0)) return 0;
+        var units = items.SelectMany(i => Enumerable.Repeat(i, i.Quantity))
+            .Select(i => (Product: Products.FirstOrDefault(p => p.Id == i.ProductId), Unit: i.UnitPrice))
+            .Where(u => u.Product is not null)
+            // Listed price: base plus the default size, as on the menu tile.
+            .Select(u => (Product: u.Product!, Value: Math.Min(u.Product!.BasePrice + (u.Product.IsBeverage ? u.Product.Sizes.FirstOrDefault(s => s.Name == u.Product.DefaultSize)?.ExtraPrice ?? 0 : 0), u.Unit)))
+            .OrderByDescending(u => u.Value).ToList();
+        var used = new bool[units.Count];
+        decimal saving = 0;
+        while (true)
+        {
+            var picks = new List<int>();
+            foreach (var slot in promo.Slots.OrderBy(s => units.Where((u, i) => !used[i] && s.Accepts(u.Product)).Count()))
+            {
+                // Units are sorted dearest first, so the first free match is the best one.
+                int pick = Enumerable.Range(0, units.Count).FirstOrDefault(i => !used[i] && !picks.Contains(i) && slot.Accepts(units[i].Product), -1);
+                if (pick < 0) return saving;
+                picks.Add(pick);
+            }
+            foreach (int i in picks) used[i] = true;
+            saving += Math.Max(0, picks.Sum(i => units[i].Value) - promo.ComboPrice);
+        }
+    }
+
     public void SavePromotion(Promotion promo)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(promo.Name)) throw new InvalidOperationException("Nhập tên chương trình.");
         if (promo.Type == "Giờ vàng" && promo.Percent is <= 0 or >= 100) throw new InvalidOperationException("Mức giảm phải từ 1 đến 99%.");
         if (promo.Type == "Mua X tặng Y" && (promo.BuyQuantity < 1 || promo.FreeQuantity < 1)) throw new InvalidOperationException("Số lượng mua và tặng phải từ 1 trở lên.");
-        if (promo.Type == "Combo" && (promo.ProductIds.Distinct().Count() < 2 || promo.ComboPrice <= 0)) throw new InvalidOperationException("Combo cần ít nhất 2 món và giá combo lớn hơn 0.");
+        if (promo.Type == "Combo" && promo.ComboPrice <= 0) throw new InvalidOperationException("Giá combo phải lớn hơn 0.");
+        if (promo.Type == "Combo" && promo.Slots.Count == 0 && promo.ProductIds.Distinct().Count() < 2) throw new InvalidOperationException("Combo cần ít nhất 2 suất.");
+        if (promo.Type == "Combo" && promo.Slots.Count is > 0 and < 2) throw new InvalidOperationException("Combo cần ít nhất 2 suất.");
+        if (promo.Slots.Any(s => s.CategoryIds.Count == 0 && s.ProductIds.Count == 0)) throw new InvalidOperationException("Mỗi suất cần ít nhất một danh mục hoặc món.");
+        if (promo.ValidFrom is { } from && promo.ValidTo is { } to && to.Date < from.Date) throw new InvalidOperationException("Ngày kết thúc phải từ ngày bắt đầu trở đi.");
         if (promo.Type is not ("Giờ vàng" or "Mua X tặng Y" or "Combo")) throw new InvalidOperationException("Loại khuyến mãi không hợp lệ.");
         if (promo.End <= promo.Start) throw new InvalidOperationException("Giờ kết thúc phải sau giờ bắt đầu.");
         Mutate(() =>

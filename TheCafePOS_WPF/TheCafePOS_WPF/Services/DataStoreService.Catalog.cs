@@ -100,6 +100,14 @@ public partial class DataStoreService
         Bundle("deal-combo-pasta-nuoc", DealCategoryId, "Combo Pasta & Nước", 95000, 108000, "Images/combo-pasta-nuoc.png");
     }
 
+    // v8: deals are combo promotions now; the old fixed-price bundle items skipped cup, sticker and recipe
+    // deductions for their drink. Hidden so past orders and reports keep their names.
+    public static readonly string[] BundleDealIds = { "tch-6ac3f014e0a2d40012d588a9", "deal-combo-pizza-nuoc", "deal-combo-pasta-nuoc" };
+    private void HideBundleDeals()
+    {
+        foreach (var product in Products.Where(p => BundleDealIds.Contains(p.Id))) product.IsActive = false;
+    }
+
     private void ImportCoffeeHouseMenu()
     {
         using var stream = typeof(DataStoreService).Assembly.GetManifestResourceStream("TheCafePOS_WPF.Assets.Menu.thecoffeehouse.json")

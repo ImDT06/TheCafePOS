@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using TheCafePOS_WPF.Models;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Services
 {
@@ -18,14 +19,14 @@ namespace TheCafePOS_WPF.Services
 
     public class HoldOrderService : Interfaces.IHoldOrderService
     {
-        private static HoldOrderService? _instance;
-        public static HoldOrderService Instance => _instance ??= new HoldOrderService();
+        private readonly IOrderService _orders;
 
         public ObservableCollection<HeldOrderInfo> HeldOrders { get; private set; } = new ObservableCollection<HeldOrderInfo>();
 
-        private HoldOrderService()
+        public HoldOrderService(LocalDatabase db, IOrderService orders)
         {
-            HeldOrders = new ObservableCollection<HeldOrderInfo>(LocalDatabase.Instance.Read<System.Collections.Generic.List<HeldOrderInfo>>("held-orders") ?? new());
+            _orders = orders;
+            HeldOrders = new ObservableCollection<HeldOrderInfo>(db.Read<System.Collections.Generic.List<HeldOrderInfo>>("held-orders") ?? new());
         }
 
         public void HoldOrder(ObservableCollection<OrderItem> items, decimal totalAmount, string note = "", string serviceType = "Mang đi")
@@ -45,7 +46,7 @@ namespace TheCafePOS_WPF.Services
             }
 
             HeldOrders.Insert(0, heldInfo);
-            try { DataStoreService.Instance.SaveWorkspace(HeldOrders, null); }
+            try { _orders.SaveWorkspace(HeldOrders, null); }
             catch { HeldOrders.Remove(heldInfo); throw; }
         }
 
@@ -60,7 +61,7 @@ namespace TheCafePOS_WPF.Services
                 {
                     var item = HeldOrders[i];
                     HeldOrders.RemoveAt(i);
-                    try { DataStoreService.Instance.SaveWorkspace(HeldOrders, null); }
+                    try { _orders.SaveWorkspace(HeldOrders, null); }
                     catch { HeldOrders.Insert(i, item); throw; }
                     return item;
                 }

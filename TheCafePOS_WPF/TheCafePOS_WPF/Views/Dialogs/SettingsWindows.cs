@@ -7,22 +7,29 @@ using System.Windows.Data;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
 // Shop information, cashier discount limit and delivery-app channels.
 public sealed class StoreSettingsWindow : Window
 {
-    public StoreSettingsWindow()
+    private readonly IStoreSettingsService _settings;
+    private readonly IAuthService _auth;
+    public StoreSettingsWindow(IStoreSettingsService settings, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
-        var store = DataStoreService.Instance;
-        var s = JsonSerializer.Deserialize<StoreSettings>(JsonSerializer.Serialize(store.Settings))!;
+        _settings = settings;
+        _auth = auth;
+        _auth.RequireManager();
+        var s = JsonSerializer.Deserialize<StoreSettings>(JsonSerializer.Serialize(_settings.Settings))!;
         Title = "Cài đặt cửa hàng"; Width = 760; Height = 720; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         TextBox Field(string value) => new() { Text = value, Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) };
         var name = Field(s.ShopName); var address = Field(s.Address); var phone = Field(s.Phone); var hours = Field(s.OpeningHours);
         var limit = Field(s.CashierDiscountLimitPercent.ToString()); TouchInput.SetNumeric(limit, true);
+        var vat = Field(s.VatPercent.ToString()); TouchInput.SetNumeric(vat, true);
+        var vatIncluded = new CheckBox { Content = "Giá trên thực đơn đã gồm VAT (hóa đơn chỉ hiển thị phần thuế)", IsChecked = s.PricesIncludeVat, Margin = new Thickness(0, 0, 0, 8) };
+        var footer = Field(s.ReceiptFooter);
         var channels = new ObservableCollection<SalesChannel>(s.Channels);
         var grid = new DataGrid { ItemsSource = channels, AutoGenerateColumns = false, CanUserAddRows = false, Height = 180 };
         EmptyState.SetText(grid, "Chưa có kênh — bấm + Thêm kênh");
@@ -37,10 +44,12 @@ public sealed class StoreSettingsWindow : Window
             try
             {
                 if (!int.TryParse(limit.Text, out var l) || l is < 0 or > 100) throw FieldError.Mark(limit, "Nhập từ 0 đến 100.");
-                store.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
-                DialogResult = true;
+                if (!int.TryParse(vat.Text, out var v) || v is < 0 or > 10) throw FieldError.Mark(vat, "Nhập VAT từ 0 đến 10%.");
+                _settings.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, VatPercent = v, PricesIncludeVat = vatIncluded.IsChecked == true, ReceiptFooter = footer.Text.Trim(), Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
+                if (Embedded.IsEmbedded(this)) Toast.Show(Embedded.HostOf(this), "Đã lưu cài đặt cửa hàng.");
+                else DialogResult = true;
             }
-            catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+            catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
         }, "PrimaryButton", 48);
         save.IsDefault = true;
         var form = new StackPanel
@@ -52,6 +61,8 @@ public sealed class StoreSettingsWindow : Window
                 new UniformGrid { Columns = 2, Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Số điện thoại"), phone } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Giờ mở cửa"), hours } } } },
                 PosUi.Text("Phân quyền giảm giá", 17, true), PosUi.Text("Thu ngân được tự giảm tối đa % này của tạm tính; vượt mức cần quản lý duyệt. Quản lý không bị giới hạn. Đặt 0 để mọi khoản giảm của thu ngân đều cần duyệt.", 13, color: PosUi.Muted),
                 PosUi.Text("Hạn mức thu ngân (%)"), limit,
+                PosUi.Text("Thuế & hóa đơn", 17, true), PosUi.Text("VAT tính trên số tiền sau mọi khoản giảm, làm tròn đến đồng. Đặt 0 để tắt.", 13, color: PosUi.Muted),
+                PosUi.Text("Thuế VAT (%)"), vat, vatIncluded, PosUi.Text("Lời chào cuối hóa đơn"), footer,
                 PosUi.Text("Kênh bán (app giao hàng)", 17, true), PosUi.Text("Đơn từ app được cộng % phụ thu vào giá, ghi nhận thanh toán qua nền tảng (không vào ngăn kéo), không áp dụng khuyến mãi/điểm của quán.", 13, color: PosUi.Muted),
                 grid, new UniformGrid { Columns = 2, Margin = new Thickness(-4, 6, -4, 0), Children = { add, remove } }
             }
@@ -64,34 +75,70 @@ public sealed class StoreSettingsWindow : Window
     }
 }
 
-// List of promotions; each can be a time-window %, buy X get Y, or a fixed-price combo.
+// List of promotions; each can be a time-window %, buy X get Y, or a fixed-price combo of slots
+// ("1 pizza bất kỳ + 1 nước"), optionally limited to a date range.
 public sealed class PromotionsWindow : Window
 {
-    private readonly DataStoreService _store = DataStoreService.Instance;
+    private readonly ICatalogService _catalog;
+    private readonly IPromotionService _promotions;
+    private readonly IAuthService _auth;
     private readonly ListBox _list = new() { DisplayMemberPath = "Name", MinWidth = 240 };
     private readonly ComboBox _type = new() { ItemsSource = new[] { "Giờ vàng", "Mua X tặng Y", "Combo" }, Margin = new Thickness(0, 4, 0, 8), MinHeight = 36 };
     private readonly TextBox _name = Box(), _percent = Box(true), _buy = Box(true), _free = Box(true), _comboPrice = Box(true), _start = Box(), _end = Box();
     private readonly CheckBox _active = new() { Content = "Đang bật", Margin = new Thickness(0, 0, 0, 8) };
     private readonly ListBox _products = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
     private readonly WrapPanel _days = new();
-    private readonly StackPanel _percentRow, _bxgyRow, _comboRow;
+    private readonly StackPanel _percentRow, _bxgyRow, _comboRow, _productRow;
     private readonly TextBlock _productHint = PosUi.Text("", 12, color: PosUi.Muted);
+    private readonly DatePicker _validFrom = new() { Margin = new Thickness(0, 4, 0, 8) }, _validTo = new() { Margin = new Thickness(0, 4, 0, 8) };
+    // Combo slots being edited: the list on the left, the selected slot's categories and items on the right.
+    private readonly List<ComboSlot> _slots = new();
+    private readonly ListBox _slotList = new() { Height = 120 };
+    private readonly ListBox _slotCategories = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
+    private readonly ListBox _slotProducts = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
+    private bool _loadingSlot;
     private string? _id;
 
     private static TextBox Box(bool numeric = false) { var b = new TextBox { Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) }; if (numeric) TouchInput.SetNumeric(b, true); return b; }
     private static readonly (DayOfWeek Day, string Label)[] Days = { (DayOfWeek.Monday, "T2"), (DayOfWeek.Tuesday, "T3"), (DayOfWeek.Wednesday, "T4"), (DayOfWeek.Thursday, "T5"), (DayOfWeek.Friday, "T6"), (DayOfWeek.Saturday, "T7"), (DayOfWeek.Sunday, "CN") };
 
-    public PromotionsWindow()
+    public PromotionsWindow(ICatalogService catalog, IPromotionService promotions, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
+        _catalog = catalog;
+        _promotions = promotions;
+        _auth = auth;
+        _auth.RequireManager();
         Title = "Chương trình khuyến mãi"; Width = 980; Height = 760; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         EmptyState.SetText(_list, "Chưa có chương trình");
-        _products.ItemsSource = _store.Products.Where(p => !p.IsTopping || p.SoldSeparately).OrderBy(p => p.Name).ToList();
+        _products.ItemsSource = _catalog.Products.Where(p => !p.IsTopping || p.SoldSeparately).OrderBy(p => p.Name).ToList();
         foreach (var (day, label) in Days) _days.Children.Add(new CheckBox { Content = label, Tag = day, Margin = new Thickness(0, 0, 12, 6) });
         _percentRow = new StackPanel { Children = { PosUi.Text("Mức giảm (%)"), _percent } };
         _bxgyRow = new StackPanel { Children = { new UniformGrid { Columns = 2, Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Mua (X)"), _buy } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Tặng (Y) — món rẻ nhất"), _free } } } } } };
-        _comboRow = new StackPanel { Children = { PosUi.Text("Giá combo (đồng)"), _comboPrice } };
+        _slotCategories.ItemsSource = _catalog.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToList();
+        _slotProducts.ItemsSource = _products.ItemsSource;
+        _slotList.SelectionChanged += (_, _) => ShowSlot();
+        _slotCategories.SelectionChanged += (_, _) => StoreSlot();
+        _slotProducts.SelectionChanged += (_, _) => StoreSlot();
+        var addSlot = PosUi.Button("+ Thêm suất", (_, _) => { _slots.Add(new ComboSlot()); RefreshSlots(_slots.Count - 1); }, minHeight: 36);
+        var removeSlot = PosUi.Button("Xóa suất", (_, _) => { if (_slotList.SelectedIndex >= 0) { _slots.RemoveAt(_slotList.SelectedIndex); RefreshSlots(Math.Max(0, _slotList.SelectedIndex - 1)); } }, "DangerButton", 36);
+        _comboRow = new StackPanel
+        {
+            Children =
+            {
+                PosUi.Text("Giá combo (đồng)"), _comboPrice,
+                PosUi.Text("Các suất trong combo"),
+                PosUi.Text("Mỗi suất lấy 1 món bất kỳ thuộc danh mục hoặc món đã chọn. Size lớn và topping vẫn tính thêm.", 12, color: PosUi.Muted),
+                _slotList,
+                new UniformGrid { Columns = 2, Margin = new Thickness(0, 6, 0, 8), Children = { addSlot, removeSlot } },
+                new UniformGrid { Columns = 2, Children =
+                {
+                    new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Danh mục của suất"), _slotCategories } },
+                    new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Hoặc món cụ thể"), _slotProducts } }
+                } }
+            }
+        };
+        _productRow = new StackPanel { Children = { PosUi.Text("Món áp dụng"), _productHint, _products } };
         _type.SelectionChanged += (_, _) => UpdateTypeRows();
         _list.SelectionChanged += (_, _) => { if (_list.SelectedItem is Promotion p) Load(p); };
 
@@ -101,8 +148,8 @@ public sealed class PromotionsWindow : Window
         {
             Children =
             {
-                PosUi.Text("Loại chương trình"), _type, _active, PosUi.Text("Tên hiển thị"), _name, _percentRow, _bxgyRow, _comboRow,
-                PosUi.Text("Món áp dụng"), _productHint, _products,
+                PosUi.Text("Loại chương trình"), _type, _active, PosUi.Text("Tên hiển thị"), _name, _percentRow, _bxgyRow, _comboRow, _productRow,
+                new UniformGrid { Columns = 2, Margin = new Thickness(0, 8, 0, 0), Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Từ ngày (trống = ngay)"), _validFrom } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Đến hết ngày (trống = không hạn)"), _validTo } } } },
                 new UniformGrid { Columns = 2, Margin = new Thickness(0, 8, 0, 0), Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Từ (giờ:phút)"), _start } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Đến (giờ:phút)"), _end } } } },
                 PosUi.Text("Ngày áp dụng (không chọn = mọi ngày)"), _days, save, new Border { Height = 10 }, del
             }
@@ -117,7 +164,7 @@ public sealed class PromotionsWindow : Window
         DockPanel.SetDock(head, Dock.Top); DockPanel.SetDock(left, Dock.Left);
         root.Children.Add(head); root.Children.Add(left); root.Children.Add(side);
         Content = root;
-        Loaded += (_, _) => { Refresh(); Load(_store.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true }); };
+        Loaded += (_, _) => { Refresh(); Load(_promotions.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true }); };
     }
 
     private void UpdateTypeRows()
@@ -126,11 +173,11 @@ public sealed class PromotionsWindow : Window
         _percentRow.Visibility = type == "Giờ vàng" ? Visibility.Visible : Visibility.Collapsed;
         _bxgyRow.Visibility = type == "Mua X tặng Y" ? Visibility.Visible : Visibility.Collapsed;
         _comboRow.Visibility = type == "Combo" ? Visibility.Visible : Visibility.Collapsed;
-        _products.Visibility = type == "Giờ vàng" ? Visibility.Collapsed : Visibility.Visible;
-        _productHint.Text = type switch { "Mua X tặng Y" => "Không chọn = mọi đồ uống.", "Combo" => "Chọn từ 2 món; mỗi combo gồm 1 phần mỗi món.", _ => "Giờ vàng áp dụng cho cả đơn." };
+        _productRow.Visibility = type == "Mua X tặng Y" ? Visibility.Visible : Visibility.Collapsed;
+        _productHint.Text = "Không chọn = mọi đồ uống.";
     }
 
-    private void Refresh() { _list.ItemsSource = null; _list.ItemsSource = _store.Promotions.ToList(); _list.SelectedItem = _store.Promotions.FirstOrDefault(p => p.Id == _id); }
+    private void Refresh() { _list.ItemsSource = null; _list.ItemsSource = _promotions.Promotions.ToList(); _list.SelectedItem = _promotions.Promotions.FirstOrDefault(p => p.Id == _id); }
 
     private void Load(Promotion p)
     {
@@ -140,6 +187,14 @@ public sealed class PromotionsWindow : Window
         foreach (CheckBox c in _days.Children) c.IsChecked = p.Days.Contains((DayOfWeek)c.Tag);
         _products.SelectedItems.Clear();
         foreach (var product in ((List<Product>)_products.ItemsSource).Where(x => p.ProductIds.Contains(x.Id))) _products.SelectedItems.Add(product);
+        _validFrom.SelectedDate = p.ValidFrom; _validTo.SelectedDate = p.ValidTo;
+        // Older combos listed one product per slot; they open as slots so they can be widened.
+        _slots.Clear();
+        _slots.AddRange(p.Slots.Count > 0
+            ? p.Slots.Select(s => new ComboSlot { CategoryIds = s.CategoryIds.ToList(), ProductIds = s.ProductIds.ToList() })
+            : p.Type == "Combo" ? p.ProductIds.Select(id => new ComboSlot { ProductIds = new() { id } }) : Enumerable.Empty<ComboSlot>());
+        if (_slots.Count == 0) { _slots.Add(new ComboSlot()); _slots.Add(new ComboSlot()); }
+        RefreshSlots(0);
         UpdateTypeRows();
     }
 
@@ -156,18 +211,60 @@ public sealed class PromotionsWindow : Window
             {
                 Id = _id ?? Guid.NewGuid().ToString(), Type = type, Name = _name.Text.Trim(), IsActive = _active.IsChecked == true, Percent = percent, BuyQuantity = buy, FreeQuantity = free, ComboPrice = combo, Start = start, End = end,
                 Days = _days.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (DayOfWeek)c.Tag).ToList(),
-                ProductIds = type == "Giờ vàng" ? new() : _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList()
+                ProductIds = type == "Mua X tặng Y" ? _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList() : new(),
+                Slots = type == "Combo" ? _slots.Select(s => new ComboSlot { CategoryIds = s.CategoryIds.ToList(), ProductIds = s.ProductIds.ToList() }).ToList() : new(),
+                ValidFrom = _validFrom.SelectedDate?.Date, ValidTo = _validTo.SelectedDate?.Date
             };
-            _store.SavePromotion(promo);
-            _id = promo.Id; Refresh(); Toast.Show(this, "Đã lưu chương trình.");
+            _promotions.SavePromotion(promo);
+            _id = promo.Id; Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu chương trình.");
         }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
+    }
+
+    private string SlotLabel(ComboSlot slot, int index)
+    {
+        var names = _catalog.Categories.Where(c => slot.CategoryIds.Contains(c.Id)).Select(c => c.Name)
+            .Concat(_catalog.Products.Where(p => slot.ProductIds.Contains(p.Id)).Select(p => p.Name)).ToList();
+        return $"Suất {index + 1}: " + (names.Count == 0 ? "chưa chọn" : string.Join(", ", names));
+    }
+
+    private void RefreshSlots(int select)
+    {
+        _loadingSlot = true;
+        _slotList.ItemsSource = _slots.Select(SlotLabel).ToList();
+        _loadingSlot = false;
+        _slotList.SelectedIndex = _slots.Count == 0 ? -1 : Math.Min(select, _slots.Count - 1);
+        ShowSlot();
+    }
+
+    private void ShowSlot()
+    {
+        if (_loadingSlot) return;
+        _loadingSlot = true;
+        _slotCategories.SelectedItems.Clear(); _slotProducts.SelectedItems.Clear();
+        if (_slotList.SelectedIndex >= 0 && _slotList.SelectedIndex < _slots.Count)
+        {
+            var slot = _slots[_slotList.SelectedIndex];
+            foreach (var c in ((List<Category>)_slotCategories.ItemsSource).Where(c => slot.CategoryIds.Contains(c.Id))) _slotCategories.SelectedItems.Add(c);
+            foreach (var p in ((List<Product>)_slotProducts.ItemsSource).Where(p => slot.ProductIds.Contains(p.Id))) _slotProducts.SelectedItems.Add(p);
+        }
+        _slotCategories.IsEnabled = _slotProducts.IsEnabled = _slotList.SelectedIndex >= 0;
+        _loadingSlot = false;
+    }
+
+    private void StoreSlot()
+    {
+        if (_loadingSlot || _slotList.SelectedIndex < 0 || _slotList.SelectedIndex >= _slots.Count) return;
+        int index = _slotList.SelectedIndex;
+        _slots[index].CategoryIds = _slotCategories.SelectedItems.Cast<Category>().Select(c => c.Id).ToList();
+        _slots[index].ProductIds = _slotProducts.SelectedItems.Cast<Product>().Select(p => p.Id).ToList();
+        RefreshSlots(index);
     }
 
     private void Delete()
     {
-        if (_id is null || _store.Promotions.All(p => p.Id != _id)) { Toast.Show(this, "Chọn chương trình trước.", true); return; }
-        if (MessageBox.Show(this, $"Xóa chương trình {_name.Text}?", "Xóa khuyến mãi", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        _store.DeletePromotion(_id); _id = null; Refresh(); Load(_store.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true });
+        if (_id is null || _promotions.Promotions.All(p => p.Id != _id)) { Toast.Show(Embedded.HostOf(this), "Chọn chương trình trước.", true); return; }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa chương trình {_name.Text}?", "Xóa khuyến mãi", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        _promotions.DeletePromotion(_id); _id = null; Refresh(); Load(_promotions.Promotions.FirstOrDefault() ?? new Promotion { IsActive = true });
     }
 }

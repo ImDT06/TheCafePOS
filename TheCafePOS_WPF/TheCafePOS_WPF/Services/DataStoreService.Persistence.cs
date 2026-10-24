@@ -33,7 +33,7 @@ public partial class DataStoreService
     public List<CashEntry> CashEntries { get; private set; } = new();
     public List<Shift> Shifts { get; private set; } = new();
     public List<StockMovement> StockMovements { get; private set; } = new();
-    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 7, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings, Vouchers = Vouchers, Suppliers = Suppliers, PurchaseReceipts = PurchaseReceipts };
+    private StoreState Snapshot() => new() { Draft = Draft, Refunds = Refunds, CashEntries = CashEntries, MenuSchemaVersion = 8, Categories = Categories, Products = Products, Packaging = PackagingInventory, Orders = CompletedOrders.ToList(), Shifts = Shifts, CurrentShift = CurrentShift, StickerLogs = StickerLogs, StockMovements = StockMovements, Customers = Customers, Promotions = Promotions, Ingredients = Ingredients, IngredientMovements = IngredientMovements, Settings = Settings, Vouchers = Vouchers, Suppliers = Suppliers, PurchaseReceipts = PurchaseReceipts };
     // Early seed data used emoji and all-caps names; show them like every other category.
     private static readonly Dictionary<string, string> LegacyCategoryNames = new()
     {
@@ -93,6 +93,11 @@ public partial class DataStoreService
         if (state is null || state.MenuSchemaVersion < 7)
         {
             AddHomepageMenu();
+            Save();
+        }
+        if (state is null || state.MenuSchemaVersion < 8)
+        {
+            HideBundleDeals();
             Save();
         }
         NormalizeProductImagePaths();

@@ -59,6 +59,11 @@ partial class Preview {
     Render(management,"ManagementWindow-tab"+name,1120,728);}
   for(int i=0;i<managementTabs.Items.Count;i++){managementTabs.SelectedIndex=i;Pump();var top=(TabItem)managementTabs.Items[i];CheckTab(top,"-"+i);
     if(top.Content is TabControl nested)for(int j=0;j<nested.Items.Count;j++){nested.SelectedIndex=j;Pump();CheckTab((TabItem)nested.Items[j],"-"+i+"-"+j);}}
+  // Combo promotions are edited as slots; render the editor with that type picked.
+  managementTabs.SelectedIndex=3;Pump();((TabControl)((TabItem)managementTabs.Items[3]).Content).SelectedIndex=0;Pump();
+  var promoHost=(ContentControl)management.FindName("PromotionsHost");
+  var promoType=Descendants<ComboBox>((DependencyObject)promoHost.Content).First(c=>c.ItemsSource is string[] types&&types.Contains("Combo"));
+  promoType.SelectedItem="Combo";Pump();Render(management,"ManagementWindow-promotion-combo",1120,728);
   managementTabs.SelectedIndex=0;Pump();
   Check(true,"Every management tab and embedded tool loads");
   management.Hide();

@@ -117,8 +117,9 @@ public partial class DataStoreService
     }
 
     // As many complete sets as the cart holds; each set costs ComboPrice instead of its items' prices.
-    private static decimal Combo(Promotion promo, List<OrderItem> items)
+    private decimal Combo(Promotion promo, List<OrderItem> items)
     {
+        if (promo.Slots.Count > 0) return SlotCombo(promo, items);
         if (promo.ProductIds.Count == 0) return 0;
         var pools = promo.ProductIds.Distinct().ToDictionary(id => id, id => items.Where(i => i.ProductId == id).SelectMany(i => Enumerable.Repeat(i.UnitPrice, i.Quantity)).OrderByDescending(p => p).ToList());
         int sets = pools.Values.Min(p => p.Count);
@@ -127,13 +128,46 @@ public partial class DataStoreService
         return saving;
     }
 
+    // Each set takes one unit per slot; the combo price replaces the items' base prices, so a larger size or
+    // toppings are still charged on top. Scarcest slot fills first, with the dearest eligible unit, so a unit
+    // that fits two slots is not used up by the wrong one.
+    private decimal SlotCombo(Promotion promo, List<OrderItem> items)
+    {
+        if (promo.Slots.Any(s => s.CategoryIds.Count == 0 && s.ProductIds.Count == 0)) return 0;
+        var units = items.SelectMany(i => Enumerable.Repeat(i, i.Quantity))
+            .Select(i => (Product: Products.FirstOrDefault(p => p.Id == i.ProductId), Unit: i.UnitPrice))
+            .Where(u => u.Product is not null)
+            // Listed price: base plus the default size, as on the menu tile.
+            .Select(u => (Product: u.Product!, Value: Math.Min(u.Product!.BasePrice + (u.Product.IsBeverage ? u.Product.Sizes.FirstOrDefault(s => s.Name == u.Product.DefaultSize)?.ExtraPrice ?? 0 : 0), u.Unit)))
+            .OrderByDescending(u => u.Value).ToList();
+        var used = new bool[units.Count];
+        decimal saving = 0;
+        while (true)
+        {
+            var picks = new List<int>();
+            foreach (var slot in promo.Slots.OrderBy(s => units.Where((u, i) => !used[i] && s.Accepts(u.Product)).Count()))
+            {
+                // Units are sorted dearest first, so the first free match is the best one.
+                int pick = Enumerable.Range(0, units.Count).FirstOrDefault(i => !used[i] && !picks.Contains(i) && slot.Accepts(units[i].Product), -1);
+                if (pick < 0) return saving;
+                picks.Add(pick);
+            }
+            foreach (int i in picks) used[i] = true;
+            saving += Math.Max(0, picks.Sum(i => units[i].Value) - promo.ComboPrice);
+        }
+    }
+
     public void SavePromotion(Promotion promo)
     {
         _auth.RequireManager();
         if (string.IsNullOrWhiteSpace(promo.Name)) throw new InvalidOperationException("Nhập tên chương trình.");
         if (promo.Type == "Giờ vàng" && promo.Percent is <= 0 or >= 100) throw new InvalidOperationException("Mức giảm phải từ 1 đến 99%.");
         if (promo.Type == "Mua X tặng Y" && (promo.BuyQuantity < 1 || promo.FreeQuantity < 1)) throw new InvalidOperationException("Số lượng mua và tặng phải từ 1 trở lên.");
-        if (promo.Type == "Combo" && (promo.ProductIds.Distinct().Count() < 2 || promo.ComboPrice <= 0)) throw new InvalidOperationException("Combo cần ít nhất 2 món và giá combo lớn hơn 0.");
+        if (promo.Type == "Combo" && promo.ComboPrice <= 0) throw new InvalidOperationException("Giá combo phải lớn hơn 0.");
+        if (promo.Type == "Combo" && promo.Slots.Count == 0 && promo.ProductIds.Distinct().Count() < 2) throw new InvalidOperationException("Combo cần ít nhất 2 suất.");
+        if (promo.Type == "Combo" && promo.Slots.Count is > 0 and < 2) throw new InvalidOperationException("Combo cần ít nhất 2 suất.");
+        if (promo.Slots.Any(s => s.CategoryIds.Count == 0 && s.ProductIds.Count == 0)) throw new InvalidOperationException("Mỗi suất cần ít nhất một danh mục hoặc món.");
+        if (promo.ValidFrom is { } from && promo.ValidTo is { } to && to.Date < from.Date) throw new InvalidOperationException("Ngày kết thúc phải từ ngày bắt đầu trở đi.");
         if (promo.Type is not ("Giờ vàng" or "Mua X tặng Y" or "Combo")) throw new InvalidOperationException("Loại khuyến mãi không hợp lệ.");
         if (promo.End <= promo.Start) throw new InvalidOperationException("Giờ kết thúc phải sau giờ bắt đầu.");
         Mutate(() =>

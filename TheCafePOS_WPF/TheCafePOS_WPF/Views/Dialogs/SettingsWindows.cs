@@ -75,7 +75,8 @@ public sealed class StoreSettingsWindow : Window
     }
 }
 
-// List of promotions; each can be a time-window %, buy X get Y, or a fixed-price combo.
+// List of promotions; each can be a time-window %, buy X get Y, or a fixed-price combo of slots
+// ("1 pizza bất kỳ + 1 nước"), optionally limited to a date range.
 public sealed class PromotionsWindow : Window
 {
     private readonly ICatalogService _catalog;
@@ -87,8 +88,15 @@ public sealed class PromotionsWindow : Window
     private readonly CheckBox _active = new() { Content = "Đang bật", Margin = new Thickness(0, 0, 0, 8) };
     private readonly ListBox _products = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
     private readonly WrapPanel _days = new();
-    private readonly StackPanel _percentRow, _bxgyRow, _comboRow;
+    private readonly StackPanel _percentRow, _bxgyRow, _comboRow, _productRow;
     private readonly TextBlock _productHint = PosUi.Text("", 12, color: PosUi.Muted);
+    private readonly DatePicker _validFrom = new() { Margin = new Thickness(0, 4, 0, 8) }, _validTo = new() { Margin = new Thickness(0, 4, 0, 8) };
+    // Combo slots being edited: the list on the left, the selected slot's categories and items on the right.
+    private readonly List<ComboSlot> _slots = new();
+    private readonly ListBox _slotList = new() { Height = 120 };
+    private readonly ListBox _slotCategories = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
+    private readonly ListBox _slotProducts = new() { SelectionMode = SelectionMode.Multiple, Height = 150, DisplayMemberPath = "Name" };
+    private bool _loadingSlot;
     private string? _id;
 
     private static TextBox Box(bool numeric = false) { var b = new TextBox { Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) }; if (numeric) TouchInput.SetNumeric(b, true); return b; }
@@ -107,7 +115,30 @@ public sealed class PromotionsWindow : Window
         foreach (var (day, label) in Days) _days.Children.Add(new CheckBox { Content = label, Tag = day, Margin = new Thickness(0, 0, 12, 6) });
         _percentRow = new StackPanel { Children = { PosUi.Text("Mức giảm (%)"), _percent } };
         _bxgyRow = new StackPanel { Children = { new UniformGrid { Columns = 2, Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Mua (X)"), _buy } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Tặng (Y) — món rẻ nhất"), _free } } } } } };
-        _comboRow = new StackPanel { Children = { PosUi.Text("Giá combo (đồng)"), _comboPrice } };
+        _slotCategories.ItemsSource = _catalog.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToList();
+        _slotProducts.ItemsSource = _products.ItemsSource;
+        _slotList.SelectionChanged += (_, _) => ShowSlot();
+        _slotCategories.SelectionChanged += (_, _) => StoreSlot();
+        _slotProducts.SelectionChanged += (_, _) => StoreSlot();
+        var addSlot = PosUi.Button("+ Thêm suất", (_, _) => { _slots.Add(new ComboSlot()); RefreshSlots(_slots.Count - 1); }, minHeight: 36);
+        var removeSlot = PosUi.Button("Xóa suất", (_, _) => { if (_slotList.SelectedIndex >= 0) { _slots.RemoveAt(_slotList.SelectedIndex); RefreshSlots(Math.Max(0, _slotList.SelectedIndex - 1)); } }, "DangerButton", 36);
+        _comboRow = new StackPanel
+        {
+            Children =
+            {
+                PosUi.Text("Giá combo (đồng)"), _comboPrice,
+                PosUi.Text("Các suất trong combo"),
+                PosUi.Text("Mỗi suất lấy 1 món bất kỳ thuộc danh mục hoặc món đã chọn. Size lớn và topping vẫn tính thêm.", 12, color: PosUi.Muted),
+                _slotList,
+                new UniformGrid { Columns = 2, Margin = new Thickness(0, 6, 0, 8), Children = { addSlot, removeSlot } },
+                new UniformGrid { Columns = 2, Children =
+                {
+                    new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Danh mục của suất"), _slotCategories } },
+                    new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Hoặc món cụ thể"), _slotProducts } }
+                } }
+            }
+        };
+        _productRow = new StackPanel { Children = { PosUi.Text("Món áp dụng"), _productHint, _products } };
         _type.SelectionChanged += (_, _) => UpdateTypeRows();
         _list.SelectionChanged += (_, _) => { if (_list.SelectedItem is Promotion p) Load(p); };
 
@@ -117,8 +148,8 @@ public sealed class PromotionsWindow : Window
         {
             Children =
             {
-                PosUi.Text("Loại chương trình"), _type, _active, PosUi.Text("Tên hiển thị"), _name, _percentRow, _bxgyRow, _comboRow,
-                PosUi.Text("Món áp dụng"), _productHint, _products,
+                PosUi.Text("Loại chương trình"), _type, _active, PosUi.Text("Tên hiển thị"), _name, _percentRow, _bxgyRow, _comboRow, _productRow,
+                new UniformGrid { Columns = 2, Margin = new Thickness(0, 8, 0, 0), Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Từ ngày (trống = ngay)"), _validFrom } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Đến hết ngày (trống = không hạn)"), _validTo } } } },
                 new UniformGrid { Columns = 2, Margin = new Thickness(0, 8, 0, 0), Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Từ (giờ:phút)"), _start } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Đến (giờ:phút)"), _end } } } },
                 PosUi.Text("Ngày áp dụng (không chọn = mọi ngày)"), _days, save, new Border { Height = 10 }, del
             }
@@ -142,8 +173,8 @@ public sealed class PromotionsWindow : Window
         _percentRow.Visibility = type == "Giờ vàng" ? Visibility.Visible : Visibility.Collapsed;
         _bxgyRow.Visibility = type == "Mua X tặng Y" ? Visibility.Visible : Visibility.Collapsed;
         _comboRow.Visibility = type == "Combo" ? Visibility.Visible : Visibility.Collapsed;
-        _products.Visibility = type == "Giờ vàng" ? Visibility.Collapsed : Visibility.Visible;
-        _productHint.Text = type switch { "Mua X tặng Y" => "Không chọn = mọi đồ uống.", "Combo" => "Chọn từ 2 món; mỗi combo gồm 1 phần mỗi món.", _ => "Giờ vàng áp dụng cho cả đơn." };
+        _productRow.Visibility = type == "Mua X tặng Y" ? Visibility.Visible : Visibility.Collapsed;
+        _productHint.Text = "Không chọn = mọi đồ uống.";
     }
 
     private void Refresh() { _list.ItemsSource = null; _list.ItemsSource = _promotions.Promotions.ToList(); _list.SelectedItem = _promotions.Promotions.FirstOrDefault(p => p.Id == _id); }
@@ -156,6 +187,14 @@ public sealed class PromotionsWindow : Window
         foreach (CheckBox c in _days.Children) c.IsChecked = p.Days.Contains((DayOfWeek)c.Tag);
         _products.SelectedItems.Clear();
         foreach (var product in ((List<Product>)_products.ItemsSource).Where(x => p.ProductIds.Contains(x.Id))) _products.SelectedItems.Add(product);
+        _validFrom.SelectedDate = p.ValidFrom; _validTo.SelectedDate = p.ValidTo;
+        // Older combos listed one product per slot; they open as slots so they can be widened.
+        _slots.Clear();
+        _slots.AddRange(p.Slots.Count > 0
+            ? p.Slots.Select(s => new ComboSlot { CategoryIds = s.CategoryIds.ToList(), ProductIds = s.ProductIds.ToList() })
+            : p.Type == "Combo" ? p.ProductIds.Select(id => new ComboSlot { ProductIds = new() { id } }) : Enumerable.Empty<ComboSlot>());
+        if (_slots.Count == 0) { _slots.Add(new ComboSlot()); _slots.Add(new ComboSlot()); }
+        RefreshSlots(0);
         UpdateTypeRows();
     }
 
@@ -172,12 +211,54 @@ public sealed class PromotionsWindow : Window
             {
                 Id = _id ?? Guid.NewGuid().ToString(), Type = type, Name = _name.Text.Trim(), IsActive = _active.IsChecked == true, Percent = percent, BuyQuantity = buy, FreeQuantity = free, ComboPrice = combo, Start = start, End = end,
                 Days = _days.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (DayOfWeek)c.Tag).ToList(),
-                ProductIds = type == "Giờ vàng" ? new() : _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList()
+                ProductIds = type == "Mua X tặng Y" ? _products.SelectedItems.Cast<Product>().Select(x => x.Id).ToList() : new(),
+                Slots = type == "Combo" ? _slots.Select(s => new ComboSlot { CategoryIds = s.CategoryIds.ToList(), ProductIds = s.ProductIds.ToList() }).ToList() : new(),
+                ValidFrom = _validFrom.SelectedDate?.Date, ValidTo = _validTo.SelectedDate?.Date
             };
             _promotions.SavePromotion(promo);
             _id = promo.Id; Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu chương trình.");
         }
         catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
+    }
+
+    private string SlotLabel(ComboSlot slot, int index)
+    {
+        var names = _catalog.Categories.Where(c => slot.CategoryIds.Contains(c.Id)).Select(c => c.Name)
+            .Concat(_catalog.Products.Where(p => slot.ProductIds.Contains(p.Id)).Select(p => p.Name)).ToList();
+        return $"Suất {index + 1}: " + (names.Count == 0 ? "chưa chọn" : string.Join(", ", names));
+    }
+
+    private void RefreshSlots(int select)
+    {
+        _loadingSlot = true;
+        _slotList.ItemsSource = _slots.Select(SlotLabel).ToList();
+        _loadingSlot = false;
+        _slotList.SelectedIndex = _slots.Count == 0 ? -1 : Math.Min(select, _slots.Count - 1);
+        ShowSlot();
+    }
+
+    private void ShowSlot()
+    {
+        if (_loadingSlot) return;
+        _loadingSlot = true;
+        _slotCategories.SelectedItems.Clear(); _slotProducts.SelectedItems.Clear();
+        if (_slotList.SelectedIndex >= 0 && _slotList.SelectedIndex < _slots.Count)
+        {
+            var slot = _slots[_slotList.SelectedIndex];
+            foreach (var c in ((List<Category>)_slotCategories.ItemsSource).Where(c => slot.CategoryIds.Contains(c.Id))) _slotCategories.SelectedItems.Add(c);
+            foreach (var p in ((List<Product>)_slotProducts.ItemsSource).Where(p => slot.ProductIds.Contains(p.Id))) _slotProducts.SelectedItems.Add(p);
+        }
+        _slotCategories.IsEnabled = _slotProducts.IsEnabled = _slotList.SelectedIndex >= 0;
+        _loadingSlot = false;
+    }
+
+    private void StoreSlot()
+    {
+        if (_loadingSlot || _slotList.SelectedIndex < 0 || _slotList.SelectedIndex >= _slots.Count) return;
+        int index = _slotList.SelectedIndex;
+        _slots[index].CategoryIds = _slotCategories.SelectedItems.Cast<Category>().Select(c => c.Id).ToList();
+        _slots[index].ProductIds = _slotProducts.SelectedItems.Cast<Product>().Select(p => p.Id).ToList();
+        RefreshSlots(index);
     }
 
     private void Delete()

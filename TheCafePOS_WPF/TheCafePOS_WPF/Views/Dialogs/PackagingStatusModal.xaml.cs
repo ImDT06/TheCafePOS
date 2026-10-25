@@ -18,7 +18,7 @@ public partial class PackagingStatusModal : Window
         InitializeComponent();
         Editor.Visibility = _auth.IsManager ? Visibility.Visible : Visibility.Collapsed;
         ManageTab.Visibility = Editor.Visibility;
-        if (!_auth.IsManager) PermissionNote.Text = "Nhân viên được xem kho và lịch sử. Quản lý mới được nhập kho, kiểm kê hoặc điều chỉnh.";
+        if (!_auth.IsManager) PermissionNote.Text = "Nhân viên được xem kho và lịch sử. Chủ quán mới được nhập kho, kiểm kê hoặc điều chỉnh.";
         Refresh();
         Loaded += (_, _) => Refresh(); // stock may have changed through purchasing while this sat in a tab
     }

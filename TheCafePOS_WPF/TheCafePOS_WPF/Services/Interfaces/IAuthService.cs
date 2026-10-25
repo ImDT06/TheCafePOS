@@ -20,10 +20,9 @@ namespace TheCafePOS_WPF.Services.Interfaces
         void ChangePassword(string oldPassword, string newPassword);
         void ResetPassword(string username, string temporaryPassword);
         void SetAccountActive(string username, bool active);
-        void UpdateAccountRole(string username, string role);
         void DeleteAccount(string username);
 
-        /// <summary>Records a manager's approval of <paramref name="action"/> after checking their credentials.</summary>
+        /// <summary>Records the owner's approval of <paramref name="action"/> after checking their credentials.</summary>
         void Approve(string username, string password, string action);
         /// <summary>Records an approval granted by an external system, e.g. a bank transfer webhook.</summary>
         void ApproveBySystem(string paymentAction, string source);

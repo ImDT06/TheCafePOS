@@ -14,7 +14,7 @@ Nếu Visual Studio hoặc bản ứng dụng cũ đang giữ file Debug, đóng
 1. Lần chạy đầu: tự đặt tên đăng nhập và mật khẩu chủ quán. Không có mật khẩu/PIN mặc định. Mật khẩu tối thiểu 8 ký tự.
 2. Chọn **Mở ca**, nhập tiền mặt đầu ca.
 3. **Quản trị** cho phép thêm/sửa món, giá cơ bản, danh mục, trạng thái bán; tạo nhân viên và cấu hình tài khoản nhận chuyển khoản.
-4. Chọn món và thanh toán. Tiền mặt phải đủ tổng tiền. VietQR cần cấu hình ngân hàng và quản lý kiểm tra giao dịch thực tế, sau đó nhập tài khoản quản lý để duyệt.
+4. Chọn món và thanh toán. Tiền mặt phải đủ tổng tiền. VietQR cần cấu hình ngân hàng và chủ quán kiểm tra giao dịch thực tế, sau đó nhập tài khoản chủ quán để duyệt.
 5. **Báo cáo** lọc theo khoảng ngày/ca, xem đơn và chi tiết món, doanh thu theo phương thức, món bán chạy, ca đã đóng và xuất CSV.
 6. **Chốt ca mù** ghi số tiền thực tế và lưu chênh lệch. Chỉ nhân viên sở hữu ca được thanh toán/chốt ca; phải mở ca mới để bán tiếp.
 7. **Đăng xuất / Đổi nhân viên** xóa phiên đã lưu và mở màn hình đăng nhập. Đóng màn hình đăng nhập lúc này sẽ thoát ứng dụng. Giỏ hàng phải được giữ hoặc hoàn tất trước khi đổi nhân viên. Khi đóng cửa sổ bình thường, giỏ chưa thanh toán tự chuyển thành đơn giữ.
@@ -44,28 +44,28 @@ Chọn **Giữ đăng nhập trên máy này (30 ngày)** để mở lại ứng
 
 Mở **Hoàn tiền / Thu chi** khi đang đăng nhập bằng nhân viên sở hữu ca mở.
 
-- **Hoàn tiền:** chọn ngày bán, tìm số thứ tự hoặc mã đơn, chọn đơn và nhập số tiền hoàn toàn bộ/một phần cùng lý do. Hoàn theo phương thức thanh toán gốc. Với QR, thực hiện chuyển khoản ngoài ứng dụng và nhập mã giao dịch. Đánh dấu đã trả tiền, sau đó quản lý nhập tài khoản để duyệt và ghi nhận.
+- **Hoàn tiền:** chọn ngày bán, tìm số thứ tự hoặc mã đơn, chọn đơn và nhập số tiền hoàn toàn bộ/một phần cùng lý do. Hoàn theo phương thức thanh toán gốc. Với QR, thực hiện chuyển khoản ngoài ứng dụng và nhập mã giao dịch. Đánh dấu đã trả tiền, sau đó chủ quán nhập tài khoản để duyệt và ghi nhận.
 - Không được hoàn vượt số tiền còn lại. Cùng mã phiếu không bị ghi nhận hai lần. Phiếu lưu đơn gốc, thời gian, ca thực hiện, nhân viên, người duyệt và lý do. Đơn gốc không bị xóa; trạng thái hoàn được hiển thị trong màn hình tìm đơn.
 - Kho không tự tăng khi hoàn tiền vì đồ uống có thể đã pha. Nếu có bao bì thực sự thu hồi, dùng điều chỉnh kho và ghi rõ lý do.
-- **Thu/chi:** nhập số tiền nguyên dương, chọn thu vào/chi ra và nhập lý do hoặc chứng từ; quản lý duyệt trước khi ghi sổ. Phiếu không làm tăng doanh thu bán hàng. Không cho chi/hoàn tiền mặt vượt tiền dự kiến trong ngăn kéo.
+- **Thu/chi:** nhập số tiền nguyên dương, chọn thu vào/chi ra và nhập lý do hoặc chứng từ; chủ quán duyệt trước khi ghi sổ. Phiếu không làm tăng doanh thu bán hàng. Không cho chi/hoàn tiền mặt vượt tiền dự kiến trong ngăn kéo.
 - Tiền chốt ca = tiền đầu ca + bán tiền mặt + thu thêm − chi ra − hoàn tiền mặt trong ca. Hoàn một đơn bán ở ca trước chỉ ảnh hưởng ca thực hiện hoàn; số liệu ca đã đóng giữ nguyên.
 - Báo cáo và CSV có riêng bán hàng, hoàn tiền, thu/chi. Khoản hoàn được lọc theo **ngày/ca hoàn**, không theo ngày bán gốc; doanh thu thuần của một khoảng có thể âm. Món bán chạy vẫn thống kê số lượng và doanh thu trước hoàn vì hoàn theo số tiền, chưa phân bổ theo dòng món.
 
 ### Đổi mật khẩu và khóa nhân viên
 
 - Mọi người dùng có thể chọn **Đổi mật khẩu**, nhập mật khẩu hiện tại và xác nhận mật khẩu mới.
-- **Quản trị → Nhân viên:** chọn tài khoản rồi đặt lại mật khẩu hoặc khóa/mở khóa. Quản lý được quản lý nhân viên; chủ quán được quản lý nhân viên và quản lý. Không được khóa/reset chính mình hoặc tài khoản chủ quán qua luồng này.
+- **Quản trị → Nhân viên:** chủ quán chọn tài khoản nhân viên rồi đặt lại mật khẩu hoặc khóa/mở khóa. Không khóa/reset được tài khoản chủ quán qua luồng này.
 - Mật khẩu được reset là mật khẩu tạm; lần đăng nhập tiếp theo bắt buộc đổi trước khi thao tác nghiệp vụ. Không cho khóa nhân viên đang giữ ca mở; chốt ca trước khi khóa.
-- Chủ quán đổi vai trò nhân viên ↔ quản lý bằng cách chọn tài khoản, đổi vai trò rồi bấm **Tạo / Cập nhật tài khoản**. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
+- Ứng dụng có hai vai trò: chủ quán và nhân viên. Tài khoản tạo mới luôn là nhân viên; tài khoản "Quản lý" từ dữ liệu cũ được chuyển thành nhân viên khi mở ứng dụng. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
 - Các thao tác tài khoản được ghi nhật ký. Chưa có khôi phục mật khẩu chủ quán qua email hay màn hình tra cứu toàn bộ nhật ký xác thực.
 
 ### Chọn món, sửa món và topping
 
 - Trong **Quản trị → Thực đơn**, lưu/chọn món rồi mở **Cấu hình size / topping / đường đá**. Chọn loại đồ uống hoặc topping, size M/L/XL được bán, phụ thu từng size, bao bì ly tương ứng, tùy chọn đường/đá và mức mặc định. Chọn danh sách topping được thêm vào từng đồ uống.
 - Giá topping là giá cơ bản của sản phẩm topping. Mỗi loại có thể chọn 0–10 phần trên **mỗi ly**. Thành tiền = (giá cơ bản + phụ thu size + tổng giá topping mỗi ly) × số lượng.
-- Topping mẫu được chuyển sang món thêm, mặc định không bán riêng. Quản lý có thể bật bán riêng; topping bán riêng không có size/đường/đá, không trừ bao bì đồ uống và không tạo tem ly.
+- Topping mẫu được chuyển sang món thêm, mặc định không bán riêng. Chủ quán có thể bật bán riêng; topping bán riêng không có size/đường/đá, không trừ bao bì đồ uống và không tạo tem ly.
 - **Sửa** thay đổi cả dòng món; **Tách 1** mở một sản phẩm để sửa riêng và chỉ giảm dòng gốc sau khi lưu. Đóng hộp thoại không thay đổi giỏ. Có ghi chú pha chế, số lượng mỗi dòng từ 1–999.
-- Giỏ chưa thanh toán là đơn nháp: nhân viên được sửa/xóa; xóa toàn giỏ cần xác nhận. Chưa có luồng gửi đơn pha chế trước thanh toán. Phê duyệt quản lý vẫn áp dụng cho xác nhận chuyển khoản.
+- Giỏ chưa thanh toán là đơn nháp: nhân viên được sửa/xóa; xóa toàn giỏ cần xác nhận. Chưa có luồng gửi đơn pha chế trước thanh toán. Phê duyệt của chủ quán vẫn áp dụng cho xác nhận chuyển khoản.
 - Đơn giữ bảo toàn giá và tùy chọn lúc thêm. Sửa món áp dụng thực đơn hiện tại và có thông báo. Món, size hoặc topping ngừng bán sẽ chặn thanh toán và yêu cầu sửa/xóa dòng.
 - Bao bì ly lấy theo size đã chọn; mỗi đồ uống trừ thêm một nắp và ống hút. Tem đánh số liên tục trên toàn bộ số ly trong đơn. Chưa có cấu hình mang đi/tại chỗ, chọn không lấy ống hút hay số túi theo đơn.
 
@@ -73,7 +73,7 @@ Kiểm tra thủ công: chọn 2 ly cùng loại có 2 phần topping mỗi ly �
 
 ### Nhập kho, kiểm kê và điều chỉnh bao bì
 
-Mở **Kho Bao Bì**, chọn một dòng bao bì. Quản lý/chủ quán có thể chọn:
+Mở **Kho Bao Bì**, chọn một dòng bao bì. Chủ quán có thể chọn:
 
 - **Nhập kho:** nhập số lượng bổ sung, phải lớn hơn 0.
 - **Kiểm kê:** nhập tổng số lượng đếm thực tế, có thể bằng 0. Hệ thống tính chênh lệch với tồn hiện tại.
@@ -81,21 +81,20 @@ Mở **Kho Bao Bì**, chọn một dòng bao bì. Quản lý/chủ quán có th�
 
 Nhập lý do, nhà cung cấp hoặc số phiếu rồi bấm **Lưu thay đổi kho**. Tồn sau thay đổi hiển thị trước khi lưu; hệ thống chặn tồn âm và số vượt giới hạn. Tồn kho và lịch sử lưu cùng giao dịch SQLite. Nhân viên chỉ được xem. Dòng màu vàng là bao bì chạm ngưỡng cảnh báo.
 
-Tab **Danh mục bao bì** (quản lý) cho thêm/sửa tên, đơn vị, ngưỡng cảnh báo. Bao bì mới có tồn 0, nhập số lượng qua Nhập kho. Chỉ xóa được bao bì tự thêm, tồn bằng 0 và không gán cho size nào; ly M/L/XL, nắp và ống hút mặc định không xóa được.
+Tab **Danh mục bao bì** (chủ quán) cho thêm/sửa tên, đơn vị, ngưỡng cảnh báo. Bao bì mới có tồn 0, nhập số lượng qua Nhập kho. Chỉ xóa được bao bì tự thêm, tồn bằng 0 và không gán cho size nào; ly M/L/XL, nắp và ống hút mặc định không xóa được.
 
 Lịch sử lưu thời gian, người thực hiện, lý do, số lượng trước/sau và cả bao bì trừ khi bán hàng. Có thể lọc theo bao bì đang chọn. Dữ liệu cũ tiếp tục sử dụng được, lịch sử chỉ bắt đầu từ các thay đổi sau nâng cấp. Đây là thao tác từng loại bao bì, chưa có phiếu nhập nhiều dòng, giá nhập hoặc công nợ nhà cung cấp.
 
-| Quyền | Nhân viên (Cashier) | Quản lý (Manager) | Chủ quán (Owner) |
-|---|---|---|---|
-| Bán hàng, giữ đơn, mở/chốt ca của mình | Có | Có | Có |
-| Quản trị thực đơn, tài khoản ngân hàng, báo cáo | Không | Có | Có |
-| Tạo nhân viên | Không | Có | Có |
-| Tạo quản lý | Không | Không | Có |
-| Duyệt xác nhận chuyển khoản | Không | Có | Có |
-| Sửa/xóa món trong giỏ chưa thanh toán | Có | Có | Có |
-| Lập phiếu hoàn tiền và thu/chi trong ca của mình | Cần quản lý duyệt | Cần xác thực duyệt | Cần xác thực duyệt |
-| Đổi mật khẩu của mình | Có | Có | Có |
-| Reset mật khẩu / khóa tài khoản khác | Không | Nhân viên | Nhân viên và quản lý |
+| Quyền | Nhân viên (Cashier) | Chủ quán (Owner) |
+|---|---|---|
+| Bán hàng, giữ đơn, mở/chốt ca của mình | Có | Có |
+| Quản trị thực đơn, kho, tài khoản ngân hàng, báo cáo | Không | Có |
+| Tạo nhân viên | Không | Có |
+| Duyệt xác nhận chuyển khoản, giảm giá vượt hạn mức | Không | Có |
+| Sửa/xóa món trong giỏ chưa thanh toán | Có | Có |
+| Lập phiếu hoàn tiền và thu/chi trong ca của mình | Cần chủ quán duyệt | Cần xác thực duyệt |
+| Đổi mật khẩu của mình | Có | Có |
+| Reset mật khẩu / khóa tài khoản nhân viên | Không | Có |
 
 Mật khẩu được băm PBKDF2-SHA256 với salt riêng. Năm lần đăng nhập sai liên tiếp sẽ khóa tên đăng nhập một phút trong phiên ứng dụng. Nhật ký phê duyệt lưu người thao tác, người duyệt, hành động và thời gian. Kiểm soát này áp dụng trong ứng dụng; người có quyền sửa trực tiếp file dữ liệu Windows vẫn có thể thay đổi dữ liệu.
 
@@ -132,17 +131,17 @@ powershell -File scripts/test-regressions.ps1
 
 Bộ kiểm thử hồi quy dùng xUnit (`dotnet test`, cũng chạy được từ Test Explorer của Visual Studio). Mỗi test chạy các service thật trên một cơ sở dữ liệu tạm riêng, không đụng dữ liệu của quán. Kiểm tra: phân quyền, băm mật khẩu, khóa đăng nhập, dữ liệu thực đơn, tiền mặt thiếu/âm, duyệt QR, thanh toán trùng, hoàn tác khi thiếu kho, đóng/mở ca, tổng hợp báo cáo và CSV. Kiểm tra dữ liệu tồn tại qua khởi động lại bằng cách dựng lại toàn bộ service trên cùng cơ sở dữ liệu. GitHub Actions chạy bộ test này và kiểm thử giao diện cho mọi pull request.
 
-Kiểm tra giao diện thủ công: tạo chủ quán → thêm nhân viên/món → mở ca → bán tiền mặt → giữ/gọi đơn → cấu hình QR và quản lý duyệt → chốt ca → lọc báo cáo/xuất CSV → đóng/mở lại ứng dụng và kiểm tra dữ liệu.
+Kiểm tra giao diện thủ công: tạo chủ quán → thêm nhân viên/món → mở ca → bán tiền mặt → giữ/gọi đơn → cấu hình QR và chủ quán duyệt → chốt ca → lọc báo cáo/xuất CSV → đóng/mở lại ứng dụng và kiểm tra dữ liệu.
 
 Trên máy phát triển có bật Smart App Control, Windows có thể chặn file test vừa build (lỗi `0x800711C7`, xem [docs/app-control-diagnosis.md](docs/app-control-diagnosis.md)); khi đó dựa vào kết quả GitHub Actions của pull request.
 
 ## Giới hạn hiện tại
 
-- QR tạo ảnh từ dịch vụ VietQR qua mạng; xác nhận tiền là thao tác thủ công có quản lý duyệt, chưa có webhook/đối soát tự động.
+- QR tạo ảnh từ dịch vụ VietQR qua mạng; xác nhận tiền là thao tác thủ công có chủ quán duyệt, chưa có webhook/đối soát tự động.
 - Dịch vụ tem tạo dữ liệu và nhật ký, chưa gửi lệnh tới máy in vật lý.
 - Supabase chỉ dùng để giữ bản sao lưu ngoài máy, không đồng bộ dữ liệu: không hỗ trợ nhiều máy cùng bán hay nhiều chi nhánh. Khi khôi phục, các đơn sau lần sao lưu gần nhất sẽ mất.
 - Cách lưu snapshot phù hợp quy mô một máy; cần tách bảng và truy vấn có chỉ mục khi lượng dữ liệu lớn. Ứng dụng giới hạn một tiến trình trong phiên Windows, không dùng chung file dữ liệu giữa các phiên/máy.
-- Hoàn tiền hiện theo số tiền của đơn, chưa chọn số lượng từng món để hoàn hoặc tự chuyển tiền qua ngân hàng. Báo cáo chưa tính giá vốn/lợi nhuận. Chưa có sửa/xóa phiếu tài chính; nhập sai cần ghi phiếu đối ứng có lý do và quản lý duyệt khi phù hợp.
+- Hoàn tiền hiện theo số tiền của đơn, chưa chọn số lượng từng món để hoàn hoặc tự chuyển tiền qua ngân hàng. Báo cáo chưa tính giá vốn/lợi nhuận. Chưa có sửa/xóa phiếu tài chính; nhập sai cần ghi phiếu đối ứng có lý do và chủ quán duyệt khi phù hợp.
 - Giỏ đang nhập được giữ khi đóng cửa sổ bình thường; chưa phục hồi tự động khi mất điện hoặc tiến trình bị dừng đột ngột.
 
 ## Cập nhật giao diện POS (08/10/2026)

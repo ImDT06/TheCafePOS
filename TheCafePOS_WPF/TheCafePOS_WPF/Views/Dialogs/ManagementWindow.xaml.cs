@@ -140,8 +140,6 @@ public partial class ManagementWindow : Window
         StaffName.Text = acc.Username;
         StaffName.IsReadOnly = true;
         StaffPassword.Clear();
-        StaffRole.SelectedIndex = acc.Role == "Manager" ? 1 : 0;
-        StaffRole.IsEnabled = acc.Role != "Owner";
         SaveStaff.Content = "Cập nhật tài khoản";
     }
     private void NewStaff_Click(object sender, RoutedEventArgs e)
@@ -150,24 +148,20 @@ public partial class ManagementWindow : Window
         StaffName.Clear();
         StaffName.IsReadOnly = false;
         StaffPassword.Clear();
-        StaffRole.SelectedIndex = 0;
-        StaffRole.IsEnabled = true;
         SaveStaff.Content = "Tạo tài khoản";
     }
     private void CreateStaff_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
-        var role = (string)((ComboBoxItem)StaffRole.SelectedItem).Tag;
         if (Staff.SelectedItem is null && string.IsNullOrWhiteSpace(StaffName.Text)) throw FieldError.Mark(StaffName, "Nhập tên đăng nhập.");
         if ((Staff.SelectedItem is null || StaffPassword.Password.Length > 0) && StaffPassword.Password.Length < 8) throw FieldError.Mark(StaffPassword, "Mật khẩu tối thiểu 8 ký tự.");
         if (Staff.SelectedItem is StaffAccount acc)
         {
             if (!string.IsNullOrEmpty(StaffPassword.Password))
                 _auth.ResetPassword(acc.Username, StaffPassword.Password);
-            if (acc.Role != "Owner") _auth.UpdateAccountRole(acc.Username, role);
         }
         else
         {
-            _auth.CreateAccount(StaffName.Text, StaffPassword.Password, role);
+            _auth.CreateAccount(StaffName.Text, StaffPassword.Password, "Cashier");
         }
         NewStaff_Click(sender, e);
     });

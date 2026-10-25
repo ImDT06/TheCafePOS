@@ -50,7 +50,7 @@ internal static class CoreRegression
         Reject(() => auth.RequireManager(), "Cashier cannot access management");
         Reject(() => store.SaveProduct(new Product()), "Cashier cannot edit menu");
         Reject(() => store.UpdateStock("pack-1", "Nhập kho", 10, "Unauthorized"), "Cashier cannot update stock");
-        Reject(() => auth.CreateAccount("manager", "ManagerPass!2026", "Manager"), "Cashier cannot create staff");
+        Reject(() => auth.CreateAccount("staff-2", "StaffPass!2026", "Cashier"), "Cashier cannot create staff");
         Reject(() => auth.Approve("cashier", "CashierPass!2026", "test"), "Cashier cannot approve protected operation");
         for (int i = 0; i < 5; i++) Reject(() => auth.Login("cashier", "bad"), "Reject incorrect password");
         Reject(() => auth.Login("cashier", "CashierPass!2026"), "Repeated attempts are temporarily locked");

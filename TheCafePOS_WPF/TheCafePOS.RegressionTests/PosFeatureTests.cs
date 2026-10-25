@@ -195,6 +195,17 @@ public sealed class PosFeatureTests : IDisposable
     }
 
     [Fact]
+    public void Cancelled_order_cannot_be_reopened()
+    {
+        var order = Store.Checkout(Cart(1), "Cash", 50000, "reopen-cancelled", serviceType: "Tại chỗ");
+        Approve(DataStoreService.RefundAction("reopen-cancel", order.Id, order.TotalAmount, DataStoreService.CancelReason("Khách đổi ý"), ""));
+        Store.CancelOrder("reopen-cancel", order.Id, "Khách đổi ý", "");
+
+        Assert.Throws<InvalidOperationException>(() => Store.UpdateFulfillment(order.Id, "reopen", reason: "Thử mở lại"));
+        Assert.Equal("Dừng phục vụ", Store.CompletedOrders.Single(o => o.Id == order.Id).FulfillmentStatus);
+    }
+
+    [Fact]
     public void Voucher_applies_after_promotions_and_cannot_zero_the_total()
     {
         SaveVoucher("HALF", Voucher.Percent, 50);

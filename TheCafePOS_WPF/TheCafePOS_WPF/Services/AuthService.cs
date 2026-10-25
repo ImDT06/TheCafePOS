@@ -38,12 +38,15 @@ public sealed partial class AuthService : Interfaces.IAuthService
 {
     private readonly LocalDatabase _db;
     private readonly Func<Shift> _currentShift;
+    private readonly Func<string, bool> _hasHistory;
     private AuthState _state;
     /// <param name="currentShift">Read when an account change needs it; the shift store itself depends on this service.</param>
-    public AuthService(LocalDatabase db, Func<Shift> currentShift)
+    /// <param name="hasHistory">Whether a username appears in shifts, refunds or other store records; null treats every account as unused.</param>
+    public AuthService(LocalDatabase db, Func<Shift> currentShift, Func<string, bool>? hasHistory = null)
     {
         _db = db;
         _currentShift = currentShift;
+        _hasHistory = hasHistory ?? (_ => false);
         _state = db.Read<AuthState>("auth") ?? new();
         // The Quản lý role was dropped: its accounts become Nhân viên and their remembered sessions stop working.
         foreach (var account in _state.Accounts.Where(a => a.Role == "Manager")) { account.Role = "Cashier"; account.SessionVersion++; }
@@ -228,7 +231,8 @@ public sealed partial class AuthService : Interfaces.IAuthService
         var target = ManagedAccount(username);
         var shift = _currentShift();
         if (shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi xóa tài khoản.");
-        // Orders, shifts and audit keep the username as text, so history stays readable.
+        // Records keep the username as text: deleting a used account would let a new account take over its history.
+        if (_hasHistory(username)) throw new InvalidOperationException("Tài khoản đã có ca hoặc giao dịch nên không xóa được. Hãy khóa tài khoản thay vì xóa.");
         UpdateAccount(target, "Xóa tài khoản", () => _state.Accounts.Remove(target));
         _attempts.Remove(username);
     }

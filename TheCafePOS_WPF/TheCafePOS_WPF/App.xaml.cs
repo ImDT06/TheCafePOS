@@ -25,7 +25,8 @@ namespace TheCafePOS_WPF
             var services = new ServiceCollection();
             services.AddSingleton(_ => new LocalDatabase(dataDirectory is null ? null : System.IO.Path.Combine(dataDirectory, "cafe.db")));
             // Auth reads the current shift only when an account change needs it, which breaks the auth <-> store cycle.
-            services.AddSingleton(sp => new AuthService(sp.GetRequiredService<LocalDatabase>(), () => sp.GetRequiredService<IShiftService>().CurrentShift));
+            services.AddSingleton(sp => new AuthService(sp.GetRequiredService<LocalDatabase>(), () => sp.GetRequiredService<IShiftService>().CurrentShift,
+                username => sp.GetRequiredService<DataStoreService>().HasStaffHistory(username)));
             services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<AuthService>());
             services.AddSingleton<DataStoreService>();
             services.AddSingleton<IDataStoreService>(sp => sp.GetRequiredService<DataStoreService>());

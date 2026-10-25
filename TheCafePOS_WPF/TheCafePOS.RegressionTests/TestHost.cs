@@ -31,5 +31,5 @@ internal static class TestHost
     public static IVietQRService Bank => Services.GetRequiredService<IVietQRService>();
 
     /// <summary>A second auth service over the same database, like the next app launch would create.</summary>
-    public static AuthService NewAuth() => new(Database, () => Store.CurrentShift);
+    public static AuthService NewAuth() => new(Database, () => Store.CurrentShift, Store.HasStaffHistory);
 }

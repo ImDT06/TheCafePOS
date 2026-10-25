@@ -57,7 +57,7 @@ Mở **Hoàn tiền / Thu chi** khi đang đăng nhập bằng nhân viên sở 
 - **Vào ca bằng mã PIN:** chủ quán đặt PIN 4–6 số cho nhân viên trong **Quản trị → Nhân viên**. Màn đăng nhập hiện tên các nhân viên có PIN; chạm tên rồi nhập PIN. Đăng nhập bằng PIN không được ghi nhớ, lần mở ứng dụng sau phải đăng nhập lại. Nhân viên tự đổi PIN trong **Đổi mật khẩu** (xác nhận bằng mật khẩu). Chủ quán không dùng PIN, luôn đăng nhập và duyệt bằng mật khẩu. Sai PIN 5 lần sẽ khóa đăng nhập 1 phút như mật khẩu.
 - **Quản trị → Nhân viên:** chủ quán chọn tài khoản nhân viên rồi đặt lại mật khẩu hoặc khóa/mở khóa. Không khóa/reset được tài khoản chủ quán qua luồng này.
 - Mật khẩu được reset là mật khẩu tạm; lần đăng nhập tiếp theo bắt buộc đổi trước khi thao tác nghiệp vụ. Không cho khóa nhân viên đang giữ ca mở; chốt ca trước khi khóa.
-- Ứng dụng có hai vai trò: chủ quán và nhân viên. Tài khoản tạo mới luôn là nhân viên; tài khoản "Quản lý" từ dữ liệu cũ được chuyển thành nhân viên khi mở ứng dụng. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
+- Ứng dụng có hai vai trò: chủ quán và nhân viên. Tài khoản tạo mới luôn là nhân viên; tài khoản "Quản lý" từ dữ liệu cũ được chuyển thành nhân viên khi mở ứng dụng. Chỉ xóa được tài khoản chưa từng làm ca hay giao dịch (tạo nhầm); tài khoản đã có lịch sử thì khóa thay vì xóa, để đơn, ca và phiếu hoàn vẫn gắn đúng người và tên đăng nhập không bị dùng lại.
 - Các thao tác tài khoản được ghi nhật ký. Chưa có khôi phục mật khẩu chủ quán qua email hay màn hình tra cứu toàn bộ nhật ký xác thực.
 
 ### Chọn món, sửa món và topping

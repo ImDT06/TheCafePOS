@@ -44,7 +44,7 @@ public static class ReportService
     /// <summary>Sheets of the Excel export: summary, daily totals, orders, lines, products, refunds and cash entries.</summary>
     public static List<(string Name, IReadOnlyList<string> Header, IEnumerable<object?[]> Rows)> ToWorkbook(SalesReport report, string storeName, DateTime? from, DateTime? to)
     {
-        static string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Platform" => "Nền tảng", "Mixed" => "Kết hợp", _ => m };
+        static string Pay(string m) => m switch { "Cash" => "Tiền mặt", "VietQR" => "Chuyển khoản", "Platform" => "Nền tảng", "Mixed" => "Kết hợp", _ => m };
         return new()
         {
             ("Tổng quan", new[] { "Chỉ số", "Giá trị" }, new object?[][]
@@ -53,7 +53,7 @@ public static class ReportService
                 new object?[] { "Từ ngày", from }, new object?[] { "Đến ngày", to },
                 new object?[] { "Số đơn", report.Orders.Count }, new object?[] { "Doanh thu bán hàng", report.Revenue },
                 new object?[] { "Hoàn tiền", report.Refunded }, new object?[] { "Doanh thu thuần", report.NetRevenue },
-                new object?[] { "Tiền mặt", report.Cash }, new object?[] { "VietQR", report.Transfer },
+                new object?[] { "Tiền mặt", report.Cash }, new object?[] { "Chuyển khoản", report.Transfer },
                 new object?[] { "Giảm giá thủ công", report.Orders.Sum(o => o.DiscountAmount) }, new object?[] { "Khuyến mãi", report.Orders.Sum(o => o.PromotionAmount) },
                 new object?[] { "Đổi điểm", report.Orders.Sum(o => o.LoyaltyAmount) }, new object?[] { "Voucher", report.Orders.Sum(o => o.VoucherAmount) },
                 new object?[] { "Thuế VAT", report.Orders.Sum(o => o.VatAmount) }, new object?[] { "Giá trị TB/đơn", Math.Round(report.AverageOrderValue) }

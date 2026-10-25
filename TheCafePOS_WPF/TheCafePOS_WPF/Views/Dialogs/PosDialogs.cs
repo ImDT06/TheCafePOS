@@ -227,7 +227,7 @@ public static class OrderCompleteModal
         panel.Children.Add(new MaterialDesignThemes.Wpf.PackIcon { Kind = MaterialDesignThemes.Wpf.PackIconKind.CheckCircle, Width = 52, Height = 52, Foreground = PosUi.Accent, HorizontalAlignment = HorizontalAlignment.Center });
         panel.Children.Add(new TextBlock { Text = "Thanh toán thành công", FontSize = 18, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         panel.Children.Add(new TextBlock { Text = $"#{order.DailyOrderNumber:D2}", FontSize = 64, FontWeight = FontWeights.Bold, Foreground = PosUi.Accent, HorizontalAlignment = HorizontalAlignment.Center });
-        var paymentLabel = order.PaymentMethod switch { "Cash" => "Tiền mặt", "VietQR" => "VietQR", "Mixed" => "Tiền mặt + chuyển khoản", _ => order.Channel };
+        var paymentLabel = order.PaymentMethod switch { "Cash" => "Tiền mặt", "VietQR" => "Chuyển khoản", "Mixed" => "Tiền mặt + chuyển khoản", _ => order.Channel };
         panel.Children.Add(new TextBlock { Text = $"{order.ServiceType}, {paymentLabel}", Foreground = PosUi.Muted, FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) });
         void Row(string label, string value, bool strong = false)
         {

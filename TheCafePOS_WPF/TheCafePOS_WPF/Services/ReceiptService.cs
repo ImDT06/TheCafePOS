@@ -14,7 +14,7 @@ public static class ReceiptService
     public static string PaymentLabel(Order order) => order.PaymentMethod switch
     {
         "Cash" => "Tiền mặt",
-        "VietQR" => "Chuyển khoản VietQR",
+        "VietQR" => "Chuyển khoản",
         "Mixed" => "Tiền mặt + chuyển khoản",
         _ => "Qua " + order.Channel
     };

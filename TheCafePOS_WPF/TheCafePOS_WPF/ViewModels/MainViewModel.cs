@@ -178,7 +178,7 @@ namespace TheCafePOS_WPF.ViewModels
         public string HeldOrdersText => $"Đơn giữ: {HeldOrderCount} (F9)";
         public string ItemCountText => $"Tổng cộng ({TotalCups} món)";
         public string GrandTotalText => $"{PayableTotal:N0}đ";
-        public string CashButtonText => IsAppOrder ? $"Ghi nhận đơn {Channel} (F4)" : "Tiền mặt (F4)";
+        public string CashButtonText => IsAppOrder ? $"Ghi nhận đơn {Channel}" : "Tiền mặt";
         public string CustomerButtonText => Member is null ? "Thành viên" : "Đổi khách";
         public string DiscountButtonText => Discount > 0 ? "Sửa giảm giá" : "Giảm giá";
         public string VoucherButtonText => VoucherCode.Length > 0 ? "Đổi voucher" : "Voucher";

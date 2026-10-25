@@ -47,7 +47,7 @@ public partial class ReportWindow
         panel.Children.Add(chart);
 
         var mix = new UniformGrid { Columns = 3, Margin = new Thickness(-6, 0, -6, 16) };
-        mix.Children.Add(Breakdown("Phương thức thanh toán", new[] { ("Tiền mặt", report.Cash), ("VietQR", report.Transfer) }));
+        mix.Children.Add(Breakdown("Phương thức thanh toán", new[] { ("Tiền mặt", report.Cash), ("Chuyển khoản", report.Transfer) }));
         mix.Children.Add(Breakdown("Loại đơn", new[] { ("Mang đi", orders.Where(o => o.ServiceType == "Mang đi").Sum(o => o.TotalAmount)), ("Tại chỗ", orders.Where(o => o.ServiceType == "Tại chỗ").Sum(o => o.TotalAmount)) }));
         mix.Children.Add(Breakdown("Các khoản giảm", new[] { ("Khuyến mãi giờ", orders.Sum(o => o.PromotionAmount)), ("Đổi điểm", orders.Sum(o => o.LoyaltyAmount)), ("Giảm thủ công", orders.Sum(o => o.DiscountAmount)) }, showShare: false));
         panel.Children.Add(mix);

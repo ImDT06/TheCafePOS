@@ -36,7 +36,7 @@ internal static class DialogWiringRegression
         Wire<PackagingStatusModal>();
         Wire<HeldOrdersModal>();
         Wire<BlindDropModal>(typeof(decimal));
-        Wire<ReprintStickerModal>(typeof(PrintedStickerInfo));
+        Wire<ReprintStickerModal>(typeof(PrintedStickerInfo[]));
         Wire<VietQRModal>(typeof(decimal), typeof(int), typeof(string));
         Wire<OptionCustomModal>(typeof(Product), typeof(int));
         Wire<OptionCustomModal>(typeof(Product), typeof(int), typeof(OrderItem), typeof(bool));

@@ -14,17 +14,15 @@ namespace TheCafePOS_WPF.Views.Dialogs
     public partial class VietQRModal : Window
     {
         private readonly IAuthService _auth;
-        private readonly IDialogFactory _dialogs;
         private readonly IVietQRService _bank;
         private readonly ISePayService _sePay;
         private readonly decimal _amount;
         private readonly int _dailyOrderNumber;
         private readonly string _reference;
 
-        public VietQRModal(decimal amount, int dailyOrderNumber, string reference, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, ISePayService sePay)
+        public VietQRModal(decimal amount, int dailyOrderNumber, string reference, IAuthService auth, IVietQRService bank, ISePayService sePay)
         {
             _auth = auth;
-            _dialogs = dialogs;
             _bank = bank;
             _sePay = sePay;
             InitializeComponent();
@@ -124,8 +122,12 @@ namespace TheCafePOS_WPF.Views.Dialogs
 
         private void BtnSimulateSuccess_Click(object sender, RoutedEventArgs e)
         {
-            var approval = _dialogs.Create<PinApprovalModal>(this, AuthService.PaymentApprovalAction(_reference, _amount));
-            if (approval.ShowDialog() == true) DialogResult = true;
+            string question = $"Đã xem bill chuyển khoản của khách?\n\n• Số tiền: {_amount:N0}đ\n• Người nhận: {Or(_bank.Settings.AccountName)}\n• Thời gian: vừa chuyển\n\nTên của bạn sẽ được ghi lại là người xác nhận.";
+            if (MessageBox.Show(this, question, "Xác nhận đã nhận tiền", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            try { _auth.ConfirmTransferByStaff(AuthService.PaymentApprovalAction(_reference, _amount)); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message); return; }
+            _poll?.Stop();
+            DialogResult = true;
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)

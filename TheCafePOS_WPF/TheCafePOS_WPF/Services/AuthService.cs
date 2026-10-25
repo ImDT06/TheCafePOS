@@ -77,7 +77,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     public bool HasPaymentApproval(string orderId, decimal amount)
     {
         string action = PaymentApprovalAction(orderId, amount);
-        if (_state.Audit.Any(a => a.Operator == CurrentUser?.Username && a.Action == action && a.Approver.StartsWith("SePay:"))) return true;
+        if (_state.Audit.Any(a => a.Operator == CurrentUser?.Username && a.Action == action && (a.Approver.StartsWith("SePay:") || a.Approver.StartsWith(StaffCheckPrefix)))) return true;
         try { RequireApproval(action); return true; }
         catch (InvalidOperationException) { return false; }
     }
@@ -137,6 +137,9 @@ public sealed partial class AuthService : Interfaces.IAuthService
         _attempts.Remove(username);
         CurrentUser = account;
     }
+    public const string StaffCheckPrefix = "Staff:";
+    // The cashier checked the customer's transfer slip (amount, time, payee). Recorded under their own name so a shortfall can be traced.
+    public void ConfirmTransferByStaff(string paymentAction) => ApproveBySystem(paymentAction, StaffCheckPrefix + CurrentUser?.Username);
     // Payment confirmed by a bank feed (e.g. SePay) instead of a manager; only valid for payment actions.
     public void ApproveBySystem(string paymentAction, string source)
     {

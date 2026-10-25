@@ -62,7 +62,7 @@
     <Grid Grid.Row="2" Margin="0,16,0,0">
       <Grid.ColumnDefinitions><ColumnDefinition Width="160" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <Button Content="Quay lại" Height="48" Click="BtnCancel_Click" />
-      <TextBlock Grid.Column="1" Text="Đã thấy tiền vào tài khoản? Chủ quán xác nhận thủ công." FontSize="12" Foreground="{StaticResource PosMuted}" TextWrapping="Wrap" TextAlignment="Right" VerticalAlignment="Center" Margin="16,0" />
+      <TextBlock Grid.Column="1" Text="Đã xem bill của khách: đúng số tiền, đúng người nhận, vừa chuyển?" FontSize="12" Foreground="{StaticResource PosMuted}" TextWrapping="Wrap" TextAlignment="Right" VerticalAlignment="Center" Margin="16,0" />
       <Button x:Name="BtnSimulateSuccess" Grid.Column="2" Content="Xác nhận đã nhận tiền" Height="48" Padding="24,0" Click="BtnSimulateSuccess_Click" Style="{StaticResource PrimaryButton}" />
     </Grid>
   </Grid>

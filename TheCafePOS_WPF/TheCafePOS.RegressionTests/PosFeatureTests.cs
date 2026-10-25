@@ -244,6 +244,20 @@ public sealed class PosFeatureTests : IDisposable
 
     #endregion
 
+    #region Transfer confirmed by the cashier
+
+    [Fact]
+    public void Cashier_confirmation_completes_a_transfer_for_that_amount_only()
+    {
+        Auth.ConfirmTransferByStaff(AuthService.PaymentApprovalAction("staff-qr", 50000));
+        Assert.Throws<InvalidOperationException>(() => Store.Checkout(Cart(2), "VietQR", 0, "staff-qr", qrApproved: true));
+        var order = Store.Checkout(Cart(1), "VietQR", 0, "staff-qr", qrApproved: true);
+        Assert.Equal("VietQR", order.PaymentMethod);
+        Assert.Equal(50000, order.TotalAmount);
+    }
+
+    #endregion
+
     #region Mixed payment
 
     [Fact]

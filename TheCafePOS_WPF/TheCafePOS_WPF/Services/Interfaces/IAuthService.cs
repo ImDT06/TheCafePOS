@@ -32,6 +32,8 @@ namespace TheCafePOS_WPF.Services.Interfaces
         void Approve(string username, string password, string action);
         /// <summary>Records an approval granted by an external system, e.g. a bank transfer webhook.</summary>
         void ApproveBySystem(string paymentAction, string source);
+        /// <summary>Records that the signed-in cashier checked the customer's transfer slip for <paramref name="paymentAction"/>.</summary>
+        void ConfirmTransferByStaff(string paymentAction);
         /// <summary>Returns the approver of <paramref name="action"/>, or throws when no valid approval was recorded.</summary>
         string RequireApproval(string action);
         bool HasPaymentApproval(string orderId, decimal amount);

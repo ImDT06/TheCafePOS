@@ -71,7 +71,7 @@ public sealed class VouchersWindow : Window
         {
             Children =
             {
-                _selected, PosUi.Text("Mã (khách đọc cho thu ngân)"), _code, PosUi.Text("Mô tả"), _description,
+                _selected, PosUi.Text("Mã (khách đọc cho nhân viên)"), _code, PosUi.Text("Mô tả"), _description,
                 PosUi.Text("Loại"), _type, PosUi.Text("Giá trị (đồng hoặc %)"), _value, _maxRow,
                 PosUi.Text("Tạm tính tối thiểu (đồng)"), _min,
                 FormUi.Pair("Từ ngày", _from, "Đến hết ngày", _to),
@@ -85,7 +85,7 @@ public sealed class VouchersWindow : Window
         DockPanel.SetDock(newBtn, Dock.Top);
         newBtn.HorizontalAlignment = HorizontalAlignment.Left;
         left.Children.Add(newBtn); left.Children.Add(_grid);
-        var head = new StackPanel { Margin = new Thickness(0, 0, 0, 10), Children = { PosUi.Text("Voucher", 24, true), PosUi.Text("Thu ngân nhập mã ở màn bán hàng. Voucher tính sau khuyến mãi tự động, không áp dụng cho đơn app giao hàng. Hủy đơn sẽ trả lại lượt dùng.", 13, color: PosUi.Muted) } };
+        var head = new StackPanel { Margin = new Thickness(0, 0, 0, 10), Children = { PosUi.Text("Voucher", 24, true), PosUi.Text("Nhân viên nhập mã ở màn bán hàng. Voucher tính sau khuyến mãi tự động, không áp dụng cho đơn app giao hàng. Hủy đơn sẽ trả lại lượt dùng.", 13, color: PosUi.Muted) } };
         var root = new DockPanel { Margin = new Thickness(18) };
         DockPanel.SetDock(head, Dock.Top);
         root.Children.Add(head); root.Children.Add(new DockPanel { Children = { side, left } });

@@ -13,7 +13,8 @@ public class StaffAccount
     [System.Text.Json.Serialization.JsonIgnore] public string RoleLabel => RoleName(Role);
 
     /// <summary>Vietnamese label for a stored role; the stored values stay English.</summary>
-    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Manager" => "Quản lý", "Cashier" => "Thu ngân", _ => role };
+    // "Cashier" is the stored value for the Nhân viên role (sells, makes and hands over drinks); kept so saved accounts need no migration.
+    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Manager" => "Quản lý", "Cashier" => "Nhân viên", _ => role };
     public string Salt { get; set; } = "";
     public string PasswordHash { get; set; } = "";
 }

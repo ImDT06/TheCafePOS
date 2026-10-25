@@ -206,6 +206,21 @@ public sealed class PosFeatureTests : IDisposable
     }
 
     [Fact]
+    public void Barista_reprints_only_the_chosen_cups_of_an_order()
+    {
+        var order = new Order { DailyOrderNumber = 42, Items = { new OrderItem { ProductName = "Latte", Quantity = 3, IsBeverage = true } } };
+        int logsBefore = Store.StickerLogs.Count;
+        var cups = TestHost.Stickers.StickersForOrder(order);
+        Assert.Equal(new[] { 1, 2, 3 }, cups.Select(c => c.Index));
+        Assert.Equal(logsBefore, Store.StickerLogs.Count); // listing the cups prints nothing
+
+        TestHost.Stickers.ReprintSticker(cups[1], "Làm đổ ly / Pha lại", "barista");
+        var log = Store.StickerLogs.Skip(logsBefore).Single();
+        Assert.Equal((42, 2, 3), (log.DailyOrderNumber, log.StickerIndex, log.TotalStickers));
+        Assert.StartsWith("Reprint", log.Reason);
+    }
+
+    [Fact]
     public void Voucher_applies_after_promotions_and_cannot_zero_the_total()
     {
         SaveVoucher("HALF", Voucher.Percent, 50);

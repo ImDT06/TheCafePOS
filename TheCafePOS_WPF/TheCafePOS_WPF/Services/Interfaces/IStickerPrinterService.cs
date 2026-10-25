@@ -7,6 +7,7 @@ namespace TheCafePOS_WPF.Services.Interfaces
     public interface IStickerPrinterService
     {
         ObservableCollection<PrintedStickerInfo> RecentPrintedStickers { get; }
+        List<PrintedStickerInfo> StickersForOrder(Order order);
         List<PrintedStickerInfo> GenerateStickersForOrder(Order order);
         PrintedStickerInfo ReprintSticker(PrintedStickerInfo originalSticker, string reason, string cashierName);
     }

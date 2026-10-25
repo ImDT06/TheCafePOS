@@ -34,10 +34,10 @@ namespace TheCafePOS_WPF.Services
                 RecentPrintedStickers.Add(new PrintedStickerInfo { OrderId = log.OrderId, DailyOrderNumber = log.DailyOrderNumber, ProductName = log.ProductName, OptionsSummary = log.OptionsSummary, Index = log.StickerIndex, Total = log.TotalStickers, PrintTime = log.PrintedAt, Reason = log.Reason });
         }
 
-        public List<PrintedStickerInfo> GenerateStickersForOrder(Order order)
+        /// <summary>One sticker per beverage cup, numbered across the order; nothing is logged.</summary>
+        public List<PrintedStickerInfo> StickersForOrder(Order order)
         {
             var stickers = new List<PrintedStickerInfo>();
-
             int totalCups = order.Items.Where(i => i.IsBeverage).Sum(i => i.Quantity);
             int cupIndex = 0;
             foreach (var item in order.Items.Where(i => i.IsBeverage))
@@ -45,7 +45,7 @@ namespace TheCafePOS_WPF.Services
                 for (int i = 1; i <= item.Quantity; i++)
                 {
                     cupIndex++;
-                    var sticker = new PrintedStickerInfo
+                    stickers.Add(new PrintedStickerInfo
                     {
                         OrderId = order.Id,
                         DailyOrderNumber = order.DailyOrderNumber,
@@ -56,25 +56,30 @@ namespace TheCafePOS_WPF.Services
                         FormattedPrice = item.FormattedUnitPrice,
                         PrintTime = DateTime.Now,
                         Reason = "InLầnĐầu"
-                    };
-
-                    stickers.Add(sticker);
-                    RecentPrintedStickers.Insert(0, sticker);
-
-                    _orders.StickerLogs.Add(new StickerPrintLog
-                    {
-                        OrderId = order.Id,
-                        DailyOrderNumber = order.DailyOrderNumber,
-                        ProductName = item.ProductName,
-                        OptionsSummary = item.OptionsSummary,
-                        StickerIndex = cupIndex,
-                        TotalStickers = totalCups,
-                        Reason = "InLầnĐầu",
-                        PrintedAt = DateTime.Now
                     });
                 }
             }
+            return stickers;
+        }
 
+        public List<PrintedStickerInfo> GenerateStickersForOrder(Order order)
+        {
+            var stickers = StickersForOrder(order);
+            foreach (var sticker in stickers)
+            {
+                RecentPrintedStickers.Insert(0, sticker);
+                _orders.StickerLogs.Add(new StickerPrintLog
+                {
+                    OrderId = order.Id,
+                    DailyOrderNumber = order.DailyOrderNumber,
+                    ProductName = sticker.ProductName,
+                    OptionsSummary = sticker.OptionsSummary,
+                    StickerIndex = sticker.Index,
+                    TotalStickers = sticker.Total,
+                    Reason = "InLầnĐầu",
+                    PrintedAt = sticker.PrintTime
+                });
+            }
             return stickers;
         }
 

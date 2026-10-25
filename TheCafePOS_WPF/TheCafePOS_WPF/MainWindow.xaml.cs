@@ -321,7 +321,7 @@ namespace TheCafePOS_WPF
         {
             if (sender is Button btn && btn.Tag is PrintedStickerInfo sticker)
             {
-                var modal = _dialogs.Create<ReprintStickerModal>(this, sticker);
+                var modal = _dialogs.Create<ReprintStickerModal>(this, new[] { sticker });
                 modal.ShowDialog();
             }
         }

@@ -274,14 +274,18 @@ public static class OrderCompleteModal
 public sealed class OrderQueueWindow : Window
 {
     private readonly IOrderService _orders;
+    private readonly IStickerPrinterService _stickers;
+    private readonly IDialogFactory _dialogs;
     private readonly WrapPanel _cards = new() { Orientation = Orientation.Horizontal };
     private readonly TextBlock _summary = PosUi.Text("", 14, color: PosUi.Muted);
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private static readonly string[] Finished = { "Đã giao", "Dừng phục vụ", "Legacy" };
 
-    public OrderQueueWindow(IOrderService orders)
+    public OrderQueueWindow(IOrderService orders, IStickerPrinterService stickers, IDialogFactory dialogs)
     {
         _orders = orders;
+        _stickers = stickers;
+        _dialogs = dialogs;
         Title = "Hàng chờ pha chế"; Width = 1100; Height = 720; MinWidth = 700; MinHeight = 480; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         var header = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
@@ -335,7 +339,22 @@ public sealed class OrderQueueWindow : Window
         if (order.Items.Any(i => i.ReadyQuantity < i.Quantity)) actions.Children.Add(PosUi.Button("Đã làm xong", (_, _) => Act(order, "all-ready"), "PrimaryButton"));
         else actions.Children.Add(PosUi.Button("Đã giao khách", (_, _) => Act(order, "all-delivered"), "PrimaryButton"));
         body.Children.Add(actions);
+        // The sticker printer sits at the bar, so a jammed or smudged sticker is reprinted from here.
+        var cups = _stickers.StickersForOrder(order);
+        if (cups.Count > 0)
+        {
+            var reprint = PosUi.Button("In lại tem", (_, _) => Reprint(cups));
+            reprint.Margin = new Thickness(0, 8, 0, 0);
+            body.Children.Add(reprint);
+        }
         return new Border { Width = 320, Margin = new Thickness(0, 0, 12, 12), Padding = new Thickness(14), CornerRadius = new CornerRadius(10), Background = Brushes.White, BorderBrush = statusColor, BorderThickness = new Thickness(2, 6, 2, 2), Child = body };
+    }
+
+    private void Reprint(IReadOnlyList<PrintedStickerInfo> cups)
+    {
+        _timer.Stop(); // a refresh would rebuild the card under the open dialog
+        _dialogs.Create<ReprintStickerModal>(this, cups).ShowDialog();
+        _timer.Start();
     }
 
     private void Act(Order order, string action)

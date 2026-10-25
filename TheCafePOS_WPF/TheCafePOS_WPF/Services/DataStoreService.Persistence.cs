@@ -141,6 +141,13 @@ public partial class DataStoreService
     public decimal ExpectedCash => CurrentShift.InitialCash + CompletedOrders.Where(o => o.ShiftId == CurrentShift.Id && o.PaymentStatus == "Completed").Sum(o => o.CashPortion)
         + CashEntries.Where(e => e.ShiftId == CurrentShift.Id).Sum(e => e.SignedAmount)
         - Refunds.Where(r => r.ShiftId == CurrentShift.Id).Sum(r => r.DrawerAmount);
+    /// <summary>Whether the staff member has worked a shift or is named on any money, stock or service record.</summary>
+    // Orders link to staff through their shift, so the shift check covers every sale.
+    public bool HasStaffHistory(string username) =>
+        CurrentShift.CashierName == username || Shifts.Any(s => s.CashierName == username)
+        || Refunds.Any(r => r.Operator == username) || CashEntries.Any(e => e.Operator == username)
+        || StockMovements.Any(m => m.Operator == username) || IngredientMovements.Any(m => m.Operator == username)
+        || PurchaseReceipts.Any(r => r.Operator == username) || CompletedOrders.Any(o => o.ServiceEvents.Any(e => e.Operator == username));
     public void RequireOpenShift()
     {
         _auth.RequireSignedIn();

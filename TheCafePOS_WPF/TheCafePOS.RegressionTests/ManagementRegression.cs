@@ -165,8 +165,14 @@ internal static class ManagementRegression
         auth.Login("mgmt-cashier", "CashierPass!2026");
         store.CloseShift(0);
         auth.Login("mgmt-owner", "OwnerPass!2026");
-        auth.DeleteAccount("mgmt-cashier");
-        Check(auth.Accounts.All(a => a.Username != "mgmt-cashier"), "Staff account can be deleted after shift closes");
-        Reject(() => auth.Login("mgmt-cashier", "CashierPass!2026"), "Deleted account cannot log in");
+        Reject(() => auth.DeleteAccount("mgmt-cashier"), "Staff who worked a shift cannot be deleted");
+        Reject(() => auth.CreateAccount("mgmt-cashier", "OtherPass!2026", "Cashier"), "A kept account's username cannot be reused");
+        auth.SetAccountActive("mgmt-cashier", false);
+        Reject(() => auth.Login("mgmt-cashier", "CashierPass!2026"), "Locked account cannot log in");
+        Check(store.Shifts.Any(s => s.CashierName == "mgmt-cashier"), "Locking keeps the staff member's shift history");
+        auth.CreateAccount("mgmt-unused", "UnusedPass!2026", "Cashier");
+        auth.DeleteAccount("mgmt-unused");
+        Check(auth.Accounts.All(a => a.Username != "mgmt-unused"), "Unused staff account can be deleted");
+        Reject(() => auth.Login("mgmt-unused", "UnusedPass!2026"), "Deleted account cannot log in");
     }
 }

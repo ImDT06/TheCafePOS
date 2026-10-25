@@ -172,7 +172,7 @@ public partial class ManagementWindow : Window
     private void DeleteStaff_Click(object sender, RoutedEventArgs e)
     {
         if (Staff.SelectedItem is not StaffAccount acc) { Status.Text = "Chọn nhân viên trước."; return; }
-        if (ConfirmDelete($"Xóa tài khoản {acc.Username}? Lịch sử đơn và ca vẫn được giữ.", "Xóa tài khoản"))
+        if (ConfirmDelete($"Xóa tài khoản {acc.Username}? Chỉ xóa được tài khoản chưa có ca hay giao dịch; nhân viên đã nghỉ thì nên khóa.", "Xóa tài khoản"))
             Run(() => { _auth.DeleteAccount(acc.Username); NewStaff_Click(sender, e); });
     }
     private void ResetPassword_Click(object sender, RoutedEventArgs e)

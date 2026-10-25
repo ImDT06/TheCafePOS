@@ -54,9 +54,9 @@ Mở **Hoàn tiền / Thu chi** khi đang đăng nhập bằng nhân viên sở 
 ### Đổi mật khẩu và khóa nhân viên
 
 - Mọi người dùng có thể chọn **Đổi mật khẩu**, nhập mật khẩu hiện tại và xác nhận mật khẩu mới.
-- **Quản trị → Nhân viên:** chọn tài khoản rồi đặt lại mật khẩu hoặc khóa/mở khóa. Quản lý được quản lý thu ngân; chủ quán được quản lý thu ngân và quản lý. Không được khóa/reset chính mình hoặc tài khoản chủ quán qua luồng này.
+- **Quản trị → Nhân viên:** chọn tài khoản rồi đặt lại mật khẩu hoặc khóa/mở khóa. Quản lý được quản lý nhân viên; chủ quán được quản lý nhân viên và quản lý. Không được khóa/reset chính mình hoặc tài khoản chủ quán qua luồng này.
 - Mật khẩu được reset là mật khẩu tạm; lần đăng nhập tiếp theo bắt buộc đổi trước khi thao tác nghiệp vụ. Không cho khóa nhân viên đang giữ ca mở; chốt ca trước khi khóa.
-- Chủ quán đổi vai trò thu ngân ↔ quản lý bằng cách chọn tài khoản, đổi vai trò rồi bấm **Tạo / Cập nhật tài khoản**. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
+- Chủ quán đổi vai trò nhân viên ↔ quản lý bằng cách chọn tài khoản, đổi vai trò rồi bấm **Tạo / Cập nhật tài khoản**. Xóa tài khoản bị chặn khi nhân viên đang giữ ca mở; lịch sử đơn/ca vẫn giữ tên đăng nhập.
 - Các thao tác tài khoản được ghi nhật ký. Chưa có khôi phục mật khẩu chủ quán qua email hay màn hình tra cứu toàn bộ nhật ký xác thực.
 
 ### Chọn món, sửa món và topping
@@ -65,7 +65,7 @@ Mở **Hoàn tiền / Thu chi** khi đang đăng nhập bằng nhân viên sở 
 - Giá topping là giá cơ bản của sản phẩm topping. Mỗi loại có thể chọn 0–10 phần trên **mỗi ly**. Thành tiền = (giá cơ bản + phụ thu size + tổng giá topping mỗi ly) × số lượng.
 - Topping mẫu được chuyển sang món thêm, mặc định không bán riêng. Quản lý có thể bật bán riêng; topping bán riêng không có size/đường/đá, không trừ bao bì đồ uống và không tạo tem ly.
 - **Sửa** thay đổi cả dòng món; **Tách 1** mở một sản phẩm để sửa riêng và chỉ giảm dòng gốc sau khi lưu. Đóng hộp thoại không thay đổi giỏ. Có ghi chú pha chế, số lượng mỗi dòng từ 1–999.
-- Giỏ chưa thanh toán là đơn nháp: thu ngân được sửa/xóa; xóa toàn giỏ cần xác nhận. Chưa có luồng gửi đơn pha chế trước thanh toán. Phê duyệt quản lý vẫn áp dụng cho xác nhận chuyển khoản.
+- Giỏ chưa thanh toán là đơn nháp: nhân viên được sửa/xóa; xóa toàn giỏ cần xác nhận. Chưa có luồng gửi đơn pha chế trước thanh toán. Phê duyệt quản lý vẫn áp dụng cho xác nhận chuyển khoản.
 - Đơn giữ bảo toàn giá và tùy chọn lúc thêm. Sửa món áp dụng thực đơn hiện tại và có thông báo. Món, size hoặc topping ngừng bán sẽ chặn thanh toán và yêu cầu sửa/xóa dòng.
 - Bao bì ly lấy theo size đã chọn; mỗi đồ uống trừ thêm một nắp và ống hút. Tem đánh số liên tục trên toàn bộ số ly trong đơn. Chưa có cấu hình mang đi/tại chỗ, chọn không lấy ống hút hay số túi theo đơn.
 
@@ -79,23 +79,23 @@ Mở **Kho Bao Bì**, chọn một dòng bao bì. Quản lý/chủ quán có th�
 - **Kiểm kê:** nhập tổng số lượng đếm thực tế, có thể bằng 0. Hệ thống tính chênh lệch với tồn hiện tại.
 - **Điều chỉnh:** nhập số tăng hoặc giảm, ví dụ `5` hoặc `-3` cho bao bì hỏng.
 
-Nhập lý do, nhà cung cấp hoặc số phiếu rồi bấm **Lưu thay đổi kho**. Tồn sau thay đổi hiển thị trước khi lưu; hệ thống chặn tồn âm và số vượt giới hạn. Tồn kho và lịch sử lưu cùng giao dịch SQLite. Thu ngân chỉ được xem. Dòng màu vàng là bao bì chạm ngưỡng cảnh báo.
+Nhập lý do, nhà cung cấp hoặc số phiếu rồi bấm **Lưu thay đổi kho**. Tồn sau thay đổi hiển thị trước khi lưu; hệ thống chặn tồn âm và số vượt giới hạn. Tồn kho và lịch sử lưu cùng giao dịch SQLite. Nhân viên chỉ được xem. Dòng màu vàng là bao bì chạm ngưỡng cảnh báo.
 
 Tab **Danh mục bao bì** (quản lý) cho thêm/sửa tên, đơn vị, ngưỡng cảnh báo. Bao bì mới có tồn 0, nhập số lượng qua Nhập kho. Chỉ xóa được bao bì tự thêm, tồn bằng 0 và không gán cho size nào; ly M/L/XL, nắp và ống hút mặc định không xóa được.
 
 Lịch sử lưu thời gian, người thực hiện, lý do, số lượng trước/sau và cả bao bì trừ khi bán hàng. Có thể lọc theo bao bì đang chọn. Dữ liệu cũ tiếp tục sử dụng được, lịch sử chỉ bắt đầu từ các thay đổi sau nâng cấp. Đây là thao tác từng loại bao bì, chưa có phiếu nhập nhiều dòng, giá nhập hoặc công nợ nhà cung cấp.
 
-| Quyền | Thu ngân (Cashier) | Quản lý (Manager) | Chủ quán (Owner) |
+| Quyền | Nhân viên (Cashier) | Quản lý (Manager) | Chủ quán (Owner) |
 |---|---|---|---|
 | Bán hàng, giữ đơn, mở/chốt ca của mình | Có | Có | Có |
 | Quản trị thực đơn, tài khoản ngân hàng, báo cáo | Không | Có | Có |
-| Tạo thu ngân | Không | Có | Có |
+| Tạo nhân viên | Không | Có | Có |
 | Tạo quản lý | Không | Không | Có |
 | Duyệt xác nhận chuyển khoản | Không | Có | Có |
 | Sửa/xóa món trong giỏ chưa thanh toán | Có | Có | Có |
 | Lập phiếu hoàn tiền và thu/chi trong ca của mình | Cần quản lý duyệt | Cần xác thực duyệt | Cần xác thực duyệt |
 | Đổi mật khẩu của mình | Có | Có | Có |
-| Reset mật khẩu / khóa tài khoản khác | Không | Thu ngân | Thu ngân và quản lý |
+| Reset mật khẩu / khóa tài khoản khác | Không | Nhân viên | Nhân viên và quản lý |
 
 Mật khẩu được băm PBKDF2-SHA256 với salt riêng. Năm lần đăng nhập sai liên tiếp sẽ khóa tên đăng nhập một phút trong phiên ứng dụng. Nhật ký phê duyệt lưu người thao tác, người duyệt, hành động và thời gian. Kiểm soát này áp dụng trong ứng dụng; người có quyền sửa trực tiếp file dữ liệu Windows vẫn có thể thay đổi dữ liệu.
 

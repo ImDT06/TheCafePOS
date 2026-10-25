@@ -31,7 +31,7 @@ public sealed class CategoryEditorPanel : EditorPanel
         form.Children.Add(_name); form.Children.Add(_active);
         form.Children.Add(new TextBlock
         {
-            Text = existing is not null ? $"Danh mục đang có {_count} món. Bỏ \"Đang hiển thị\" để tạm ẩn cả nhóm mà không xóa món." : "Sắp nhóm giúp thu ngân tìm món nhanh hơn. Danh mục mới được xếp cuối hàng chip.",
+            Text = existing is not null ? $"Danh mục đang có {_count} món. Bỏ \"Đang hiển thị\" để tạm ẩn cả nhóm mà không xóa món." : "Sắp nhóm giúp nhân viên tìm món nhanh hơn. Danh mục mới được xếp cuối hàng chip.",
             Style = (Style)FindResource("Hint"), TextWrapping = TextWrapping.Wrap
         });
         Form = form;

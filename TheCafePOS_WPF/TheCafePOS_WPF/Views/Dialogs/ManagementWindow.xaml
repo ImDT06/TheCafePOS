@@ -151,7 +151,7 @@
                   <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="StaffName" Margin="0,4,0,10" />
                   <PasswordBox md:HintAssist.Hint="Mật khẩu mới (bỏ trống nếu không đổi)" x:Name="StaffPassword" Margin="0,4,0,10" />
                   <ComboBox md:HintAssist.Hint="Vai trò" x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10">
-                    <ComboBoxItem Content="Thu ngân" Tag="Cashier" />
+                    <ComboBoxItem Content="Nhân viên" Tag="Cashier" />
                     <ComboBoxItem Content="Quản lý" Tag="Manager" />
                   </ComboBox>
                   <TextBlock Text="Các thao tác nhanh (dành cho tài khoản đang chọn):" TextWrapping="Wrap" Margin="0,16,0,8" />

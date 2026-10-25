@@ -55,6 +55,29 @@
    <Setter Property="Background" Value="White"/><Setter Property="Foreground" Value="{StaticResource PosInk}"/><Setter Property="FontWeight" Value="Normal"/>
    <Style.Triggers><DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"><Setter Property="Background" Value="{StaticResource PosAccent}"/><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="Bold"/></DataTrigger></Style.Triggers>
   </Style>
+  <!-- Sticker log bar: the classic circle arrow, centred on the title and lined up with the cards above; no expand animation. -->
+  <Style x:Key="StickerLogExpander" TargetType="Expander">
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+    <Border Background="White" CornerRadius="16"><DockPanel>
+     <ToggleButton Style="{x:Null}" DockPanel.Dock="Top" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" Cursor="Hand" Focusable="False">
+      <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+       <Grid Background="Transparent" Margin="16,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Ellipse x:Name="Circle" Width="20" Height="20" Stroke="{StaticResource PosBorderStrong}" StrokeThickness="1.2" VerticalAlignment="Center"/>
+        <Path x:Name="Arrow" Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource PosInk}" StrokeThickness="1.6" Width="8" Height="4" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"/>
+        <ContentPresenter Grid.Column="1" Content="{Binding Header, RelativeSource={RelativeSource AncestorType=Expander}}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+       </Grid>
+       <ControlTemplate.Triggers>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="RenderTransform"><Setter.Value><RotateTransform Angle="180"/></Setter.Value></Setter></Trigger>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Circle" Property="Stroke" Value="{StaticResource PosAccent}"/></Trigger>
+       </ControlTemplate.Triggers>
+      </ControlTemplate></ToggleButton.Template>
+     </ToggleButton>
+     <ContentPresenter x:Name="Body" Margin="16,0,16,16" Visibility="Collapsed"/>
+    </DockPanel></Border>
+    <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
  </Window.Resources>
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <Border Background="{StaticResource PosAccentDark}" Padding="20,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -144,7 +167,9 @@
     </Grid>
    </Border>
   </Grid>
-  <Expander Grid.Row="2" Background="White" IsExpanded="False" Margin="16,0,16,8"><Expander.Header><TextBlock Text="Nhật ký tem / In lại" Padding="8,12" FontWeight="SemiBold"/></Expander.Header>
+  <!-- Row 2 only reserves the collapsed bar; the expander spans up over the menu so opening it does not shrink and re-lay out every tile. StickerLogExpander has no expand animation. -->
+  <Border Grid.Row="2" Height="{Binding ActualHeight, ElementName=StickerLogHeader}" Margin="0,0,0,8"/>
+  <Expander Style="{StaticResource StickerLogExpander}" Grid.Row="1" Grid.RowSpan="2" VerticalAlignment="Bottom" Panel.ZIndex="1" IsExpanded="False" Margin="16,0,16,8"><Expander.Header><TextBlock x:Name="StickerLogHeader" Text="Nhật ký tem / In lại" Padding="0,13" FontWeight="SemiBold"/></Expander.Header>
    <ListView x:Name="LvRecentStickers" Height="180"><ListView.View><GridView>
     <GridViewColumn Header="Đơn" DisplayMemberBinding="{Binding DailyOrderFormatted}" Width="80"/><GridViewColumn Header="Món" DisplayMemberBinding="{Binding ProductName}" Width="210"/><GridViewColumn Header="Tùy chọn" DisplayMemberBinding="{Binding OptionsSummary}" Width="330"/><GridViewColumn Header="Tem" DisplayMemberBinding="{Binding IndexFormatted}" Width="90"/><GridViewColumn Header="Giờ" DisplayMemberBinding="{Binding PrintTime, StringFormat=HH:mm:ss}" Width="100"/><GridViewColumn Header="Thao tác" Width="110"><GridViewColumn.CellTemplate><DataTemplate><Button Content="In lại" Tag="{Binding}" Click="BtnReprintSticker_Click" Padding="12,6"/></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
    </GridView></ListView.View></ListView>

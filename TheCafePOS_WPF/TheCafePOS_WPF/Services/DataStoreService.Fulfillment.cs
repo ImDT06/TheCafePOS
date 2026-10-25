@@ -15,6 +15,8 @@ public partial class DataStoreService
         _auth.RequireSignedIn();
         var order = CompletedOrders.Single(o => o.Id == orderId);
         if (order.FulfillmentStatus == "Legacy") throw new InvalidOperationException("Đơn lịch sử không theo dõi phục vụ.");
+        // A cancelled order also ends as "Dừng phục vụ"; it was refunded in full, so it must not be reopened.
+        if (order.IsCancelled) throw new InvalidOperationException("Đơn đã hủy, không cập nhật tiến độ được.");
         if (action is "reopen" or "stop")
         {
             _auth.RequireManager();

@@ -33,8 +33,13 @@ namespace TheCafePOS_WPF.Views.Dialogs
             _dailyOrderNumber = dailyOrderNumber;
             _reference = reference;
 
-            TxtOrderNumber.Text = $"Mã đơn: #{_dailyOrderNumber:D2}" + $"\nNội dung CK: {VietQRService.TransferMemo(reference)}";
+            TxtOrderNumber.Text = $"Đơn #{_dailyOrderNumber:D2} · Khách quét mã bằng ứng dụng ngân hàng";
             TxtAmount.Text = $"{_amount:N0}đ";
+            var account = _bank.Settings;
+            TxtBank.Text = Or(account.BankId);
+            TxtAccountNo.Text = Or(account.AccountNo);
+            TxtAccountName.Text = Or(account.AccountName);
+            TxtMemo.Text = VietQRService.TransferMemo(reference);
 
             LoadQRImage();
         }
@@ -69,12 +74,22 @@ namespace TheCafePOS_WPF.Views.Dialogs
             catch (Exception ex)
             {
                 _qrError = ex is InvalidOperationException ? ex.Message : "Không tải được mã QR. Kiểm tra kết nối mạng rồi mở lại.";
-                TxtPaymentStatus.Text = _qrError;
-                TxtPaymentStatus.Foreground = PosUi.Danger;
+                TxtQrError.Text = _qrError;
                 QrFrame.Visibility = Visibility.Collapsed;
+                QrError.Visibility = Visibility.Visible;
+                SetStatus("Chưa nhận chuyển khoản qua mã QR được. Quay lại để chọn cách thanh toán khác.", danger: true);
             }
         }
         private string? _qrError;
+        private static string Or(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+        private void SetStatus(string text, bool danger = false)
+        {
+            TxtPaymentStatus.Text = text;
+            StatusBar.Background = (Brush)FindResource(danger ? "PosDangerSoft" : "PosWarningSoft");
+            StatusDot.Fill = (Brush)FindResource(danger ? "PosDanger" : "PosWarning");
+            TxtPaymentStatus.Foreground = (Brush)FindResource(danger ? "PosDanger" : "PosWarningInk");
+        }
 
         private System.Windows.Threading.DispatcherTimer? _poll;
         private bool _checking;
@@ -85,7 +100,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
             if (!_sePay.Enabled || _qrError is not null) return;
             var since = DateTime.Now.AddMinutes(-2);
             string memo = VietQRService.TransferMemo(_reference);
-            TxtPaymentStatus.Text = "Đang chờ khách chuyển khoản… (tự xác nhận qua SePay)";
+            SetStatus("Đang chờ khách chuyển khoản · tự xác nhận khi tiền về");
             _poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
             _poll.Tick += async (_, _) =>
             {
@@ -100,7 +115,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
                     SystemSounds.Asterisk.Play();
                     DialogResult = true;
                 }
-                catch (Exception ex) { TxtPaymentStatus.Text = "Chưa kiểm tra được SePay (" + ex.Message + "). Có thể dùng xác nhận thủ công."; }
+                catch (Exception ex) { SetStatus("Chưa kiểm tra được giao dịch tự động (" + ex.Message + "). Chủ quán có thể xác nhận thủ công.", danger: true); }
                 finally { _checking = false; }
             };
             _poll.Start();

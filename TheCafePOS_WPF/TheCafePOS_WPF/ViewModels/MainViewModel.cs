@@ -21,8 +21,10 @@ namespace TheCafePOS_WPF.ViewModels
     {
         public const string AllCategories = "ALL";
         public const string BestSellers = "TOP";
+        public const string Deals = "DEALS";
         private const int BestSellerCount = 12;
         private List<string> _bestSellerIds = new();
+        private Dictionary<string, string> _dealLabels = new();
         public const string DefaultServiceType = "Mang đi";
         public const string DineIn = "Tại chỗ";
         public const int MaxLineQuantity = 999;
@@ -133,10 +135,13 @@ namespace TheCafePOS_WPF.ViewModels
         /// <summary>Same instance until <see cref="ReloadSettings"/>, so a bound picker keeps its selection.</summary>
         public IReadOnlyList<string> ChannelOptions => _channelOptions;
 
+        // Groups with nothing to sell (e.g. a deal section whose bundle items were retired) are left out.
         public IReadOnlyList<(string Id, string Name)> CategoryOptions =>
             new[] { (AllCategories, "Tất cả") }
                 .Concat(BestSellerIds().Count > 0 ? new[] { (BestSellers, "Bán chạy") } : Array.Empty<(string, string)>())
-                .Concat(_catalog.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)))
+                .Concat(DealLabels().Count > 0 ? new[] { (Deals, "Ưu đãi") } : Array.Empty<(string, string)>())
+                .Concat(_catalog.Categories.Where(c => c.IsActive && _catalog.Products.Any(p => IsSellable(p) && (p.CategoryId == c.Id || p.FeaturedCategoryIds.Contains(c.Id))))
+                    .OrderBy(c => c.DisplayOrder).Select(c => (c.Id, c.Name)))
                 .ToList();
 
         public bool ShiftOpen => _shifts.CurrentShift.Status == "Open";
@@ -255,7 +260,7 @@ namespace TheCafePOS_WPF.ViewModels
             // Featured sections: the seeded new-items, deals and seasonal-combo sections, plus any placed before the regular groups.
             var featured = _catalog.Categories.Where(c => c.DisplayOrder < 0).Select(c => c.Id)
                 .Concat(new[] { DataStoreService.NewCategoryId, DataStoreService.DealCategoryId, DataStoreService.SeasonalComboCategoryId }).ToHashSet();
-            string Highlight(string id) => id == BestSellers ? "best" : featured.Contains(id) ? "featured" : "";
+            string Highlight(string id) => id == BestSellers ? "best" : id == Deals || featured.Contains(id) ? "featured" : "";
             var options = CategoryOptions;
             int firstRegular = options.Select((c, i) => (c.Id, i)).FirstOrDefault(x => x.Id != AllCategories && Highlight(x.Id) == "", (Id: "", i: -1)).i;
             bool anyHighlight = options.Any(c => Highlight(c.Id) != "");
@@ -274,6 +279,7 @@ namespace TheCafePOS_WPF.ViewModels
         {
             SelectedCategoryId = categoryId;
             if (categoryId == BestSellers) _bestSellerIds = BestSellerIds();
+            if (categoryId == Deals) _dealLabels = DealLabels();
             foreach (var option in CategoryList) option.IsSelected = option.Id == categoryId;
             RefreshMenu();
         }
@@ -288,7 +294,8 @@ namespace TheCafePOS_WPF.ViewModels
         public void RefreshMenu()
         {
             MenuItems.Clear();
-            foreach (var product in FilterProducts(SearchText)) MenuItems.Add(new MenuTile(product));
+            foreach (var product in FilterProducts(SearchText))
+                MenuItems.Add(new MenuTile(product, SelectedCategoryId == Deals ? _dealLabels.GetValueOrDefault(product.Id) : null));
             OnPropertyChanged(nameof(MenuCountText));
             OnPropertyChanged(nameof(HasNoProducts));
         }
@@ -300,11 +307,30 @@ namespace TheCafePOS_WPF.ViewModels
             var categoryOrder = _catalog.Categories.GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First().DisplayOrder);
             return _catalog.Products.Where(p =>
             {
-                bool matchCat = SelectedCategoryId == AllCategories || SelectedCategoryId == BestSellers && _bestSellerIds.Contains(p.Id) || p.CategoryId == SelectedCategoryId || p.FeaturedCategoryIds.Contains(SelectedCategoryId);
+                bool matchCat = SelectedCategoryId == AllCategories || SelectedCategoryId == BestSellers && _bestSellerIds.Contains(p.Id)
+                    || SelectedCategoryId == Deals && _dealLabels.ContainsKey(p.Id) || p.CategoryId == SelectedCategoryId || p.FeaturedCategoryIds.Contains(SelectedCategoryId);
                 bool matchSearch = search.Length == 0 || p.Name.ToLower().Contains(search);
-                return (!p.IsTopping || p.SoldSeparately) && p.IsActive && _catalog.Categories.Any(c => c.Id == p.CategoryId && c.IsActive) && matchCat && matchSearch;
+                return IsSellable(p) && matchCat && matchSearch;
             }).OrderBy(p => p.IsSoldOut).ThenBy(p => SelectedCategoryId == BestSellers ? _bestSellerIds.IndexOf(p.Id) : 0)
                 .ThenBy(p => categoryOrder.GetValueOrDefault(p.CategoryId)).ToList();
+        }
+
+        private bool IsSellable(Product p) => (!p.IsTopping || p.SoldSeparately) && p.IsActive && _catalog.Categories.Any(c => c.Id == p.CategoryId && c.IsActive);
+
+        /// <summary>
+        /// Items taking part in a promotion running today (any hour), with the deal to show on their tile.
+        /// Happy hour covers the whole order and "buy X get Y" without a list covers every drink, so neither lists items.
+        /// </summary>
+        private Dictionary<string, string> DealLabels()
+        {
+            var labels = new Dictionary<string, string>();
+            foreach (var promo in _promotions.Promotions.Where(p => p.RunsOn(DataStoreService.CafeNow) && p.Type != "Giờ vàng"))
+            {
+                string label = promo.Type == "Combo" ? $"{promo.Name} · {promo.ComboPrice:N0}đ" : promo.Name;
+                foreach (var product in _catalog.Products.Where(p => promo.Slots.Count > 0 ? promo.Slots.Any(s => s.Accepts(p)) : promo.ProductIds.Contains(p.Id)))
+                    labels.TryAdd(product.Id, label);
+            }
+            return labels;
         }
 
         /// <summary>Most-sold products of the last 7 days by cups/portions, best first.</summary>

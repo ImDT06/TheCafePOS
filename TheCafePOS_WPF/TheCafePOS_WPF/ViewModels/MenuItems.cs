@@ -7,15 +7,16 @@ namespace TheCafePOS_WPF.ViewModels
     /// <summary>A product as shown on the POS menu grid.</summary>
     public sealed class MenuTile
     {
-        public MenuTile(Product product)
+        /// <param name="deal">Promotion to show instead of the usual size/old-price line (in the "Ưu đãi" section).</param>
+        public MenuTile(Product product, string? deal = null)
         {
             Product = product;
             var meta = new List<string>();
             if (product.OriginalPrice > product.BasePrice) meta.Add($"{product.OriginalPrice:N0}đ");
             if (product.IsBeverage && product.Sizes.Count > 1) meta.Add($"Size {product.DefaultSize}");
-            MetaText = string.Join("  ", meta);
+            MetaText = deal ?? string.Join("  ", meta);
             // Strike through only when the line is just the old price.
-            MetaStrikethrough = product.OriginalPrice > product.BasePrice && meta.Count == 1;
+            MetaStrikethrough = deal is null && product.OriginalPrice > product.BasePrice && meta.Count == 1;
         }
 
         public Product Product { get; }

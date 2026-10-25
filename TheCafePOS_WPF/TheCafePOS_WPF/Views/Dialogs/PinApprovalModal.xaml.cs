@@ -1,15 +1,18 @@
 using System.Windows;
 using System.Windows.Input;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs
 {
     public partial class PinApprovalModal : Window
     {
+        private readonly IAuthService _auth;
         private readonly string _actionName;
 
-        public PinApprovalModal(string actionName)
+        public PinApprovalModal(string actionName, IAuthService auth)
         {
+            _auth = auth;
             InitializeComponent();
             _actionName = actionName;
             TxtActionTitle.Text = $"Hành động: {actionName}";
@@ -30,7 +33,7 @@ namespace TheCafePOS_WPF.Views.Dialogs
         {
             try
             {
-                AuthService.Instance.Approve(TxtUsername.Text, TxtPin.Password, _actionName);
+                _auth.Approve(TxtUsername.Text, TxtPin.Password, _actionName);
                 DialogResult = true;
             }
             catch (System.Exception ex)

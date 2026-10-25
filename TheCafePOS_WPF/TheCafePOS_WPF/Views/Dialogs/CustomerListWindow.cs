@@ -4,13 +4,15 @@ using System.Windows.Data;
 using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Views.Dialogs;
 
 // Member list with search, tier / inactivity filters, add / edit / delete and purchase history.
 public sealed class CustomerListWindow : Window
 {
-    private readonly DataStoreService _store = DataStoreService.Instance;
+    private readonly ICustomerService _customers;
+    private readonly IAuthService _auth;
     private readonly TextBox _search = new() { Padding = new Thickness(8), FontSize = 15 };
     private readonly ComboBox _filter = new() { Width = 220, Margin = new Thickness(8, 0, 0, 0), FontSize = 14, ItemsSource = new[] { "Tất cả", "Lâu chưa quay lại (30+ ngày)", "Kim cương", "Vàng", "Bạc", "Mới" }, SelectedIndex = 0 };
     private readonly DataGrid _grid = new() { IsReadOnly = true, AutoGenerateColumns = false, SelectionMode = DataGridSelectionMode.Single };
@@ -21,9 +23,11 @@ public sealed class CustomerListWindow : Window
     private readonly DataGrid _history = new() { IsReadOnly = true, AutoGenerateColumns = false, Height = 260 };
     private readonly TextBlock _summary = PosUi.Text("", 13, color: PosUi.Muted);
 
-    public CustomerListWindow()
+    public CustomerListWindow(ICustomerService customers, IAuthService auth)
     {
-        AuthService.Instance.RequireManager();
+        _customers = customers;
+        _auth = auth;
+        _auth.RequireManager();
         Title = "Khách hàng thành viên"; Width = 1100; Height = 720; MinWidth = 820; MinHeight = 520; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current.TryFindResource("PosWindow") is Style style) Style = style;
         EmptyState.SetText(_grid, "Chưa có khách nào khớp bộ lọc");
@@ -75,7 +79,7 @@ public sealed class CustomerListWindow : Window
     {
         string q = _search.Text.Trim();
         string digits = new(q.Where(char.IsDigit).ToArray());
-        var list = _store.Customers.Where(c => q.Length == 0 || c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || digits.Length > 0 && c.Phone.Contains(digits));
+        var list = _customers.Customers.Where(c => q.Length == 0 || c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || digits.Length > 0 && c.Phone.Contains(digits));
         list = _filter.SelectedIndex switch
         {
             1 => list.Where(c => c.LastVisit is null || c.LastVisit < DateTime.Now.AddDays(-30)),
@@ -84,15 +88,15 @@ public sealed class CustomerListWindow : Window
         };
         var selected = (_grid.SelectedItem as Customer)?.Phone;
         _grid.ItemsSource = list.OrderByDescending(c => c.TotalSpent).ToList();
-        _grid.SelectedItem = _store.FindCustomer(selected ?? "");
-        _summary.Text = $"{_store.Customers.Count} thành viên, {_store.Customers.Sum(c => c.Points):N0} điểm chưa đổi, tổng chi {_store.Customers.Sum(c => c.TotalSpent):N0}đ";
+        _grid.SelectedItem = _customers.FindCustomer(selected ?? "");
+        _summary.Text = $"{_customers.Customers.Count} thành viên, {_customers.Customers.Sum(c => c.Points):N0} điểm chưa đổi, tổng chi {_customers.Customers.Sum(c => c.TotalSpent):N0}đ";
     }
 
     private void ShowSelected()
     {
         _delete.IsEnabled = _grid.SelectedItem is Customer;
         if (_grid.SelectedItem is not Customer c) { _detail.Text = "Khách mới: nhập số điện thoại và tên rồi bấm Lưu."; _phone.Clear(); _name.Clear(); _history.ItemsSource = null; return; }
-        var orders = _store.CustomerOrders(c.Phone);
+        var orders = _customers.CustomerOrders(c.Phone);
         _detail.Text = $"Hạng {c.Tier}, {c.Points:N0} điểm, {c.VisitCount} lần mua, trung bình {(orders.Count == 0 ? 0 : orders.Average(o => o.TotalAmount)):N0}đ/đơn\nThành viên từ {c.CreatedAt:dd/MM/yyyy}";
         _phone.Text = c.Phone;
         _name.Text = c.Name;
@@ -103,10 +107,10 @@ public sealed class CustomerListWindow : Window
     {
         try
         {
-            if (_grid.SelectedItem is Customer c) { _store.UpdateCustomer(c.Phone, _name.Text, _phone.Text); Refresh(); Toast.Show(this, "Đã lưu thông tin khách."); return; }
-            var created = _store.RegisterCustomer(_phone.Text, _name.Text);
+            if (_grid.SelectedItem is Customer c) { _customers.UpdateCustomer(c.Phone, _name.Text, _phone.Text); Refresh(); Toast.Show(Embedded.HostOf(this), "Đã lưu thông tin khách."); return; }
+            var created = _customers.RegisterCustomer(_phone.Text, _name.Text);
             _search.Clear(); Refresh(); _grid.SelectedItem = created; _grid.ScrollIntoView(created);
-            Toast.Show(this, $"Đã thêm {created.Name}.");
+            Toast.Show(Embedded.HostOf(this), $"Đã thêm {created.Name}.");
         }
         catch (InvalidOperationException ex) { FieldError.Mark(ex.Message.Contains("điện thoại") ? _phone : _name, ex.Message); }
     }
@@ -114,8 +118,8 @@ public sealed class CustomerListWindow : Window
     private void Delete()
     {
         if (_grid.SelectedItem is not Customer c) return;
-        if (MessageBox.Show(this, $"Xóa thành viên {c.Name} ({c.Phone})? {c.Points:N0} điểm chưa đổi sẽ mất. Các đơn đã bán vẫn giữ trong báo cáo.", "Xóa khách", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        try { _store.DeleteCustomer(c.Phone); _grid.SelectedItem = null; Refresh(); ShowSelected(); Toast.Show(this, $"Đã xóa {c.Name}."); }
-        catch (InvalidOperationException ex) { Toast.Show(this, ex.Message, true); }
+        if (MessageBox.Show(Embedded.HostOf(this), $"Xóa thành viên {c.Name} ({c.Phone})? {c.Points:N0} điểm chưa đổi sẽ mất. Các đơn đã bán vẫn giữ trong báo cáo.", "Xóa khách", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try { _customers.DeleteCustomer(c.Phone); _grid.SelectedItem = null; Refresh(); ShowSelected(); Toast.Show(Embedded.HostOf(this), $"Đã xóa {c.Name}."); }
+        catch (InvalidOperationException ex) { Toast.Show(Embedded.HostOf(this), ex.Message, true); }
     }
 }

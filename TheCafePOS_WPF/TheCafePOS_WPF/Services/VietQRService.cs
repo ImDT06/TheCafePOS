@@ -1,4 +1,5 @@
 using System;
+using TheCafePOS_WPF.Services.Interfaces;
 
 namespace TheCafePOS_WPF.Services
 {
@@ -13,13 +14,22 @@ namespace TheCafePOS_WPF.Services
         public string SePayTokenProtected { get; set; } = "";
         [System.Text.Json.Serialization.JsonPropertyName("SePayToken")] public string LegacySePayToken { get; set; } = "";
     }
-    public class VietQRService
+    public class VietQRService : IVietQRService
     {
-        public static BankSettings Settings
+        private readonly LocalDatabase _db;
+        private readonly IAuthService _auth;
+
+        public VietQRService(LocalDatabase db, IAuthService auth)
+        {
+            _db = db;
+            _auth = auth;
+        }
+
+        public BankSettings Settings
         {
             get
             {
-                var s = LocalDatabase.Instance.Read<BankSettings>("bank") ?? new();
+                var s = _db.Read<BankSettings>("bank") ?? new();
                 try
                 {
                     s.SePayToken = s.SePayTokenProtected.Length > 0
@@ -30,18 +40,18 @@ namespace TheCafePOS_WPF.Services
                 return s;
             }
         }
-        public static void ValidateSettings() => Validate(Settings);
+        public void ValidateSettings() => Validate(Settings);
         private static void Validate(BankSettings settings)
         {
             if (string.IsNullOrWhiteSpace(settings.BankId) || !System.Text.RegularExpressions.Regex.IsMatch(settings.BankId, "^[A-Za-z0-9]+$") || !System.Text.RegularExpressions.Regex.IsMatch(settings.AccountNo, "^[0-9]{4,30}$") || string.IsNullOrWhiteSpace(settings.AccountName))
                 throw new InvalidOperationException("Vui lòng cấu hình tài khoản nhận tiền hợp lệ trong Quản trị > Chuyển khoản.");
         }
-        public static void SaveSettings(BankSettings settings)
+        public void SaveSettings(BankSettings settings)
         {
-            AuthService.Instance.RequireManager(); Validate(settings);
+            _auth.RequireManager(); Validate(settings);
             settings.SePayTokenProtected = string.IsNullOrWhiteSpace(settings.SePayToken) ? "" : Convert.ToBase64String(WindowsSessionProtection.Transform(System.Text.Encoding.UTF8.GetBytes(settings.SePayToken.Trim()), true));
             settings.LegacySePayToken = "";
-            LocalDatabase.Instance.Write("bank", settings);
+            _db.Write("bank", settings);
         }
 
         // Short, letters/digits only (banks strip symbols): CF + ddMM + 4 chars of the checkout id, e.g. "CF1010A3F9".
@@ -51,7 +61,7 @@ namespace TheCafePOS_WPF.Services
             string tail = new string(orderRef.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
             return $"CF{DateTime.Now:ddMM}{(tail.Length >= 4 ? tail[..4] : tail.PadLeft(4, '0'))}";
         }
-        public static string GenerateQRUrl(decimal amount, string orderRef)
+        public string GenerateQRUrl(decimal amount, string orderRef)
         {
             var settings = Settings;
             Validate(settings);

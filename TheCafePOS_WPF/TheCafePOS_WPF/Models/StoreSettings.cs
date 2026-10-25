@@ -18,6 +18,10 @@ public class StoreSettings
     public string DisplayName => string.IsNullOrWhiteSpace(ShopName) ? "TheCafePOS" : ShopName;
     // Cashiers may give up to this % of the subtotal without a manager; managers are never limited.
     public int CashierDiscountLimitPercent { get; set; }
+    // 0 turns VAT off. Included: menu prices already contain the tax, receipts only show it.
+    public int VatPercent { get; set; }
+    public bool PricesIncludeVat { get; set; } = true;
+    public string ReceiptFooter { get; set; } = "Cảm ơn quý khách, hẹn gặp lại!";
     public List<SalesChannel> Channels { get; set; } = new()
     {
         new() { Name = "GrabFood", MarkupPercent = 25 },

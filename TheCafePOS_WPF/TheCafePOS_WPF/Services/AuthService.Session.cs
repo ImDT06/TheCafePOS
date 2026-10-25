@@ -58,11 +58,11 @@ public sealed partial class AuthService
     public void RememberCurrentSession(bool remember)
     {
         RequireSignedIn();
-        if (!remember) { LocalDatabase.Instance.Write("session", ""); return; }
+        if (!remember) { _db.Write("session", ""); return; }
         var account = CurrentUser!;
         var payload = JsonSerializer.SerializeToUtf8Bytes(new SavedSession(account.Username,
             account.SessionVersion, CredentialId(account), DateTime.UtcNow.AddDays(30)));
-        try { LocalDatabase.Instance.Write("session", Convert.ToBase64String(WindowsSessionProtection.Transform(payload, true))); }
+        try { _db.Write("session", Convert.ToBase64String(WindowsSessionProtection.Transform(payload, true))); }
         finally { CryptographicOperations.ZeroMemory(payload); }
     }
 
@@ -72,7 +72,7 @@ public sealed partial class AuthService
         if (CurrentUser != null) return false;
         try
         {
-            var encoded = LocalDatabase.Instance.Read<string>("session");
+            var encoded = _db.Read<string>("session");
             if (string.IsNullOrEmpty(encoded)) return false;
             var payload = WindowsSessionProtection.Transform(Convert.FromBase64String(encoded), false);
             SavedSession? saved;

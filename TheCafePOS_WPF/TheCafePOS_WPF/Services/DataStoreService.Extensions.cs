@@ -9,7 +9,7 @@ public partial class DataStoreService
 
     public void DeleteProduct(string id)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (!Products.Any(p => p.Id == id)) throw new InvalidOperationException("Món không tồn tại.");
         // Paid orders keep their own item snapshot, so history and reports are unaffected.
         Mutate(() =>
@@ -26,7 +26,7 @@ public partial class DataStoreService
     }
     public void DeleteCategory(string id, bool deleteProducts = false)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         if (!Categories.Any(c => c.Id == id)) throw new InvalidOperationException("Danh mục không tồn tại.");
         if (!deleteProducts && Products.Any(p => p.CategoryId == id)) throw new InvalidOperationException("Không thể xóa danh mục đang chứa món. Chuyển hoặc xóa món trước.");
         Mutate(() =>
@@ -40,7 +40,7 @@ public partial class DataStoreService
 
     public void SavePackagingItem(PackagingItem item)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         string name = item.Name.Trim(), unit = item.Unit.Trim();
         if (name.Length == 0 || unit.Length == 0) throw new InvalidOperationException("Tên và đơn vị tính không được trống.");
         if (item.WarningThreshold < 0) throw new InvalidOperationException("Ngưỡng cảnh báo phải là số nguyên không âm.");
@@ -56,11 +56,11 @@ public partial class DataStoreService
     }
     public void DeletePackagingItem(string id)
     {
-        AuthService.Instance.RequireManager();
+        _auth.RequireManager();
         var item = PackagingInventory.FirstOrDefault(p => p.Id == id) ?? throw new InvalidOperationException("Bao bì không tồn tại.");
         if (CorePackagingIds.Contains(id)) throw new InvalidOperationException("Không thể xóa bao bì mặc định (ly M/L/XL, nắp, ống hút) vì hệ thống dùng khi bán hàng.");
         if (Products.Any(p => p.Sizes.Any(s => s.PackagingId == id))) throw new InvalidOperationException("Không thể xóa bao bì đang được gán cho size của món.");
-        if (HoldOrderService.Instance.HeldOrders.Any(h => h.Items.Any(i => i.PackagingId == id)) || Draft?.Items.Any(i => i.PackagingId == id) == true)
+        if ((_db.Read<List<HeldOrderInfo>>("held-orders") ?? new()).Any(h => h.Items.Any(i => i.PackagingId == id)) || Draft?.Items.Any(i => i.PackagingId == id) == true)
             throw new InvalidOperationException("Bao bì đang được dùng trong giỏ hàng hoặc đơn giữ.");
         if (item.StockQuantity != 0) throw new InvalidOperationException("Kiểm kê tồn về 0 trước khi xóa để giữ lịch sử kho.");
         Mutate(() => PackagingInventory.Remove(item));

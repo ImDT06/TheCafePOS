@@ -1,30 +1,6 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $testProject = Join-Path $projectRoot 'TheCafePOS_WPF/TheCafePOS.RegressionTests/TheCafePOS.RegressionTests.csproj'
-dotnet build $testProject -c Release
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$testAssembly = Join-Path $projectRoot 'TheCafePOS_WPF/TheCafePOS.RegressionTests/bin/Release/net10.0-windows/TheCafePOS.RegressionTests.dll'
-$testDataDirectory = Join-Path $projectRoot ('artifacts/regression-' + [guid]::NewGuid().ToString('N'))
-dotnet $testAssembly (Join-Path $testDataDirectory 'checkout-flow') checkout-flow
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly (Join-Path $testDataDirectory 'menu-options') menu-options
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly (Join-Path $testDataDirectory 'report-dashboard') report-dashboard
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly (Join-Path $testDataDirectory 'americano') americano
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly (Join-Path $testDataDirectory 'management') management
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly $testDataDirectory create
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly $testDataDirectory reload
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly $testDataDirectory finance
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly $testDataDirectory finance-reload
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$sessionDataDirectory = Join-Path $testDataDirectory 'session'
-dotnet $testAssembly $sessionDataDirectory session
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet $testAssembly $sessionDataDirectory session-reload
+# Each xUnit test runs the real services over its own temporary database; the shop database is never touched.
+dotnet test $testProject -c Release --logger "console;verbosity=normal"
 exit $LASTEXITCODE

@@ -138,6 +138,7 @@
               <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="*" />
               <DataGridTextColumn Header="Vai trò" Binding="{Binding RoleLabel}" Width="100" />
               <DataGridCheckBoxColumn Header="Hoạt động" Binding="{Binding IsActive}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
+              <DataGridCheckBoxColumn Header="Có PIN" Binding="{Binding HasPin, Mode=OneWay}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
               <DataGridCheckBoxColumn Header="Đổi mật khẩu" Binding="{Binding MustChangePassword}" ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}" EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
             </DataGrid.Columns>
           </DataGrid>
@@ -150,6 +151,7 @@
                   <TextBlock Text="Quản lý nhân viên" FontWeight="Bold" Margin="0,0,0,12" />
                   <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="StaffName" Margin="0,4,0,10" />
                   <PasswordBox md:HintAssist.Hint="Mật khẩu mới (bỏ trống nếu không đổi)" x:Name="StaffPassword" Margin="0,4,0,10" />
+                  <PasswordBox md:HintAssist.Hint="Mã PIN 4–6 số để vào ca nhanh (bỏ trống nếu không đổi)" x:Name="StaffPin" MaxLength="6" InputScope="Number" Margin="0,4,0,10" />
                   <TextBlock Text="Các thao tác nhanh (dành cho tài khoản đang chọn):" TextWrapping="Wrap" Margin="0,16,0,8" />
                   <Button Content="Đặt lại mật khẩu tạm thời" Padding="8" Click="ResetPassword_Click" />
                   <Button Content="Khóa / Mở khóa tài khoản" Padding="8" Margin="0,8,0,0" Click="ToggleStaff_Click" />

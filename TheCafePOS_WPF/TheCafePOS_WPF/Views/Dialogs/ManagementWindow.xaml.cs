@@ -140,6 +140,7 @@ public partial class ManagementWindow : Window
         StaffName.Text = acc.Username;
         StaffName.IsReadOnly = true;
         StaffPassword.Clear();
+        StaffPin.Clear();
         SaveStaff.Content = "Cập nhật tài khoản";
     }
     private void NewStaff_Click(object sender, RoutedEventArgs e)
@@ -148,12 +149,14 @@ public partial class ManagementWindow : Window
         StaffName.Clear();
         StaffName.IsReadOnly = false;
         StaffPassword.Clear();
+        StaffPin.Clear();
         SaveStaff.Content = "Tạo tài khoản";
     }
     private void CreateStaff_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (Staff.SelectedItem is null && string.IsNullOrWhiteSpace(StaffName.Text)) throw FieldError.Mark(StaffName, "Nhập tên đăng nhập.");
         if ((Staff.SelectedItem is null || StaffPassword.Password.Length > 0) && StaffPassword.Password.Length < 8) throw FieldError.Mark(StaffPassword, "Mật khẩu tối thiểu 8 ký tự.");
+        if (StaffPin.Password.Length > 0 && !AuthService.IsValidPin(StaffPin.Password)) throw FieldError.Mark(StaffPin, "Mã PIN gồm 4–6 chữ số.");
         if (Staff.SelectedItem is StaffAccount acc)
         {
             if (!string.IsNullOrEmpty(StaffPassword.Password))
@@ -163,6 +166,7 @@ public partial class ManagementWindow : Window
         {
             _auth.CreateAccount(StaffName.Text, StaffPassword.Password, "Cashier");
         }
+        if (StaffPin.Password.Length > 0) _auth.SetPin((Staff.SelectedItem as StaffAccount)?.Username ?? StaffName.Text.Trim(), StaffPin.Password);
         NewStaff_Click(sender, e);
     });
     private void DeleteStaff_Click(object sender, RoutedEventArgs e)

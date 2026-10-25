@@ -17,6 +17,10 @@ public class StaffAccount
     public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Cashier" => "Nhân viên", _ => role };
     public string Salt { get; set; } = "";
     public string PasswordHash { get; set; } = "";
+    // Staff quick login on the shared till; empty = no PIN. Hashed like the password, with its own salt.
+    public string PinSalt { get; set; } = "";
+    public string PinHash { get; set; } = "";
+    [System.Text.Json.Serialization.JsonIgnore] public bool HasPin => PinHash.Length > 0;
 }
 public class ApprovalRecord
 {
@@ -102,14 +106,34 @@ public sealed partial class AuthService : Interfaces.IAuthService
         var account = _state.Accounts.FirstOrDefault(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
         if (account is null || !account.IsActive || !CryptographicOperations.FixedTimeEquals(Hash(password, Convert.FromBase64String(account.Salt)), Convert.FromBase64String(account.PasswordHash)))
         {
-            int count = attempt.Count + 1;
-            _attempts[username] = (count >= 5 ? 0 : count, count >= 5 ? DateTime.UtcNow.AddMinutes(1) : DateTime.MinValue);
+            RecordFailure(username);
             throw new InvalidOperationException("Tên đăng nhập hoặc mật khẩu không đúng.");
         }
         _attempts.Remove(username);
         return account;
     }
+    // Wrong passwords and wrong PINs share one counter, so switching between them does not reset the lock.
+    private void RecordFailure(string username)
+    {
+        int count = _attempts.GetValueOrDefault(username).Count + 1;
+        _attempts[username] = (count >= 5 ? 0 : count, count >= 5 ? DateTime.UtcNow.AddMinutes(1) : DateTime.MinValue);
+    }
     public void Login(string username, string password) => CurrentUser = Verify(username, password);
+    public static bool IsValidPin(string pin) => pin.Length is >= 4 and <= 6 && pin.All(char.IsAsciiDigit);
+    // Staff only: the owner signs in and approves with the full password.
+    public void LoginWithPin(string username, string pin)
+    {
+        if (_attempts.GetValueOrDefault(username).Until > DateTime.UtcNow) throw new InvalidOperationException("Đăng nhập sai nhiều lần. Thử lại sau 1 phút.");
+        var account = _state.Accounts.FirstOrDefault(a => a.Username == username);
+        if (account is not { IsActive: true, Role: "Cashier", HasPin: true }
+            || !CryptographicOperations.FixedTimeEquals(Hash(pin, Convert.FromBase64String(account.PinSalt)), Convert.FromBase64String(account.PinHash)))
+        {
+            RecordFailure(username);
+            throw new InvalidOperationException("Mã PIN không đúng.");
+        }
+        _attempts.Remove(username);
+        CurrentUser = account;
+    }
     // Payment confirmed by a bank feed (e.g. SePay) instead of a manager; only valid for payment actions.
     public void ApproveBySystem(string paymentAction, string source)
     {
@@ -152,6 +176,24 @@ public sealed partial class AuthService : Interfaces.IAuthService
         if (password.Length < 8) throw new InvalidOperationException("Mật khẩu tối thiểu 8 ký tự.");
         var salt = RandomNumberGenerator.GetBytes(16);
         account.Salt = Convert.ToBase64String(salt); account.PasswordHash = Convert.ToBase64String(Hash(password, salt));
+    }
+    private static void SetPinHash(StaffAccount account, string pin)
+    {
+        if (!IsValidPin(pin)) throw new InvalidOperationException("Mã PIN gồm 4–6 chữ số.");
+        var salt = RandomNumberGenerator.GetBytes(16);
+        account.PinSalt = Convert.ToBase64String(salt); account.PinHash = Convert.ToBase64String(Hash(pin, salt));
+    }
+    public void SetPin(string username, string pin)
+    {
+        var target = ManagedAccount(username);
+        UpdateAccount(target, "Đặt mã PIN", () => SetPinHash(target, pin));
+        _attempts.Remove(username);
+    }
+    public void ChangePin(string password, string newPin)
+    {
+        if (CurrentUser is not { Role: "Cashier" }) throw new InvalidOperationException("Mã PIN chỉ dành cho nhân viên; chủ quán đăng nhập bằng mật khẩu.");
+        var account = Verify(CurrentUser.Username, password);
+        UpdateAccount(account, "Đổi mã PIN", () => SetPinHash(account, newPin));
     }
     public void ChangePassword(string oldPassword, string newPassword)
     {

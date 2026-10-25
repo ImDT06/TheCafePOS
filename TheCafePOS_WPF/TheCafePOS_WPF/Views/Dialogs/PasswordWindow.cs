@@ -18,7 +18,11 @@ public sealed class PasswordWindow : Window
             var box = new PasswordBox { Padding = new Thickness(10), MinHeight = 44, Margin = new Thickness(0, 5, 0, 12) }; panel.Children.Add(box); return box;
         }
         var old = resetUsername is null ? Field("Mật khẩu hiện tại") : null;
-        var password = Field("Mật khẩu mới (tối thiểu 8 ký tự)"); var confirm = Field("Nhập lại mật khẩu mới");
+        // Staff may change only their PIN here: leave the new password empty.
+        bool staffPin = resetUsername is null && auth.CurrentUser is { Role: "Cashier", MustChangePassword: false };
+        var password = Field(staffPin ? "Mật khẩu mới (bỏ trống nếu không đổi)" : "Mật khẩu mới (tối thiểu 8 ký tự)"); var confirm = Field("Nhập lại mật khẩu mới");
+        var pin = staffPin ? Field("Mã PIN mới 4–6 số (bỏ trống nếu không đổi)") : null;
+        if (pin is not null) pin.MaxLength = 6;
         var error = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) }; panel.Children.Add(error);
         var button = new Button { Content = "Lưu mật khẩu", Style = (Style)FindResource("PrimaryButton") };
         error.Foreground = PosUi.Danger;
@@ -31,8 +35,13 @@ public sealed class PasswordWindow : Window
             try
             {
                 if (password.Password != confirm.Password) throw new InvalidOperationException("Mật khẩu nhập lại chưa khớp.");
-                if (resetUsername is null) _auth.ChangePassword(old!.Password, password.Password);
-                else _auth.ResetPassword(resetUsername, password.Password);
+                bool newPin = pin is { Password.Length: > 0 };
+                if (newPin && !AuthService.IsValidPin(pin!.Password)) throw new InvalidOperationException("Mã PIN gồm 4–6 chữ số.");
+                if (!newPin && password.Password.Length == 0 && pin is not null) throw new InvalidOperationException("Nhập mật khẩu mới hoặc mã PIN mới.");
+                bool newPassword = password.Password.Length > 0 || pin is null;
+                if (resetUsername is not null) _auth.ResetPassword(resetUsername, password.Password);
+                else if (newPassword) _auth.ChangePassword(old!.Password, password.Password);
+                if (newPin) _auth.ChangePin(newPassword ? password.Password : old!.Password, pin!.Password);
                 DialogResult = true;
             }
             catch (Exception ex) { error.Text = ex.Message; }

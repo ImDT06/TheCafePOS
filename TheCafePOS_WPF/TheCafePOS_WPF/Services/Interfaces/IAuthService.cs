@@ -10,6 +10,8 @@ namespace TheCafePOS_WPF.Services.Interfaces
         IReadOnlyList<StaffAccount> Accounts { get; }
 
         void Login(string username, string password);
+        /// <summary>Quick sign-in for staff on the shared till; the owner always uses the password.</summary>
+        void LoginWithPin(string username, string pin);
         void Logout();
         void RequireSignedIn();
         void RequireManager();
@@ -18,6 +20,10 @@ namespace TheCafePOS_WPF.Services.Interfaces
 
         void CreateAccount(string username, string password, string role);
         void ChangePassword(string oldPassword, string newPassword);
+        /// <summary>Staff change their own PIN, confirmed with their password.</summary>
+        void ChangePin(string password, string newPin);
+        /// <summary>Owner sets or replaces a staff member's PIN.</summary>
+        void SetPin(string username, string pin);
         void ResetPassword(string username, string temporaryPassword);
         void SetAccountActive(string username, bool active);
         void DeleteAccount(string username);

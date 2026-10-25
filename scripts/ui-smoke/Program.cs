@@ -29,7 +29,7 @@ partial class Preview {
   // Same container as the app, built after the data directory is chosen.
   var services=TheCafePOS_WPF.App.BuildServices();
   var app=new Application { ShutdownMode=ShutdownMode.OnExplicitShutdown }; foreach(var theme in new[]{"Touch","Workspace"}) app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source=new Uri("/TheCafePOS_WPF;component/Themes/"+theme+".xaml",UriKind.Relative) });
-  var auth=services.GetRequiredService<AuthService>();auth.CreateAccount("quan-ly","PreviewOnly!2026","Owner");auth.Login("quan-ly","PreviewOnly!2026");auth.CreateAccount("thu-ngan","PreviewOnly!2026","Cashier");
+  var auth=services.GetRequiredService<AuthService>();auth.CreateAccount("quan-ly","PreviewOnly!2026","Owner");auth.Login("quan-ly","PreviewOnly!2026");auth.CreateAccount("thu-ngan","PreviewOnly!2026","Cashier");auth.SetPin("thu-ngan","2468");
   var store=services.GetRequiredService<DataStoreService>();store.OpenShift(500000);
   var coffee=store.Products.Single(p=>p.Name=="Americano Classic");var item=OrderConfigurationService.Create(coffee,"M",100,100,2,Array.Empty<(string,int)>(),"Ít đá",store.Products);
   store.Checkout(new[]{item},"Cash",200000,"preview-order");services.GetRequiredService<HoldOrderService>().HoldOrder(new ObservableCollection<OrderItem>{item},110000,"Khách chờ bạn");

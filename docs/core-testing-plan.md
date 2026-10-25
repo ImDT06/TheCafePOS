@@ -9,7 +9,7 @@ Ngày lập: 21/10/2026. Mục đích: phục vụ môn Kiểm chứng phần m�
 | REQ-BH | Bán hàng và tính tiền | Thêm/sửa/xóa dòng món; size, topping, số lượng; tính đơn giá và tổng giỏ. |
 | REQ-TT | Thanh toán | Tiền mặt thiếu/đủ/dư; điều kiện thanh toán; lưu đơn; chống thanh toán lặp; phê duyệt QR ở tầng nghiệp vụ. |
 | REQ-KHO | Quản lý kho bao bì | Nhập kho, kiểm kê, điều chỉnh, trừ theo đơn; chặn tồn âm; lưu tồn và lịch sử nhất quán. |
-| REQ-DN | Đăng nhập và phân quyền | Đăng nhập hợp lệ/không hợp lệ, khóa tài khoản, vai trò nhân viên/quản lý/chủ quán. |
+| REQ-DN | Đăng nhập và phân quyền | Đăng nhập hợp lệ/không hợp lệ, khóa tài khoản, vai trò nhân viên/chủ quán. |
 | REQ-TD | Quản lý thực đơn | Thêm/sửa/xóa món và danh mục; kiểm tra dữ liệu; ngừng bán; bảo toàn lịch sử đơn. |
 
 Mở ca là tiền điều kiện của kiểm thử thanh toán, chưa tách thành một nhóm chức năng cần làm đầy đủ trong bài. Kiểm thử kho chính sử dụng **bao bì**, không suy rộng kết quả sang kho nguyên liệu/công thức.

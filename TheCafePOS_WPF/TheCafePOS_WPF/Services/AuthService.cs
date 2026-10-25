@@ -13,8 +13,8 @@ public class StaffAccount
     [System.Text.Json.Serialization.JsonIgnore] public string RoleLabel => RoleName(Role);
 
     /// <summary>Vietnamese label for a stored role; the stored values stay English.</summary>
-    // "Cashier" is the stored value for the Nhân viên role (sells, makes and hands over drinks); kept so saved accounts need no migration.
-    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Manager" => "Quản lý", "Cashier" => "Nhân viên", _ => role };
+    // Two roles: the owner runs the shop; "Cashier" is the stored value for Nhân viên (sells, makes and hands over drinks).
+    public static string RoleName(string role) => role switch { "Owner" => "Chủ quán", "Cashier" => "Nhân viên", _ => role };
     public string Salt { get; set; } = "";
     public string PasswordHash { get; set; } = "";
 }
@@ -41,11 +41,14 @@ public sealed partial class AuthService : Interfaces.IAuthService
         _db = db;
         _currentShift = currentShift;
         _state = db.Read<AuthState>("auth") ?? new();
+        // The Quản lý role was dropped: its accounts become Nhân viên and their remembered sessions stop working.
+        foreach (var account in _state.Accounts.Where(a => a.Role == "Manager")) { account.Role = "Cashier"; account.SessionVersion++; }
     }
     private readonly Dictionary<string, (int Count, DateTime Until)> _attempts = new(StringComparer.OrdinalIgnoreCase);
     public StaffAccount? CurrentUser { get; private set; }
     public bool NeedsSetup => _state.Accounts.Count == 0;
-    public bool IsManager => CurrentUser is { IsActive: true, MustChangePassword: false } && CurrentUser.Role is "Owner" or "Manager";
+    // Management rights (menu, stock, reports, approvals) belong to the owner only.
+    public bool IsManager => CurrentUser is { IsActive: true, MustChangePassword: false, Role: "Owner" };
     public void RequireSignedIn()
     {
         if (CurrentUser is not { IsActive: true, MustChangePassword: false }) throw new InvalidOperationException("Vui lòng đăng nhập và đổi mật khẩu tạm trước khi tiếp tục.");
@@ -59,8 +62,8 @@ public sealed partial class AuthService : Interfaces.IAuthService
     {
         RequireSignedIn();
         var record = _state.Audit.LastOrDefault(a => a.Operator == CurrentUser!.Username && a.Action == action
-            && _state.Accounts.Any(u => u.Username == a.Approver && u.IsActive && !u.MustChangePassword && u.Role is "Owner" or "Manager"));
-        return record?.Approver ?? throw new InvalidOperationException("Cần quản lý phê duyệt thao tác này.");
+            && _state.Accounts.Any(u => u.Username == a.Approver && u.IsActive && !u.MustChangePassword && u.Role == "Owner"));
+        return record?.Approver ?? throw new InvalidOperationException("Cần chủ quán phê duyệt thao tác này.");
     }
     public static string PaymentApprovalAction(string orderId, decimal amount) => $"Đã kiểm tra nhận {amount:N0}đ — POS {orderId}";
     public static string DiscountApprovalAction(string orderId, decimal amount, string reason) => $"Giảm giá {amount:N0}đ ({reason.Trim()}) — POS {orderId}";
@@ -74,7 +77,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     public IReadOnlyList<StaffAccount> Accounts => _state.Accounts.AsReadOnly();
     public void RequireManager()
     {
-        if (!IsManager) throw new InvalidOperationException("Chức năng chỉ dành cho quản lý.");
+        if (!IsManager) throw new InvalidOperationException("Chức năng chỉ dành cho chủ quán.");
     }
     public void CreateAccount(string username, string password, string role)
     {
@@ -83,8 +86,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
         username = username.Trim();
         if (username.Length < 3 || password.Length < 8) throw new InvalidOperationException("Tên đăng nhập tối thiểu 3 ký tự; mật khẩu tối thiểu 8 ký tự.");
         if (_state.Accounts.Any(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) throw new InvalidOperationException("Tên đăng nhập đã tồn tại.");
-        if (!first && role is not ("Cashier" or "Manager")) throw new InvalidOperationException("Vai trò không hợp lệ.");
-        if (!first && role == "Manager" && CurrentUser?.Role != "Owner") throw new InvalidOperationException("Chỉ chủ quán được tạo quản lý.");
+        if (!first && role != "Cashier") throw new InvalidOperationException("Chỉ tạo được tài khoản nhân viên.");
         byte[] salt = RandomNumberGenerator.GetBytes(16);
         var account = new StaffAccount { Username = username, Role = first ? "Owner" : role, Salt = Convert.ToBase64String(salt), PasswordHash = Convert.ToBase64String(Hash(password, salt)) };
         _state.Accounts.Add(account);
@@ -121,7 +123,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     {
         RequireSignedIn();
         var account = Verify(username, password);
-        if (account.MustChangePassword || account.Role is not ("Owner" or "Manager")) throw new InvalidOperationException("Tài khoản không có quyền duyệt hoặc cần đổi mật khẩu tạm.");
+        if (account.MustChangePassword || account.Role != "Owner") throw new InvalidOperationException("Tài khoản không có quyền duyệt hoặc cần đổi mật khẩu tạm.");
         var record = new ApprovalRecord { Operator = CurrentUser?.Username ?? "", Approver = account.Username, Action = action };
         _state.Audit.Add(record);
         try { _db.Write("auth", _state); }
@@ -162,7 +164,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     {
         RequireManager();
         var target = _state.Accounts.FirstOrDefault(a => a.Username == username) ?? throw new InvalidOperationException("Tài khoản không tồn tại.");
-        if (target.Username == CurrentUser!.Username || target.Role == "Owner" || CurrentUser.Role != "Owner" && target.Role != "Cashier") throw new InvalidOperationException("Bạn không được thay đổi tài khoản này. Dùng Đổi mật khẩu cho tài khoản của mình.");
+        if (target.Username == CurrentUser!.Username || target.Role == "Owner") throw new InvalidOperationException("Bạn không được thay đổi tài khoản này. Dùng Đổi mật khẩu cho tài khoản của mình.");
         return target;
     }
     public void ResetPassword(string username, string temporaryPassword)
@@ -187,13 +189,5 @@ public sealed partial class AuthService : Interfaces.IAuthService
         // Orders, shifts and audit keep the username as text, so history stays readable.
         UpdateAccount(target, "Xóa tài khoản", () => _state.Accounts.Remove(target));
         _attempts.Remove(username);
-    }
-    public void UpdateAccountRole(string username, string role)
-    {
-        var target = ManagedAccount(username);
-        if (role is not ("Cashier" or "Manager")) throw new InvalidOperationException("Vai trò không hợp lệ.");
-        if (role == "Manager" && CurrentUser?.Role != "Owner") throw new InvalidOperationException("Chỉ chủ quán được bổ nhiệm quản lý.");
-        if (target.Role == role) return;
-        UpdateAccount(target, $"Đổi vai trò {StaffAccount.RoleName(target.Role)} → {StaffAccount.RoleName(role)}", () => target.Role = role);
     }
 }

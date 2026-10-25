@@ -23,9 +23,8 @@ internal static class FinanceRegression
             Console.WriteLine($"Completed {checks} finance restart checks."); return;
         }
         auth.CreateAccount("finance-cashier", "CashierStart!2026", "Cashier");
-        auth.CreateAccount("finance-manager", "ManagerStart!2026", "Manager");
-        auth.Login("finance-manager", "ManagerStart!2026");
-        Reject(() => auth.ResetPassword("owner", "ResetOwner!2026"), "Manager cannot reset owner password");
+        Reject(() => auth.CreateAccount("finance-manager", "ManagerStart!2026", "Manager"), "Only staff accounts can be created");
+        Reject(() => auth.ResetPassword("owner", "ResetOwner!2026"), "Owner password cannot be reset through staff reset");
         Reject(() => auth.SetAccountActive("owner", false), "Owner cannot be disabled");
         auth.ResetPassword("finance-cashier", "Temporary!2026");
         auth.Login("finance-cashier", "Temporary!2026");
@@ -36,7 +35,7 @@ internal static class FinanceRegression
         Check(!auth.CurrentUser!.MustChangePassword, "Successful password change clears reset flag");
         Reject(() => auth.Login("finance-cashier", "Temporary!2026"), "Old password no longer valid");
         auth.Login("finance-cashier", "CashierNew!2026");
-        Reject(() => auth.ResetPassword("finance-manager", "Forbidden!2026"), "Cashier cannot reset manager password");
+        Reject(() => auth.ResetPassword("owner", "Forbidden!2026"), "Cashier cannot reset owner password");
         auth.Login("owner", "OwnerPass!2026");
         auth.SetAccountActive("finance-cashier", false);
         Reject(() => auth.Login("finance-cashier", "CashierNew!2026"), "Disabled account cannot log in");

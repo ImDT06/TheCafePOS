@@ -150,10 +150,6 @@
                   <TextBlock Text="Quản lý nhân viên" FontWeight="Bold" Margin="0,0,0,12" />
                   <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="StaffName" Margin="0,4,0,10" />
                   <PasswordBox md:HintAssist.Hint="Mật khẩu mới (bỏ trống nếu không đổi)" x:Name="StaffPassword" Margin="0,4,0,10" />
-                  <ComboBox md:HintAssist.Hint="Vai trò" x:Name="StaffRole" SelectedIndex="0" Margin="0,4,0,10">
-                    <ComboBoxItem Content="Nhân viên" Tag="Cashier" />
-                    <ComboBoxItem Content="Quản lý" Tag="Manager" />
-                  </ComboBox>
                   <TextBlock Text="Các thao tác nhanh (dành cho tài khoản đang chọn):" TextWrapping="Wrap" Margin="0,16,0,8" />
                   <Button Content="Đặt lại mật khẩu tạm thời" Padding="8" Click="ResetPassword_Click" />
                   <Button Content="Khóa / Mở khóa tài khoản" Padding="8" Margin="0,8,0,0" Click="ToggleStaff_Click" />
@@ -176,7 +172,7 @@
                 <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Số tài khoản" x:Name="BankAccount" />
                 <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Tên chủ tài khoản" x:Name="BankOwner" />
                 <PasswordBox Margin="0,8,0,8" md:HintAssist.Hint="API Token SePay (không bắt buộc)" x:Name="SePayToken" ToolTip="my.sepay.vn → Cấu hình công ty → API Access → Thêm API" />
-                <TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: quản lý kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,8,0,16" />
+                <TextBlock Text="Có token: màn QR tự xác nhận khi tiền vào đúng nội dung và số tiền. Không có token hoặc mất mạng: chủ quán kiểm tra giao dịch thực tế rồi duyệt thủ công." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,8,0,16" />
                 <Button Style="{StaticResource PrimaryButton}" Content="Lưu thông tin chuyển khoản" Padding="8" Click="SaveBank_Click" />
               </StackPanel>
             </Border>

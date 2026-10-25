@@ -148,10 +148,15 @@ internal static class ManagementRegression
 
         // Staff accounts
         auth.CreateAccount("mgmt-cashier", "CashierPass!2026", "Cashier");
-        auth.UpdateAccountRole("mgmt-cashier", "Manager");
-        Check(auth.Accounts.Single(a => a.Username == "mgmt-cashier").Role == "Manager", "Owner can promote cashier to manager");
+        Reject(() => auth.CreateAccount("mgmt-manager", "ManagerPass!2026", "Manager"), "Owner cannot create a manager account");
         Reject(() => auth.DeleteAccount("mgmt-owner"), "Cannot delete own owner account");
-        auth.UpdateAccountRole("mgmt-cashier", "Cashier");
+        // Data saved before the Quản lý role was dropped.
+        var legacy = TestHost.Database.Read<AuthState>("auth")!;
+        legacy.Accounts.Single(a => a.Username == "mgmt-cashier").Role = "Manager";
+        TestHost.Database.Write("auth", legacy);
+        Check(TestHost.NewAuth().Accounts.Single(a => a.Username == "mgmt-cashier").Role == "Cashier", "Legacy manager account loads as staff");
+        legacy.Accounts.Single(a => a.Username == "mgmt-cashier").Role = "Cashier";
+        TestHost.Database.Write("auth", legacy);
         auth.Login("mgmt-cashier", "CashierPass!2026");
         Check(!store.DiscountNeedsApproval(100000, 10000) && store.DiscountNeedsApproval(100000, 10001), "Cashier discount above the limit needs approval");
         store.OpenShift(0);

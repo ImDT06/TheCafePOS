@@ -13,7 +13,7 @@
       <DataGridTextColumn Header="Tổng" Binding="{Binding TotalAmount, StringFormat=N0}" Width="95"/><DataGridTextColumn Header="Có thể hoàn" Binding="{Binding RefundableAmount, StringFormat=N0}" Width="110"/><DataGridTextColumn Header="Trạng thái" Binding="{Binding RefundStatus}" Width="*"/>
      </DataGrid.Columns></DataGrid>
     </DockPanel>
-    <Border Grid.Column="1" Style="{StaticResource SurfaceCard}"><DockPanel><Button DockPanel.Dock="Bottom" Content="In lại hóa đơn" MinHeight="44" Click="PrintReceipt_Click" Margin="0,8,0,0"/><Button Style="{StaticResource DangerButton}" DockPanel.Dock="Bottom" MinHeight="44" Click="CancelOrder_Click" Margin="0,8,0,0" ToolTip="Dùng lý do và mã giao dịch ở trên; cần quản lý duyệt"><TextBlock Text="Hủy cả đơn (chưa pha chế) — hoàn đủ tiền, trả kho" TextWrapping="Wrap" TextAlignment="Center"/></Button><Button Style="{StaticResource PrimaryButton}" DockPanel.Dock="Bottom" Content="Duyệt và ghi nhận hoàn" MinHeight="52" Click="Refund_Click" Margin="0,10,0,0"/><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+    <Border Grid.Column="1" Style="{StaticResource SurfaceCard}"><DockPanel><Button DockPanel.Dock="Bottom" Content="In lại hóa đơn" MinHeight="44" Click="PrintReceipt_Click" Margin="0,8,0,0"/><Button Style="{StaticResource DangerButton}" DockPanel.Dock="Bottom" MinHeight="44" Click="CancelOrder_Click" Margin="0,8,0,0" ToolTip="Dùng lý do và mã giao dịch ở trên; cần chủ quán duyệt"><TextBlock Text="Hủy cả đơn (chưa pha chế) — hoàn đủ tiền, trả kho" TextWrapping="Wrap" TextAlignment="Center"/></Button><Button Style="{StaticResource PrimaryButton}" DockPanel.Dock="Bottom" Content="Duyệt và ghi nhận hoàn" MinHeight="52" Click="Refund_Click" Margin="0,10,0,0"/><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
      <TextBlock x:Name="OrderDetails" Text="Chọn đơn cần hoàn tiền." TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,12"/>
      <TextBox md:HintAssist.Hint="Số tiền hoàn (đồng)" x:Name="RefundAmount" touch:TouchInput.Label="Số tiền hoàn" touch:TouchInput.Numeric="True" Margin="0,5,0,10"/>
      <TextBox md:HintAssist.Hint="Lý do hoàn tiền (bắt buộc)" x:Name="RefundReason" MinHeight="70" MaxLength="300" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,10"/>
@@ -28,7 +28,7 @@
     <ComboBox x:Name="CashType" SelectedIndex="0" MinHeight="44"><ComboBoxItem Content="Thu vào — bổ sung tiền lẻ, tiền đầu quỹ" Tag="In"/><ComboBoxItem Content="Chi ra — mua hàng, nộp bớt tiền" Tag="Out"/></ComboBox>
     <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Số tiền (đồng)" x:Name="CashAmount" touch:TouchInput.Label="Số tiền thu / chi" touch:TouchInput.Numeric="True"/>
     <TextBox Margin="0,8,0,8" md:HintAssist.Hint="Lý do / người nhận / số chứng từ" x:Name="CashReason" MaxLength="300" MinHeight="100" TextWrapping="Wrap" AcceptsReturn="True"/>
-    <TextBlock Text="Không tính vào doanh thu. Mỗi phiếu cần quản lý duyệt." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,16"/>
+    <TextBlock Text="Không tính vào doanh thu. Mỗi phiếu cần chủ quán duyệt." TextWrapping="Wrap" Foreground="{StaticResource PosMuted}" Margin="0,16"/>
 
    </StackPanel></ScrollViewer></DockPanel></Border></TabItem>
    <TabItem Header="Lịch sử ca hiện tại"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

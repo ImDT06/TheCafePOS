@@ -20,7 +20,7 @@ public partial class DataStoreService
             _auth.RequireManager();
             if (string.IsNullOrWhiteSpace(reason)) throw new InvalidOperationException("Cần nhập lý do.");
         }
-        else if (order.FulfillmentStatus is "Đã giao" or "Dừng phục vụ") throw new InvalidOperationException("Đơn đã kết thúc; cần quản lý mở lại.");
+        else if (order.FulfillmentStatus is "Đã giao" or "Dừng phục vụ") throw new InvalidOperationException("Đơn đã kết thúc; cần chủ quán mở lại.");
         var line = lineId == null ? null : order.Items.Single(i => i.Id == lineId);
         string Describe() => order.FulfillmentStatus + " | " + string.Join(";", order.Items.Select(i => $"{i.Id}:{i.ReadyQuantity}/{i.DeliveredQuantity}"));
         var before = Describe();

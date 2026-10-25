@@ -3,10 +3,23 @@
   <Border DockPanel.Dock="Top" Background="{StaticResource PosAccentDark}" CornerRadius="14" Padding="22" Margin="0,0,0,18"><StackPanel><TextBlock Text="TheCafePOS" FontSize="30" FontWeight="Bold" Foreground="White"/><TextBlock x:Name="Heading" Text="Đăng nhập để bắt đầu làm việc" Foreground="{StaticResource PosAccentSoft}" Margin="0,8,0,0" TextWrapping="Wrap"/></StackPanel></Border>
   <Button DockPanel.Dock="Bottom" x:Name="Submit" Style="{StaticResource PrimaryButton}" Content="Đăng nhập" IsDefault="True" Click="Submit_Click" Margin="0,18,0,0"/>
   <Border Style="{StaticResource SurfaceCard}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-   <TextBlock Text="Tài khoản của bạn" Style="{StaticResource SectionTitle}"/>
-   <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="Username" AutomationProperties.Name="Tên đăng nhập" Margin="0,6,0,16"/>
-   <PasswordBox md:HintAssist.Hint="Mật khẩu" x:Name="Password" AutomationProperties.Name="Mật khẩu" Margin="0,6,0,16"/>
-   <StackPanel x:Name="Confirmation" Visibility="Collapsed"><PasswordBox md:HintAssist.Hint="Nhập lại mật khẩu" x:Name="ConfirmPassword" Margin="0,6,0,16"/></StackPanel>
+   <!-- Staff with a PIN: tap a name, then type the PIN. -->
+   <StackPanel x:Name="PinStaff" Visibility="Collapsed" Margin="0,0,0,12">
+    <TextBlock Text="Nhân viên vào ca" Style="{StaticResource SectionTitle}"/>
+    <ItemsControl x:Name="PinAccounts" Margin="0,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+     <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding Username}" Tag="{Binding Username}" Click="PinUser_Click" MinWidth="96" MinHeight="48" Margin="0,0,8,8"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+   </StackPanel>
+   <StackPanel x:Name="PinEntry" Visibility="Collapsed">
+    <TextBlock x:Name="PinTitle" Style="{StaticResource SectionTitle}"/>
+    <PasswordBox md:HintAssist.Hint="Mã PIN" x:Name="Pin" AutomationProperties.Name="Mã PIN" MaxLength="6" InputScope="Number" Margin="0,6,0,8"/>
+    <Button Content="Đăng nhập bằng mật khẩu" Click="UsePassword_Click" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+   </StackPanel>
+   <StackPanel x:Name="PasswordEntry">
+    <TextBlock Text="Tài khoản của bạn" Style="{StaticResource SectionTitle}"/>
+    <TextBox md:HintAssist.Hint="Tên đăng nhập" x:Name="Username" AutomationProperties.Name="Tên đăng nhập" Margin="0,6,0,16"/>
+    <PasswordBox md:HintAssist.Hint="Mật khẩu" x:Name="Password" AutomationProperties.Name="Mật khẩu" Margin="0,6,0,16"/>
+    <StackPanel x:Name="Confirmation" Visibility="Collapsed"><PasswordBox md:HintAssist.Hint="Nhập lại mật khẩu" x:Name="ConfirmPassword" Margin="0,6,0,16"/></StackPanel>
+   </StackPanel>
    <CheckBox x:Name="RememberLogin" IsChecked="True" Margin="0,0,0,8"><TextBlock Text="Giữ đăng nhập trên máy này (30 ngày)" TextWrapping="Wrap"/></CheckBox>
    <TextBlock x:Name="Error" Foreground="{StaticResource PosDanger}" TextWrapping="Wrap"/>
   </StackPanel></ScrollViewer></Border>

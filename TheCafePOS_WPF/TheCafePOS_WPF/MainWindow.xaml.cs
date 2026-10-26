@@ -130,8 +130,14 @@ namespace TheCafePOS_WPF
 
         private void ToggleSoldOut_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement { DataContext: MenuTile tile }) _vm.ToggleSoldOut(tile.Product);
+            if (sender is not FrameworkElement { DataContext: MenuTile tile }) return;
+            bool wasSoldOut = tile.Product.IsSoldOut;
+            _vm.ToggleSoldOut(tile.Product);
+            if (tile.Product.IsSoldOut != wasSoldOut) Toast.Show(this, wasSoldOut ? $"{tile.Product.Name} đã bán lại." : $"Đã báo {tile.Product.Name} hết hàng.");
         }
+
+        // Size only matters for drinks, where one product comes in several cups.
+        private static string LineName(OrderItem item) => item.IsBeverage && item.Size.Length > 0 ? $"{item.ProductName} ({item.Size})" : item.ProductName;
 
         private double ProductCardWidth()
         {
@@ -160,6 +166,7 @@ namespace TheCafePOS_WPF
             if (modal.ShowDialog() == true && modal.ResultItem != null)
             {
                 _vm.AddItem(modal.ResultItem);
+                Toast.Show(this, $"Đã thêm {modal.ResultItem.Quantity} × {LineName(modal.ResultItem)}");
             }
         }
 
@@ -171,8 +178,9 @@ namespace TheCafePOS_WPF
         {
             if (!_vm.HasItems) return;
 
-            if (MessageBox.Show(this, "Xóa toàn bộ món trong giỏ chưa thanh toán?", "Xóa giỏ", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
-                _vm.ClearCart();
+            if (MessageBox.Show(this, "Xóa toàn bộ món trong giỏ chưa thanh toán?", "Xóa giỏ", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            _vm.ClearCart();
+            Toast.Show(this, "Đã xóa giỏ hàng.");
         }
 
         #endregion
@@ -255,12 +263,14 @@ namespace TheCafePOS_WPF
             if (!modal.Show(this, _vm.Subtotal, _vm.Discount, _vm.DiscountReason)) return;
             if (_vm.DiscountNeedsApproval(modal.Amount) && _dialogs.Create<PinApprovalModal>(this, _vm.DiscountApprovalAction(modal.Amount, modal.Reason)).ShowDialog() != true) return;
             _vm.ApplyDiscount(modal.Amount, modal.Reason);
+            Toast.Show(this, modal.Amount > 0 ? $"Đã giảm {modal.Amount:N0}đ ({modal.Reason.Trim()})." : "Đã bỏ giảm giá.");
         }
 
         private void BtnVoucher_Click(object sender, RoutedEventArgs e)
         {
             if (!_vm.HasItems) return;
-            VoucherModal.Show(this, _vm.VoucherCode, _vm.ApplyVoucher);
+            if (!VoucherModal.Show(this, _vm.VoucherCode, _vm.ApplyVoucher)) return;
+            Toast.Show(this, _vm.VoucherCode.Length > 0 ? $"Đã áp dụng voucher {_vm.VoucherCode}." : "Đã bỏ voucher.");
         }
 
         private void BtnSplitBill_Click(object sender, RoutedEventArgs e)
@@ -280,6 +290,9 @@ namespace TheCafePOS_WPF
             var modal = _dialogs.Create<CustomerModal>(null);
             if (!modal.Show(this, _vm.PayableTotal + _vm.RedeemValue, _vm.CustomerPhone, _vm.RedeemPoints)) return;
             _vm.SetCustomer(modal.Phone, modal.RedeemPoints);
+            if (string.IsNullOrEmpty(modal.Phone)) { Toast.Show(this, "Đã bỏ khách hàng khỏi đơn."); return; }
+            string name = _vm.FindCustomer(modal.Phone)?.Name ?? modal.Phone;
+            Toast.Show(this, modal.RedeemPoints > 0 ? $"Đã gắn khách {name}, đổi {modal.RedeemPoints} điểm." : $"Đã gắn khách {name}.");
         }
 
         private void LoadStoreSettings()
@@ -313,6 +326,7 @@ namespace TheCafePOS_WPF
             if (modal.ShowDialog() == true && modal.SelectedHeldOrder != null)
             {
                 _vm.RecallHeldOrder(modal.SelectedHeldOrder);
+                Toast.Show(this, $"Đã gọi lại đơn giữ ({modal.SelectedHeldOrder.Items.Sum(i => i.Quantity)} món).");
             }
             _vm.Refresh(); // the held-order count changes after a recall or discard
         }

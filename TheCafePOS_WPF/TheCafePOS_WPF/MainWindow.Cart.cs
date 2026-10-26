@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Models;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.ViewModels;
@@ -51,5 +52,6 @@ public partial class MainWindow
         if (modal.ShowDialog() != true) return;
         if (split) _vm.SplitItem(item, modal.ResultItem);
         else _vm.ReplaceItem(item, modal.ResultItem);
+        Toast.Show(this, split ? $"Đã tách 1 × {LineName(modal.ResultItem)} thành dòng riêng." : $"Đã cập nhật {LineName(modal.ResultItem)}.");
     }
 }

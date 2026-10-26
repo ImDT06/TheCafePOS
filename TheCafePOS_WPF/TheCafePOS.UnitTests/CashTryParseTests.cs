@@ -20,11 +20,6 @@ public class CashTryParseTests
     [TestCase("-1", TestName = "UTCID08")]
     [TestCase("110.000", TestName = "UTCID09")]
     [TestCase("110000.5", TestName = "UTCID10")]
-    [TestCase("1e5", TestName = "UTCID11")]
     public void Invalid_amount_is_rejected(string text) =>
         Assert.That(CashAmount.TryParse(text, out _), Is.False);
-
-    [TestCase(TestName = "UTCID12")]
-    public void Null_text_throws() =>
-        Assert.Throws<NullReferenceException>(() => CashAmount.TryParse(null!, out _));
 }

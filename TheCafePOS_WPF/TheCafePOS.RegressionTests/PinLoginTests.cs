@@ -112,4 +112,51 @@ public sealed class PinLoginTests : IDisposable
         Auth.LoginWithPin(Staff, "1357");
         Assert.Equal(Staff, Auth.CurrentUser?.Username);
     }
+
+    [Theory]
+    [InlineData("0000")]
+    [InlineData("1111")]
+    [InlineData("1234")]
+    [InlineData("123456")]
+    [InlineData("9876")]
+    [InlineData("3210")]
+    public void Guessable_pins_are_refused(string pin)
+    {
+        Assert.True(AuthService.IsWeakPin(pin));
+        var refused = Assert.Throws<InvalidOperationException>(() => Auth.SetPin(Staff, pin));
+        Assert.Contains("dễ đoán", refused.Message);
+        Assert.False(Auth.Accounts.Single(a => a.Username == Staff).HasPin);
+    }
+
+    [Theory]
+    [InlineData("2468")]
+    [InlineData("1357")]
+    [InlineData("1243")]
+    [InlineData("908172")]
+    public void Ordinary_pins_are_not_weak(string pin) => Assert.False(AuthService.IsWeakPin(pin));
+
+    [Fact]
+    public void Pin_cannot_skip_a_temporary_password()
+    {
+        Auth.SetPin(Staff, "2468");
+        Auth.ResetPassword(Staff, "Temporary!2026");
+        Auth.Logout();
+
+        var refused = Assert.Throws<InvalidOperationException>(() => Auth.LoginWithPin(Staff, "2468"));
+        Assert.Contains("mật khẩu tạm", refused.Message);
+        Assert.Null(Auth.CurrentUser);
+    }
+
+    [Fact]
+    public void Lockout_survives_a_restart()
+    {
+        Auth.SetPin(Staff, "2468");
+        for (int i = 0; i < 5; i++) Assert.Throws<InvalidOperationException>(() => Auth.LoginWithPin(Staff, "0000"));
+
+        var restarted = TestHost.NewAuth();
+        var locked = Assert.Throws<InvalidOperationException>(() => restarted.LoginWithPin(Staff, "2468"));
+        Assert.Contains("sai nhiều lần", locked.Message);
+        // The password shares the lock.
+        Assert.Throws<InvalidOperationException>(() => restarted.Login(Staff, StaffPass));
+    }
 }

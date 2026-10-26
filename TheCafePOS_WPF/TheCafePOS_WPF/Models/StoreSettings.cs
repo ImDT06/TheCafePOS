@@ -18,6 +18,8 @@ public class StoreSettings
     public string DisplayName => string.IsNullOrWhiteSpace(ShopName) ? "TheCafePOS" : ShopName;
     // Cashiers may give up to this % of the subtotal without a manager; managers are never limited.
     public int CashierDiscountLimitPercent { get; set; }
+    // The till locks after this many minutes without input; 0 = never.
+    public int AutoLockMinutes { get; set; } = 5;
     // 0 turns VAT off. Included: menu prices already contain the tax, receipts only show it.
     public int VatPercent { get; set; }
     public bool PricesIncludeVat { get; set; } = true;

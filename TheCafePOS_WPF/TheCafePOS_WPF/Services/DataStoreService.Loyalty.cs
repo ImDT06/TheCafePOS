@@ -65,6 +65,7 @@ public partial class DataStoreService
     {
         _auth.RequireManager();
         if (settings.CashierDiscountLimitPercent is < 0 or > 100) throw new InvalidOperationException("Hạn mức giảm giá phải từ 0 đến 100%.");
+        if (settings.AutoLockMinutes is < 0 or > 60) throw new InvalidOperationException("Thời gian tự khóa phải từ 0 đến 60 phút.");
         if (settings.VatPercent is < 0 or > 10) throw new InvalidOperationException("Thuế VAT phải từ 0 đến 10%.");
         if ((settings.ReceiptFooter ?? "").Length > 200) throw new InvalidOperationException("Lời chào cuối hóa đơn tối đa 200 ký tự.");
         if (settings.Channels.Any(c => string.IsNullOrWhiteSpace(c.Name) || c.Name == StoreSettings.Counter || c.MarkupPercent is < 0 or > 100)) throw new InvalidOperationException("Kênh bán cần tên hợp lệ và phụ thu từ 0 đến 100%.");

@@ -27,6 +27,7 @@ namespace TheCafePOS_WPF
         private readonly IVietQRService _bank;
         private readonly IBackupService _backup;
         private readonly IPurchasingService _purchasing;
+        private readonly IStoreSettingsService _settings;
         private readonly System.Windows.Threading.DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(20) };
         private readonly System.Windows.Threading.DispatcherTimer _wallClock = new() { Interval = TimeSpan.FromSeconds(1) };
         private static readonly System.Globalization.CultureInfo Vietnamese = new("vi-VN");
@@ -38,8 +39,9 @@ namespace TheCafePOS_WPF
             TxtClockDate.Text = Vietnamese.TextInfo.ToTitleCase(now.ToString("dddd, dd/MM/yyyy", Vietnamese));
         }
 
-        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup, IPurchasingService purchasing)
+        public MainWindow(MainViewModel vm, IShiftService shifts, IAuthService auth, IDialogFactory dialogs, IVietQRService bank, IBackupService backup, IPurchasingService purchasing, IStoreSettingsService settings)
         {
+            _settings = settings;
             _purchasing = purchasing;
             _backup = backup;
             _vm = vm;
@@ -58,6 +60,7 @@ namespace TheCafePOS_WPF
             _wallClock.Start();
             Closed += (_, _) => { _clock.Stop(); _wallClock.Stop(); };
             LvRecentStickers.ItemsSource = _vm.RecentStickers;
+            StartIdleLock();
 
             Loaded += MainWindow_Loaded;
             PreviewKeyDown += MainWindow_PreviewKeyDown;
@@ -236,7 +239,7 @@ namespace TheCafePOS_WPF
         // Cashier shortcuts: F2 search, F4 cash, F5 VietQR, F8 hold, F9 held orders, Ctrl+1..9 category chips in order.
         private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            Button? target = e.Key switch { System.Windows.Input.Key.F4 => BtnCash, System.Windows.Input.Key.F5 => BtnQr, System.Windows.Input.Key.F8 => BtnHold, System.Windows.Input.Key.F9 => BtnHeldOrders, System.Windows.Input.Key.F6 => BtnQueue, _ => null };
+            Button? target = e.Key switch { System.Windows.Input.Key.F4 => BtnCash, System.Windows.Input.Key.F5 => BtnQr, System.Windows.Input.Key.F8 => BtnHold, System.Windows.Input.Key.F9 => BtnHeldOrders, System.Windows.Input.Key.F6 => BtnQueue, System.Windows.Input.Key.F12 => BtnLock, _ => null };
             int chip = e.Key is >= System.Windows.Input.Key.D1 and <= System.Windows.Input.Key.D9 ? e.Key - System.Windows.Input.Key.D1
                 : e.Key is >= System.Windows.Input.Key.NumPad1 and <= System.Windows.Input.Key.NumPad9 ? e.Key - System.Windows.Input.Key.NumPad1 : -1;
             if (chip >= 0 && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)

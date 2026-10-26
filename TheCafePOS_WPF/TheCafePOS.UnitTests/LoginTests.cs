@@ -23,9 +23,9 @@ public class LoginTests
     [TearDown]
     public void TearDown() => _host.Dispose();
 
-    // Failed attempts live in a private counter; reading it is the only way to see the count and lock time.
-    private Dictionary<string, (int Count, DateTime Until)> Attempts =>
-        (Dictionary<string, (int, DateTime)>)typeof(AuthService).GetField("_attempts", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(Auth)!;
+    // Failed attempts live in the private auth state; reading it is the only way to see the count and lock time.
+    private Dictionary<string, LoginAttempts> Attempts =>
+        ((AuthState)typeof(AuthService).GetField("_state", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(Auth)!).Attempts;
 
     private void FailTimes(int times)
     {
@@ -72,7 +72,7 @@ public class LoginTests
         var ex = Assert.Throws<InvalidOperationException>(() => Auth.Login("staff", "sai12345"));
         Assert.That(ex!.Message, Is.EqualTo(WrongLogin));
         Assert.That(Attempts["staff"].Count, Is.EqualTo(0));
-        Assert.That(Attempts["staff"].Until, Is.EqualTo(DateTime.UtcNow.AddMinutes(1)).Within(TimeSpan.FromSeconds(5)));
+        Assert.That(Attempts["staff"].UntilUtc, Is.EqualTo(DateTime.UtcNow.AddMinutes(1)).Within(TimeSpan.FromSeconds(5)));
     }
 
     [TestCase(TestName = "UTCID11")]
@@ -89,7 +89,7 @@ public class LoginTests
     public void Lock_expires_after_one_minute()
     {
         FailTimes(5);
-        Attempts["staff"] = (0, DateTime.UtcNow.AddSeconds(-1)); // stands in for waiting out the minute
+        Attempts["staff"].UntilUtc = DateTime.UtcNow.AddSeconds(-1); // stands in for waiting out the minute
         Auth.Login("staff", "staff123");
         Assert.That(Auth.CurrentUser!.Username, Is.EqualTo("staff"));
     }

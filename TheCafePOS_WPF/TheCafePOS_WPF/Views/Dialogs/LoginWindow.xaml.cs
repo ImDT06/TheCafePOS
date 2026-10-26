@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using TheCafePOS_WPF.Services;
@@ -49,7 +50,29 @@ public partial class LoginWindow : Window
             box.GotKeyboardFocus += (_, _) => UpdateCapsLock();
             box.LostKeyboardFocus += (_, _) => UpdateCapsLock();
         }
-        Loaded += (_, _) => { if (PasswordEntry.Visibility == Visibility.Visible) Username.Focus(); };
+        Loaded += (_, _) =>
+        {
+            if (_pinUser is not null) Pin.Focus();
+            else if (PasswordEntry.Visibility == Visibility.Visible) (Username.Text.Length > 0 ? (Control)Password : Username).Focus();
+        };
+    }
+
+    /// <summary>The till was locked mid-shift: offer <paramref name="previousUser"/> first, but anyone may take over.</summary>
+    public LoginWindow AsLockScreen(string? previousUser, string? reason)
+    {
+        Title = "TheCafePOS — Máy đang khóa";
+        Welcome.Text = "Máy đang khóa";
+        FormTitle.Text = "Mở khóa";
+        Heading.Text = (reason is null ? "" : reason + " ") + "Người khác đăng nhập thì đơn đang làm được tạm giữ.";
+        if (previousUser is null) return this;
+        if (PinAccounts.ItemsSource is IEnumerable<PinTile> tiles && tiles.Any(t => t.Username == previousUser)) SelectPinUser(previousUser);
+        else
+        {
+            if (ModeSwitch.Visibility == Visibility.Visible) ModePassword.IsChecked = true;
+            Username.Text = previousUser;
+            ShowError("");
+        }
+        return this;
     }
 
     private void Tick()
@@ -99,9 +122,11 @@ public partial class LoginWindow : Window
         ShowError("");
     }
 
-    private void PinUser_Click(object sender, RoutedEventArgs e)
+    private void PinUser_Click(object sender, RoutedEventArgs e) => SelectPinUser((string)((FrameworkElement)sender).Tag);
+
+    private void SelectPinUser(string username)
     {
-        _pinUser = (string)((FrameworkElement)sender).Tag;
+        _pinUser = username;
         PinTitle.Text = _pinUser;
         PinInitial.Text = _pinUser[..1].ToUpper(Vietnamese);
         PinPick.Visibility = Visibility.Hidden;

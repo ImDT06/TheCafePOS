@@ -27,6 +27,7 @@ public sealed class StoreSettingsWindow : Window
         TextBox Field(string value) => new() { Text = value, Padding = new Thickness(6), Margin = new Thickness(0, 4, 0, 8) };
         var name = Field(s.ShopName); var address = Field(s.Address); var phone = Field(s.Phone); var hours = Field(s.OpeningHours);
         var limit = Field(s.CashierDiscountLimitPercent.ToString()); TouchInput.SetNumeric(limit, true);
+        var autoLock = Field(s.AutoLockMinutes.ToString()); TouchInput.SetNumeric(autoLock, true);
         var vat = Field(s.VatPercent.ToString()); TouchInput.SetNumeric(vat, true);
         var vatIncluded = new CheckBox { Content = "Giá trên thực đơn đã gồm VAT (hóa đơn chỉ hiển thị phần thuế)", IsChecked = s.PricesIncludeVat, Margin = new Thickness(0, 0, 0, 8) };
         var footer = Field(s.ReceiptFooter);
@@ -44,8 +45,9 @@ public sealed class StoreSettingsWindow : Window
             try
             {
                 if (!int.TryParse(limit.Text, out var l) || l is < 0 or > 100) throw FieldError.Mark(limit, "Nhập từ 0 đến 100.");
+                if (!int.TryParse(autoLock.Text, out var lockMinutes) || lockMinutes is < 0 or > 60) throw FieldError.Mark(autoLock, "Nhập từ 0 đến 60 phút.");
                 if (!int.TryParse(vat.Text, out var v) || v is < 0 or > 10) throw FieldError.Mark(vat, "Nhập VAT từ 0 đến 10%.");
-                _settings.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, VatPercent = v, PricesIncludeVat = vatIncluded.IsChecked == true, ReceiptFooter = footer.Text.Trim(), Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
+                _settings.SaveSettings(new StoreSettings { ShopName = name.Text.Trim(), Address = address.Text.Trim(), Phone = phone.Text.Trim(), OpeningHours = hours.Text.Trim(), CashierDiscountLimitPercent = l, AutoLockMinutes = lockMinutes, VatPercent = v, PricesIncludeVat = vatIncluded.IsChecked == true, ReceiptFooter = footer.Text.Trim(), Channels = channels.Select(c => new SalesChannel { Name = c.Name.Trim(), MarkupPercent = c.MarkupPercent, IsActive = c.IsActive }).ToList() });
                 if (Embedded.IsEmbedded(this)) Toast.Show(Embedded.HostOf(this), "Đã lưu cài đặt cửa hàng.");
                 else DialogResult = true;
             }
@@ -61,6 +63,8 @@ public sealed class StoreSettingsWindow : Window
                 new UniformGrid { Columns = 2, Children = { new StackPanel { Margin = new Thickness(0, 0, 6, 0), Children = { PosUi.Text("Số điện thoại"), phone } }, new StackPanel { Margin = new Thickness(6, 0, 0, 0), Children = { PosUi.Text("Giờ mở cửa"), hours } } } },
                 PosUi.Text("Phân quyền giảm giá", 17, true), PosUi.Text("Nhân viên được tự giảm tối đa % này của tạm tính; vượt mức cần chủ quán duyệt. Chủ quán không bị giới hạn. Đặt 0 để mọi khoản giảm của nhân viên đều cần duyệt.", 13, color: PosUi.Muted),
                 PosUi.Text("Hạn mức nhân viên (%)"), limit,
+                PosUi.Text("Tự khóa máy", 17, true), PosUi.Text("Máy bán hàng tự khóa khi không ai dùng trong số phút này; người tiếp theo nhập mã PIN hoặc mật khẩu để mở. Đặt 0 để tắt.", 13, color: PosUi.Muted),
+                PosUi.Text("Tự khóa sau (phút)"), autoLock,
                 PosUi.Text("Thuế & hóa đơn", 17, true), PosUi.Text("VAT tính trên số tiền sau mọi khoản giảm, làm tròn đến đồng. Đặt 0 để tắt.", 13, color: PosUi.Muted),
                 PosUi.Text("Thuế VAT (%)"), vat, vatIncluded, PosUi.Text("Lời chào cuối hóa đơn"), footer,
                 PosUi.Text("Kênh bán (app giao hàng)", 17, true), PosUi.Text("Đơn từ app được cộng % phụ thu vào giá, ghi nhận thanh toán qua nền tảng (không vào ngăn kéo), không áp dụng khuyến mãi/điểm của quán.", 13, color: PosUi.Muted),

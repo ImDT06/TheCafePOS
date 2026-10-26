@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using TheCafePOS_WPF.Models;
 
 namespace TheCafePOS_WPF.Services;
@@ -29,10 +29,19 @@ public class ApprovalRecord
     public string Approver { get; set; } = "";
     public string Action { get; set; } = "";
 }
+public class LoginAttempts
+{
+    public int Count { get; set; }
+    // Lockouts in a row without a successful sign-in; each one doubles the wait.
+    public int Lockouts { get; set; }
+    public DateTime UntilUtc { get; set; }
+}
 public class AuthState
 {
     public List<StaffAccount> Accounts { get; set; } = new();
     public List<ApprovalRecord> Audit { get; set; } = new();
+    // Saved so restarting the app does not reset a lock; a 4-digit PIN has only 10,000 values.
+    public Dictionary<string, LoginAttempts> Attempts { get; set; } = new();
 }
 public sealed partial class AuthService : Interfaces.IAuthService
 {
@@ -48,10 +57,10 @@ public sealed partial class AuthService : Interfaces.IAuthService
         _currentShift = currentShift;
         _hasHistory = hasHistory ?? (_ => false);
         _state = db.Read<AuthState>("auth") ?? new();
+        _state.Attempts = new(_state.Attempts ?? new(), StringComparer.OrdinalIgnoreCase);
         // The Quản lý role was dropped: its accounts become Nhân viên and their remembered sessions stop working.
         foreach (var account in _state.Accounts.Where(a => a.Role == "Manager")) { account.Role = "Cashier"; account.SessionVersion++; }
     }
-    private readonly Dictionary<string, (int Count, DateTime Until)> _attempts = new(StringComparer.OrdinalIgnoreCase);
     public StaffAccount? CurrentUser { get; private set; }
     public bool NeedsSetup => _state.Accounts.Count == 0;
     // Management rights (menu, stock, reports, approvals) belong to the owner only.
@@ -104,29 +113,53 @@ public sealed partial class AuthService : Interfaces.IAuthService
     private StaffAccount Verify(string username, string password)
     {
         username = username.Trim();
-        var attempt = _attempts.GetValueOrDefault(username);
-        if (attempt.Until > DateTime.UtcNow) throw new InvalidOperationException("Đăng nhập sai nhiều lần. Thử lại sau 1 phút.");
+        ThrowIfLockedOut(username);
         var account = _state.Accounts.FirstOrDefault(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
         if (account is null || !account.IsActive || !CryptographicOperations.FixedTimeEquals(Hash(password, Convert.FromBase64String(account.Salt)), Convert.FromBase64String(account.PasswordHash)))
         {
             RecordFailure(username);
             throw new InvalidOperationException("Tên đăng nhập hoặc mật khẩu không đúng.");
         }
-        _attempts.Remove(username);
+        ClearFailures(username);
         return account;
     }
+    private void ThrowIfLockedOut(string username)
+    {
+        if (_state.Attempts.GetValueOrDefault(username) is { } a && a.UntilUtc > DateTime.UtcNow)
+            throw new InvalidOperationException($"Đăng nhập sai nhiều lần. Thử lại sau {Math.Ceiling((a.UntilUtc - DateTime.UtcNow).TotalMinutes)} phút.");
+    }
     // Wrong passwords and wrong PINs share one counter, so switching between them does not reset the lock.
+    // Five misses lock the name for 1 minute, then 2, 4… up to 30 while the misses continue.
     private void RecordFailure(string username)
     {
-        int count = _attempts.GetValueOrDefault(username).Count + 1;
-        _attempts[username] = (count >= 5 ? 0 : count, count >= 5 ? DateTime.UtcNow.AddMinutes(1) : DateTime.MinValue);
+        var a = _state.Attempts.TryGetValue(username, out var found) ? found : _state.Attempts[username] = new();
+        if (++a.Count >= 5)
+        {
+            a.Count = 0;
+            a.UntilUtc = DateTime.UtcNow.AddMinutes(Math.Min(30, 1 << Math.Min(a.Lockouts, 5)));
+            a.Lockouts++;
+        }
+        SaveAttempts();
+    }
+    private void ClearFailures(string username)
+    {
+        if (_state.Attempts.Remove(username)) SaveAttempts();
+    }
+    // The counter still works in memory if the disk write fails; a sign-in error should not turn into a storage error.
+    private void SaveAttempts()
+    {
+        try { _db.Write("auth", _state); }
+        catch (Exception) { }
     }
     public void Login(string username, string password) => CurrentUser = Verify(username, password);
     public static bool IsValidPin(string pin) => pin.Length is >= 4 and <= 6 && pin.All(char.IsAsciiDigit);
+    // The first codes anyone tries: one repeated digit (1111) or a run up or down the keypad (1234, 9876).
+    public static bool IsWeakPin(string pin) =>
+        pin.Length > 1 && new[] { 0, 1, -1 }.Any(step => Enumerable.Range(1, pin.Length - 1).All(i => pin[i] - pin[i - 1] == step));
     // Staff only: the owner signs in and approves with the full password.
     public void LoginWithPin(string username, string pin)
     {
-        if (_attempts.GetValueOrDefault(username).Until > DateTime.UtcNow) throw new InvalidOperationException("Đăng nhập sai nhiều lần. Thử lại sau 1 phút.");
+        ThrowIfLockedOut(username);
         var account = _state.Accounts.FirstOrDefault(a => a.Username == username);
         if (account is not { IsActive: true, Role: "Cashier", HasPin: true }
             || !CryptographicOperations.FixedTimeEquals(Hash(pin, Convert.FromBase64String(account.PinSalt)), Convert.FromBase64String(account.PinHash)))
@@ -134,7 +167,9 @@ public sealed partial class AuthService : Interfaces.IAuthService
             RecordFailure(username);
             throw new InvalidOperationException("Mã PIN không đúng.");
         }
-        _attempts.Remove(username);
+        ClearFailures(username);
+        // A temporary password must be replaced first, and only the password screen does that.
+        if (account.MustChangePassword) throw new InvalidOperationException("Tài khoản đang dùng mật khẩu tạm. Chọn Mật khẩu để đăng nhập và đổi mật khẩu.");
         CurrentUser = account;
     }
     public const string StaffCheckPrefix = "Staff:";
@@ -186,6 +221,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     private static void SetPinHash(StaffAccount account, string pin)
     {
         if (!IsValidPin(pin)) throw new InvalidOperationException("Mã PIN gồm 4–6 chữ số.");
+        if (IsWeakPin(pin)) throw new InvalidOperationException("Mã PIN quá dễ đoán (như 1111, 1234). Chọn dãy số khác.");
         var salt = RandomNumberGenerator.GetBytes(16);
         account.PinSalt = Convert.ToBase64String(salt); account.PinHash = Convert.ToBase64String(Hash(pin, salt));
     }
@@ -193,7 +229,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     {
         var target = ManagedAccount(username);
         UpdateAccount(target, "Đặt mã PIN", () => SetPinHash(target, pin));
-        _attempts.Remove(username);
+        ClearFailures(username);
     }
     public void ChangePin(string password, string newPin)
     {
@@ -219,7 +255,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
     {
         var target = ManagedAccount(username);
         UpdateAccount(target, "Đặt lại mật khẩu", () => { SetPassword(target, temporaryPassword); target.MustChangePassword = true; });
-        _attempts.Remove(username);
+        ClearFailures(username);
     }
     public void SetAccountActive(string username, bool active)
     {
@@ -227,7 +263,7 @@ public sealed partial class AuthService : Interfaces.IAuthService
         var shift = _currentShift();
         if (!active && shift.Status == "Open" && shift.CashierName == username) throw new InvalidOperationException("Nhân viên đang có ca mở. Chốt ca trước khi khóa tài khoản.");
         UpdateAccount(target, active ? "Mở khóa tài khoản" : "Khóa tài khoản", () => target.IsActive = active);
-        if (active) _attempts.Remove(username);
+        if (active) ClearFailures(username);
     }
     public void DeleteAccount(string username)
     {
@@ -237,6 +273,6 @@ public sealed partial class AuthService : Interfaces.IAuthService
         // Records keep the username as text: deleting a used account would let a new account take over its history.
         if (_hasHistory(username)) throw new InvalidOperationException("Tài khoản đã có ca hoặc giao dịch nên không xóa được. Hãy khóa tài khoản thay vì xóa.");
         UpdateAccount(target, "Xóa tài khoản", () => _state.Accounts.Remove(target));
-        _attempts.Remove(username);
+        ClearFailures(username);
     }
 }

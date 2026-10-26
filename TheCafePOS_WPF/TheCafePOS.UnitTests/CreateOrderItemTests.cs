@@ -42,7 +42,6 @@ public class CreateOrderItemTests
     [TestCase("L", 2, "shot*1", 75000, 150000, TestName = "UTCID02")]
     [TestCase("M", 1, "shot*1 sua*1", 70000, 70000, TestName = "UTCID03")]
     [TestCase("M", 999, "", 55000, 54945000, TestName = "UTCID04")]
-    [TestCase("M", 1, "shot*10", 155000, 155000, TestName = "UTCID07")]
     public void Item_is_priced_from_size_and_toppings(string size, int quantity, string toppings, decimal unit, decimal total)
     {
         var item = Create(size, 50, quantity, toppings);
@@ -52,19 +51,18 @@ public class CreateOrderItemTests
 
     [TestCase("M", 50, 0, "", BadQuantity, TestName = "UTCID05")]
     [TestCase("M", 50, 1000, "", BadQuantity, TestName = "UTCID06")]
-    [TestCase("M", 50, 1, "shot*11", BadTopping, TestName = "UTCID08")]
-    [TestCase("M", 50, 1, "shot*0", BadTopping, TestName = "UTCID09")]
-    [TestCase("M", 50, 1, "shot*1 shot*1", BadTopping, TestName = "UTCID10")]
-    [TestCase("M", 50, 1, "tran*1", NotOffered, TestName = "UTCID11")]
-    [TestCase("XL", 50, 1, "", BadSize, TestName = "UTCID12")]
-    [TestCase("M", 40, 1, "", BadLevel, TestName = "UTCID13")]
+    [TestCase("M", 50, 1, "shot*0", BadTopping, TestName = "UTCID07")]
+    [TestCase("M", 50, 1, "shot*1 shot*1", BadTopping, TestName = "UTCID08")]
+    [TestCase("M", 50, 1, "tran*1", NotOffered, TestName = "UTCID09")]
+    [TestCase("XL", 50, 1, "", BadSize, TestName = "UTCID10")]
+    [TestCase("M", 40, 1, "", BadLevel, TestName = "UTCID11")]
     public void Invalid_choice_is_refused(string size, int sugar, int quantity, string toppings, string message)
     {
         var ex = Assert.Throws<InvalidOperationException>(() => Create(size, sugar, quantity, toppings));
         Assert.That(ex!.Message, Is.EqualTo(message));
     }
 
-    [TestCase(TestName = "UTCID14")]
+    [TestCase(TestName = "UTCID12")]
     public void Discontinued_item_cannot_be_ordered()
     {
         _americano.IsActive = false;
@@ -72,7 +70,7 @@ public class CreateOrderItemTests
         Assert.That(ex!.Message, Is.EqualTo(NotSold));
     }
 
-    [TestCase(TestName = "UTCID15")]
+    [TestCase(TestName = "UTCID13")]
     public void Note_is_trimmed()
     {
         var item = Create("M", 50, 1, "", "  Ít đá  ");

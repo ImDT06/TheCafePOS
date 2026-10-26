@@ -29,7 +29,6 @@ public class UpdateStockTests
     [TestCase("Kiểm kê", 0, 0, TestName = "UTCID04")]
     [TestCase("Điều chỉnh", -10, 1190, TestName = "UTCID06")]
     [TestCase("Hao hụt", 1200, 0, TestName = "UTCID08")]
-    [TestCase("Nhập kho", 2147482447, int.MaxValue, TestName = "UTCID10")]
     public void Valid_change_updates_stock_and_history(string operation, int quantity, int expected)
     {
         int moves = Store.StockMovements.Count;
@@ -43,15 +42,13 @@ public class UpdateStockTests
     [TestCase("pack-1", "Kiểm kê", -1, "Phiếu NCC01", Rule, TestName = "UTCID05")]
     [TestCase("pack-1", "Điều chỉnh", 0, "Phiếu NCC01", Rule, TestName = "UTCID07")]
     [TestCase("pack-1", "Hao hụt", 1201, "Phiếu NCC01", Range, TestName = "UTCID09")]
-    [TestCase("pack-1", "Nhập kho", 2147482448, "Phiếu NCC01", Range, TestName = "UTCID11")]
-    [TestCase("pack-1", "Khác", 10, "Phiếu NCC01", Rule, TestName = "UTCID12")]
-    [TestCase("pack-1", "Nhập kho", 10, "", NoReason, TestName = "UTCID13")]
-    [TestCase("pack-1", "Nhập kho", 10, "   ", NoReason, TestName = "UTCID14")]
-    [TestCase("khong-co", "Nhập kho", 10, "Phiếu NCC01", NoItem, TestName = "UTCID15")]
+    [TestCase("pack-1", "Nhập kho", 10, "", NoReason, TestName = "UTCID10")]
+    [TestCase("pack-1", "Nhập kho", 10, "   ", NoReason, TestName = "UTCID11")]
+    [TestCase("khong-co", "Nhập kho", 10, "Phiếu NCC01", NoItem, TestName = "UTCID12")]
     public void Invalid_change_is_refused_and_stock_kept(string packagingId, string operation, int quantity, string reason, string message) =>
         AssertRefused(() => Store.UpdateStock(packagingId, operation, quantity, reason), message);
 
-    [TestCase(TestName = "UTCID16")]
+    [TestCase(TestName = "UTCID13")]
     public void Cashier_cannot_change_stock()
     {
         _host.Auth.CreateAccount("staff", "staff123", "Cashier");

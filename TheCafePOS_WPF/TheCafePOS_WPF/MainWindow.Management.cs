@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using TheCafePOS_WPF.Core;
 using TheCafePOS_WPF.Services;
 using TheCafePOS_WPF.ViewModels;
 using TheCafePOS_WPF.Views.Dialogs;
@@ -25,7 +26,7 @@ public partial class MainWindow
     {
         UtilitiesPopup.IsOpen = false;
         if (_auth.CurrentUser is null) { MessageBox.Show(this, "Vui lòng đăng nhập."); return; }
-        _dialogs.Create<PasswordWindow>(this).ShowDialog();
+        if (_dialogs.Create<PasswordWindow>(this).ShowDialog() == true) Toast.Show(this, "Đã lưu thay đổi tài khoản.");
     }
     private void Management_Click(object sender, RoutedEventArgs e)
     {
@@ -67,6 +68,7 @@ public partial class MainWindow
             {
                 if (!decimal.TryParse(input.Text, out var cash)) throw new InvalidOperationException("Nhập số tiền hợp lệ.");
                 _shifts.OpenShift(cash); window.DialogResult = true; RefreshSession();
+                Toast.Show(this, $"Đã mở ca với {cash:N0}đ tiền đầu ca.");
             }
             catch (Exception ex) { MessageBox.Show(window, ex.Message); }
         };
